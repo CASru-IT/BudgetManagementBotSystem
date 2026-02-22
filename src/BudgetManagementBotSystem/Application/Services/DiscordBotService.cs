@@ -1,5 +1,5 @@
 using Discord;
-using Discord.Commands;
+using Discord.Interactions;
 using Discord.WebSocket;
 using System.Reflection;
 
@@ -9,7 +9,7 @@ public class DiscordBotService
 {
     private readonly IServiceProvider _provider;
     private DiscordSocketClient _client = null!;
-    private CommandService _commands = null!;
+    private InteractionService _interactions = null!;
 
     public DiscordBotService(IServiceProvider provider)
     {
@@ -18,21 +18,31 @@ public class DiscordBotService
 
     public async Task StartAsync(string token)
     {
-        _client = new DiscordSocketClient();
-        _commands = new CommandService();
+        var config = new DiscordSocketConfig
+        {
+            GatewayIntents = GatewayIntents.Guilds
+        };
+
+        _client = new DiscordSocketClient(config);
+        _interactions = new InteractionService(_client);
 
         _client.Log += m => { Console.WriteLine(m); return Task.CompletedTask; };
 
-        await _commands.AddModulesAsync(Assembly.GetExecutingAssembly(), _provider);
+        await _interactions.AddModulesAsync(Assembly.GetExecutingAssembly(), _provider);
 
-        _client.MessageReceived += async msg =>
+        _client.Ready += async () =>
         {
-            if (msg is not SocketUserMessage m) return;
-            int pos = 0;
-            if (!m.HasCharPrefix('!', ref pos)) return;
+            // 開発環境: 特定のギルドに登録
+            // await _interactions.RegisterCommandsToGuildAsync(YOUR_GUILD_ID);
+            
+            // 本番環境: グローバルに登録
+            await _interactions.RegisterCommandsGloballyAsync();
+        };
 
-            var ctx = new SocketCommandContext(_client, m);
-            await _commands.ExecuteAsync(ctx, pos, _provider);
+        _client.InteractionCreated += async interaction =>
+        {
+            var ctx = new SocketInteractionContext(_client, interaction);
+            await _interactions.ExecuteCommandAsync(ctx, _provider);
         };
 
         await _client.LoginAsync(TokenType.Bot, token);
