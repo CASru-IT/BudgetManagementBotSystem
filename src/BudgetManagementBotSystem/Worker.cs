@@ -1,16 +1,20 @@
-namespace BudgetManagementBotSystem;
+using BudgetManagementBotSystem.Application.Services;
 
-public class Worker(ILogger<Worker> logger) : BackgroundService
+public class Worker : BackgroundService
 {
+    private readonly DiscordBotService _bot;
+    private readonly IConfiguration _config;
+
+    public Worker(DiscordBotService bot, IConfiguration config)
+    {
+        _bot = bot;
+        _config = config;
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            if (logger.IsEnabled(LogLevel.Information))
-            {
-                logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-            }
-            await Task.Delay(1000, stoppingToken);
-        }
+        var token = _config["Discord:Token"] ?? throw new InvalidOperationException("Discord token is not configured");
+        await _bot.StartAsync(token);
+        await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 }
