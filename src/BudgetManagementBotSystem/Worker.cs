@@ -1,4 +1,4 @@
-using BudgetManagementBotSystem.Application.Services;
+using BudgetManagementBotSystem.Services;
 
 public class Worker : BackgroundService
 {

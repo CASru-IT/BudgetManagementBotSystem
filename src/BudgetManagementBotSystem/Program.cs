@@ -1,4 +1,4 @@
-using BudgetManagementBotSystem.Application.Services;
+using BudgetManagementBotSystem.Services;
 
 var builder = Host.CreateApplicationBuilder(args);
 

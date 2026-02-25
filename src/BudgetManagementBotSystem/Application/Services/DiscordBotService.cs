@@ -3,7 +3,7 @@ using Discord.Interactions;
 using Discord.WebSocket;
 using System.Reflection;
 
-namespace BudgetManagementBotSystem.Application.Services;
+namespace BudgetManagementBotSystem.Services;
 
 public class DiscordBotService
 {
