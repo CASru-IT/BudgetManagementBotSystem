@@ -111,7 +111,7 @@ dotnet test
 
 ## プロジェクト構成
 
-```
+```bash
 BudgetManagementBotSystem/
 ├── src/
 │   └── BudgetManagementBotSystem/      # メインプロジェクト
