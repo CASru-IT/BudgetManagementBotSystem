@@ -3,7 +3,7 @@ using Discord.Interactions;
 using Discord.WebSocket;
 using System.Reflection;
 
-namespace BudgetManagementBotSystem.Services;
+namespace BudgetManagementBotSystem.Application.Services;
 
 public class DiscordBotService
 {
@@ -32,10 +32,6 @@ public class DiscordBotService
 
         _client.Ready += async () =>
         {
-            // 開発環境: 特定のギルドに登録
-            // await _interactions.RegisterCommandsToGuildAsync(YOUR_GUILD_ID);
-            
-            // 本番環境: グローバルに登録
             await _interactions.RegisterCommandsGloballyAsync();
         };
 
