@@ -3,7 +3,7 @@ using Discord.Interactions;
 using Discord.WebSocket;
 using System.Reflection;
 
-namespace BudgetManagementBotSystem.Application.Services;
+namespace BudgetManagementBotSystem.InfraStructure.Discord;
 
 public class DiscordBotService
 {
@@ -18,6 +18,7 @@ public class DiscordBotService
 
     public async Task StartAsync(string token)
     {
+        //インテントの管理
         var config = new DiscordSocketConfig
         {
             GatewayIntents = GatewayIntents.Guilds
@@ -30,11 +31,13 @@ public class DiscordBotService
 
         await _interactions.AddModulesAsync(Assembly.GetExecutingAssembly(), _provider);
 
+        //サーバーへのコマンドの登録
         _client.Ready += async () =>
         {
             await _interactions.RegisterCommandsGloballyAsync();
         };
 
+        //コマンドが呼び出されたときのイベントハンドラーの登録
         _client.InteractionCreated += async interaction =>
         {
             var ctx = new SocketInteractionContext(_client, interaction);

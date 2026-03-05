@@ -1,4 +1,4 @@
-using BudgetManagementBotSystem.Application.Services;
+using BudgetManagementBotSystem.InfraStructure.Discord;
 
 public class Worker : BackgroundService
 {
