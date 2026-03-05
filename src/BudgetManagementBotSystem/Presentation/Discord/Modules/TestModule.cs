@@ -1,6 +1,6 @@
 using Discord.Interactions;
 
-namespace BudgetManagementBotSystem.Commands;
+namespace BudgetManagementBotSystem.Presentation.Discord.Modules;
 
 public class TestModule : InteractionModuleBase<SocketInteractionContext>
 {
