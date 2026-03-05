@@ -10,5 +10,8 @@
   },
   "ConnectionStrings": {
     "Db": "Host=localhost;Database=budget;Username=postgres;Password=pass"
+  },
+  "FiscalYearStartMonth":{
+    "Month": 4
   }
 }
