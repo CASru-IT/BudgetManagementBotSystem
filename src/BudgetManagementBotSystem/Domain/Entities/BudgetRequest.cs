@@ -1,4 +1,5 @@
 using BudgetManagementBotSystem.Domain.ValueObjects;
+using BudgetManagementBotSystem.Domain.Enums;
 
 namespace BudgetManagementBotSystem.Domain.Entities;
 
@@ -11,7 +12,7 @@ public class BudgetRequest
     public DateTime RequestDate { get; private set; }
     public string Description { get; private set; }
     public List<RequestEvidence> Evidences { get; private set; } = new List<RequestEvidence>();
-    public List<RequestStatusHistory> StatusHistory { get; private set; } = new List<RequestStatusHistory>();
+    private List<RequestStatusHistory> StatusHistory { get; set; } = new List<RequestStatusHistory>();
 
     public BudgetRequest(int userId, Money amount, FiscalYear fiscalYear, string description)
     {
@@ -20,5 +21,34 @@ public class BudgetRequest
         FiscalYear = fiscalYear;
         Description = description;
         RequestDate = DateTime.Now;
+    }
+
+    public void AddEvidence(string filePath)
+    {
+        Evidences.Add(new RequestEvidence(filePath));
+    }
+    public void UpdateStatus(RequestStatus newStatus)
+    {
+        CheckStatusTransition(newStatus);
+        StatusHistory.Add(new RequestStatusHistory(newStatus, DateTime.Now));
+    }
+
+    private void CheckStatusTransition(RequestStatus newStatus)
+    {
+        if (StatusHistory.Count == 0 && newStatus != RequestStatus.Pending)
+        {
+            throw new InvalidOperationException("最初のステータスはPendingでなければなりません。");
+        }
+
+        var currentStatus = StatusHistory.Last().ChangedStatus;
+
+        if (currentStatus == RequestStatus.Rejected)
+        {
+            throw new InvalidOperationException("Rejectedからのステータス変更は許可されていません。");
+        }
+        else if (currentStatus == RequestStatus.Approved && newStatus != RequestStatus.ApprovalCancelled)
+        {
+            throw new InvalidOperationException("ApprovedからはApprovalCancelled以外のステータスへの変更は許可されていません。");
+        }
     }
 }
