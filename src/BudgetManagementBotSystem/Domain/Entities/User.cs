@@ -7,6 +7,7 @@ public class User
     public int Id { get; private set; }
     public string Name { get; private set; }
     public int DiscordUserId { get; private set; }
+    public int GroupId { get; private set; }
     public AccountRole Role { get; private set; }
     public bool IsActive { get; private set; }
 
