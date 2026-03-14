@@ -12,7 +12,7 @@ public class BudgetRequest
     public DateTime RequestDate { get; private set; }
     public string Description { get; private set; }
     public List<RequestEvidence> Evidences { get; private set; } = new List<RequestEvidence>();
-    private List<RequestStatusHistory> StatusHistory { get; set; } = new List<RequestStatusHistory>();
+    public List<RequestStatusChange> StatusHistory { get; private set; } = new List<RequestStatusChange>();
 
     public BudgetRequest(int userId, Money amount, FiscalYear fiscalYear, string description)
     {
@@ -21,6 +21,10 @@ public class BudgetRequest
         FiscalYear = fiscalYear;
         Description = description;
         RequestDate = DateTime.Now;
+        if (StatusHistory.Count == 0)
+        {
+            StatusHistory.Add(new RequestStatusChange(RequestStatus.Pending, DateTime.Now));
+        }
     }
 
     public void AddEvidence(string filePath)
@@ -30,7 +34,7 @@ public class BudgetRequest
     public void UpdateStatus(RequestStatus newStatus)
     {
         CheckStatusTransition(newStatus);
-        StatusHistory.Add(new RequestStatusHistory(newStatus, DateTime.Now));
+        StatusHistory.Add(new RequestStatusChange(newStatus, DateTime.Now));
     }
 
     private void CheckStatusTransition(RequestStatus newStatus)
@@ -42,13 +46,26 @@ public class BudgetRequest
 
         var currentStatus = StatusHistory.Last().ChangedStatus;
 
-        if (currentStatus == RequestStatus.Rejected)
+        switch (currentStatus)
         {
-            throw new InvalidOperationException("Rejectedからのステータス変更は許可されていません。");
-        }
-        else if (currentStatus == RequestStatus.Approved && newStatus != RequestStatus.ApprovalCancelled)
-        {
-            throw new InvalidOperationException("ApprovedからはApprovalCancelled以外のステータスへの変更は許可されていません。");
+            case RequestStatus.Pending:
+                if (newStatus != RequestStatus.Approved && newStatus != RequestStatus.Rejected)
+                {
+                    throw new InvalidOperationException("PendingからはApprovedまたはRejectedにしか遷移できません。");
+                }
+                break;
+            case RequestStatus.Approved:
+                if (newStatus != RequestStatus.ApprovalCancelled)
+                {
+                    throw new InvalidOperationException("ApprovedからはApprovalCancelledにしか遷移できません。");
+                }
+                break;
+            case RequestStatus.Rejected:
+                throw new InvalidOperationException("Rejectedからは遷移できません。");
+            case RequestStatus.ApprovalCancelled:
+                throw new InvalidOperationException("ApprovalCancelledからは遷移できません。");
+            default:
+                throw new InvalidOperationException("不正な現在のステータスです。");
         }
     }
 }
