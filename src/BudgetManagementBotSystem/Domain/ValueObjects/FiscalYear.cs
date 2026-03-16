@@ -3,23 +3,22 @@ namespace BudgetManagementBotSystem.Domain.ValueObjects;
 public class FiscalYear
 {
     public int Year { get; private set; }
-    private int FiscalYearStartMonth = 4;
+    public int StartMonth { get; private set; } = 4;
 
-    public FiscalYear(int StartMonth)
+    private FiscalYear() { } // EF Core用
+
+    public FiscalYear(int startMonth)
     {
-        FiscalYearStartMonth = StartMonth;
+        StartMonth = startMonth;
         Year = DateTime.Now.Year;
-        if (DateTime.Now.Month < FiscalYearStartMonth) Year -= 1;
+        if (DateTime.Now.Month < StartMonth) Year -= 1;
     }
 
     public FiscalYear(int year, int startMonth)
     {
         Year = year;
-        FiscalYearStartMonth = startMonth;
+        StartMonth = startMonth;
     }
 
-    public override string ToString()
-    {
-        return Year.ToString();
-    }
+    public override string ToString() => Year.ToString();
 }

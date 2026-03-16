@@ -4,9 +4,9 @@ public class Money
 {
     public decimal Value { get; private set; }
 
-    public Money(decimal Value)
+    public Money(decimal value)
     {
-        this.Value = Value;
+        this.Value = value;
     }
 
     public static Money operator +(Money a, Money b)
