@@ -24,10 +24,6 @@ public class BudgetManagementDbContext : DbContext
             v => v.Value,
             v => new Money(v));
 
-        var fiscalYearConverter = new ValueConverter<FiscalYear, int>(
-            v => v.Year,
-            v => new FiscalYear(v)); // FiscalYear側に year 復元用ctorが必要
-
         modelBuilder.Entity<Group>(e =>
         {
             e.HasKey(x => x.Id);
@@ -52,7 +48,12 @@ public class BudgetManagementDbContext : DbContext
         {
             e.HasKey(x => x.Id);
             e.Property(x => x.Amount).HasConversion(moneyConverter).HasPrecision(18, 2).IsRequired();
-            e.Property(x => x.FiscalYear).HasConversion(fiscalYearConverter).IsRequired();
+
+            var fiscalYear = e.OwnsOne(x => x.FiscalYear);
+            fiscalYear.Property(p => p.Year).IsRequired();
+            fiscalYear.Property(p => p.StartMonth).IsRequired();
+            e.Navigation(x => x.FiscalYear).IsRequired();
+
             e.Property(x => x.TransactionDate).IsRequired();
             e.Property(x => x.IsIncome).IsRequired();
 
@@ -66,7 +67,12 @@ public class BudgetManagementDbContext : DbContext
         {
             e.HasKey(x => x.Id);
             e.Property(x => x.Amount).HasConversion(moneyConverter).HasPrecision(18, 2).IsRequired();
-            e.Property(x => x.FiscalYear).HasConversion(fiscalYearConverter).IsRequired();
+
+            var fiscalYear = e.OwnsOne(x => x.FiscalYear);
+            fiscalYear.Property(p => p.Year).IsRequired();
+            fiscalYear.Property(p => p.StartMonth).IsRequired();
+            e.Navigation(x => x.FiscalYear).IsRequired();
+
             e.Property(x => x.RequestDate).IsRequired();
             e.Property(x => x.Description).HasMaxLength(1000).IsRequired();
 
