@@ -243,6 +243,7 @@ erDiagram
 classDiagram
 
 class Group {
+  <<Entity>>
   +int Id
   +string Name
   +List~BudgetTransaction~ BudgetTransactions
@@ -254,6 +255,7 @@ class Group {
 }
 
 class BudgetRequest {
+  <<Entity>>
   +int Id
   +int UserId
   +Money Amount
@@ -267,6 +269,7 @@ class BudgetRequest {
 }
 
 class BudgetTransaction {
+  <<Entity>>
   +int Id
   +bool IsIncome
   +Money Amount
@@ -275,17 +278,20 @@ class BudgetTransaction {
 }
 
 class RequestEvidence {
+  <<Entity>>
   +int Id
   +string FilePath
 }
 
 class RequestStatusChange {
+  <<Entity>>
   +int Id
   +RequestStatus ChangedStatus
   +DateTime ChangedAt
 }
 
 class User {
+  <<Entity>>
   +int Id
   +string Name
   +int DiscordUserId
@@ -297,16 +303,18 @@ class User {
 }
 
 class Money {
+  <<ValueObject>>
   +decimal Value
 }
 
 class FiscalYear {
+  <<ValueObject>>
   +int Year
   +int StartMonth
 }
 
 class RequestStatus {
-  <<enumeration>>
+  <<Enum>>
   Pending
   Approved
   Rejected
@@ -314,7 +322,7 @@ class RequestStatus {
 }
 
 class AccountRole {
-  <<enumeration>>
+  <<Enum>>
   GroupLeader
   Accountant
   President
