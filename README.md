@@ -165,23 +165,16 @@ BudgetManagementBotSystem/
 
 ## 図
 
-### ER図
+### ER図（主要テーブルとリレーション）
 
 ```mermaid
 erDiagram
-    GROUPS ||--o{ USERS : GroupId
-    GROUPS ||--o{ BUDGET_TRANSACTIONS : GroupId
-    GROUPS ||--o{ BUDGET_REQUESTS : GroupId
-    USERS ||--o{ BUDGET_REQUESTS : UserId
-    BUDGET_REQUESTS ||--o{ REQUEST_EVIDENCES : BudgetRequestId
-    BUDGET_REQUESTS ||--o{ REQUEST_STATUS_CHANGES : BudgetRequestId
-
-    GROUPS {
+  Group {
         int Id PK
         string Name UK
     }
 
-    USERS {
+  User {
         int Id PK
         string Name
         int DiscordUserId UK
@@ -190,17 +183,7 @@ erDiagram
         bool IsActive
     }
 
-    BUDGET_TRANSACTIONS {
-        int Id PK
-        decimal Amount
-        int FiscalYear_Year
-        int FiscalYear_StartMonth
-        datetime TransactionDate
-        bool IsIncome
-        int GroupId FK
-    }
-
-    BUDGET_REQUESTS {
+  BudgetRequest {
         int Id PK
         int UserId FK
         decimal Amount
@@ -211,18 +194,35 @@ erDiagram
         int GroupId FK
     }
 
-    REQUEST_EVIDENCES {
+    RequestEvidence {
         int Id PK
         string FilePath
         int BudgetRequestId FK
     }
 
-    REQUEST_STATUS_CHANGES {
+    RequestStatusChange {
         int Id PK
         string ChangedStatus
         datetime ChangedAt
         int BudgetRequestId FK
     }
+
+    BudgetTransaction {
+      int Id PK
+      decimal Amount
+      int FiscalYear_Year
+      int FiscalYear_StartMonth
+      datetime TransactionDate
+      bool IsIncome
+      int GroupId FK
+    }
+
+    Group ||--o{ User : GroupId
+    Group ||--o{ BudgetRequest : GroupId
+    Group ||--o{ BudgetTransaction : GroupId
+    User ||--o{ BudgetRequest : UserId
+    BudgetRequest ||--o{ RequestEvidence : BudgetRequestId
+    BudgetRequest ||--o{ RequestStatusChange : BudgetRequestId
 ```
 
 ### 複合インデックスについて
@@ -237,102 +237,109 @@ erDiagram
 
 > 補足: このインデックスは先頭キーが `BudgetRequestId` のため、`ChangedAt` 単体条件の検索では効果が出にくい場合があります。
 
-### Domainクラス図
+### Domainクラス図（Entity / ValueObject / Enum）
 
 ```mermaid
 classDiagram
+direction LR
 
-class Group {
-  +int Id
-  +string Name
-  +List~BudgetTransaction~ BudgetTransactions
-  +List~BudgetRequest~ Requests
-  +AddBudgetTransaction(transaction)
-  +AddBudgetRequest(request, user)
-  +GetTotalBudgetForFiscalYear(fiscalYear) decimal
-  +GetRequestsByStatus(status) List~BudgetRequest~
+namespace Entity {
+  class Group {
+    +int Id
+    +string Name
+    +List~BudgetTransaction~ BudgetTransactions
+    +List~BudgetRequest~ Requests
+    +AddBudgetTransaction(transaction)
+    +AddBudgetRequest(request, user)
+    +GetTotalBudgetForFiscalYear(fiscalYear) decimal
+    +GetRequestsByStatus(status) List~BudgetRequest~
+  }
+
+  class BudgetRequest {
+    +int Id
+    +int UserId
+    +Money Amount
+    +FiscalYear FiscalYear
+    +DateTime RequestDate
+    +string Description
+    +List~RequestEvidence~ Evidences
+    +List~RequestStatusChange~ StatusHistory
+    +AddEvidence(filePath)
+    +UpdateStatus(newStatus)
+  }
+
+  class BudgetTransaction {
+    +int Id
+    +bool IsIncome
+    +Money Amount
+    +FiscalYear FiscalYear
+    +DateTime TransactionDate
+  }
+
+  class RequestEvidence {
+    +int Id
+    +string FilePath
+  }
+
+  class RequestStatusChange {
+    +int Id
+    +RequestStatus ChangedStatus
+    +DateTime ChangedAt
+  }
+
+  class User {
+    +int Id
+    +string Name
+    +int DiscordUserId
+    +int GroupId
+    +AccountRole Role
+    +bool IsActive
+    +Deactivate()
+    +Activate()
+  }
 }
 
-class BudgetRequest {
-  +int Id
-  +int UserId
-  +Money Amount
-  +FiscalYear FiscalYear
-  +DateTime RequestDate
-  +string Description
-  +List~RequestEvidence~ Evidences
-  +List~RequestStatusChange~ StatusHistory
-  +AddEvidence(filePath)
-  +UpdateStatus(newStatus)
+namespace ValueObject {
+  class Money {
+    +decimal Value
+  }
+
+  class FiscalYear {
+    +int Year
+    +int StartMonth
+  }
 }
 
-class BudgetTransaction {
-  +int Id
-  +bool IsIncome
-  +Money Amount
-  +FiscalYear FiscalYear
-  +DateTime TransactionDate
+namespace Enum {
+  class RequestStatus {
+    <<enumeration>>
+    Pending
+    Approved
+    Rejected
+    ApprovalCancelled
+  }
+
+  class AccountRole {
+    <<enumeration>>
+    GroupLeader
+    Accountant
+    President
+    Admin
+  }
 }
 
-class RequestEvidence {
-  +int Id
-  +string FilePath
-}
-
-class RequestStatusChange {
-  +int Id
-  +RequestStatus ChangedStatus
-  +DateTime ChangedAt
-}
-
-class User {
-  +int Id
-  +string Name
-  +int DiscordUserId
-  +int GroupId
-  +AccountRole Role
-  +bool IsActive
-  +Deactivate()
-  +Activate()
-}
-
-class Money {
-  +decimal Value
-}
-
-class FiscalYear {
-  +int Year
-  +int StartMonth
-}
-
-class RequestStatus {
-  <<enumeration>>
-  Pending
-  Approved
-  Rejected
-  ApprovalCancelled
-}
-
-class AccountRole {
-  <<enumeration>>
-  GroupLeader
-  Accountant
-  President
-  Admin
-}
-
-Group "1" *-- "0..*" BudgetTransaction : BudgetTransactions
-Group "1" *-- "0..*" BudgetRequest : Requests
-BudgetRequest "1" *-- "0..*" RequestEvidence : Evidences
-BudgetRequest "1" *-- "1..*" RequestStatusChange : StatusHistory
-BudgetRequest --> Money
-BudgetRequest --> FiscalYear
-BudgetTransaction --> Money
-BudgetTransaction --> FiscalYear
-RequestStatusChange --> RequestStatus
-User --> AccountRole
-User --> Group : GroupId
-Group ..> User : AddBudgetRequest(user)
+Entity.Group "1" *-- "0..*" Entity.BudgetTransaction : BudgetTransactions
+Entity.Group "1" *-- "0..*" Entity.BudgetRequest : Requests
+Entity.BudgetRequest "1" *-- "0..*" Entity.RequestEvidence : Evidences
+Entity.BudgetRequest "1" *-- "1..*" Entity.RequestStatusChange : StatusHistory
+Entity.BudgetRequest --> ValueObject.Money
+Entity.BudgetRequest --> ValueObject.FiscalYear
+Entity.BudgetTransaction --> ValueObject.Money
+Entity.BudgetTransaction --> ValueObject.FiscalYear
+Entity.RequestStatusChange --> Enum.RequestStatus
+Entity.User --> Enum.AccountRole
+Entity.User --> Entity.Group : GroupId
+Entity.Group ..> Entity.User : AddBudgetRequest(user)
 ```
 
 ## ライセンス
