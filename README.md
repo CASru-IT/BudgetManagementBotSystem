@@ -342,6 +342,112 @@ Entity.User --> Entity.Group : GroupId
 Entity.Group ..> Entity.User : AddBudgetRequest(user)
 ```
 
+### Domainクラス図（PlantUML）
+
+```plantuml
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+
+package "Entity" {
+  class Group {
+    +int Id
+    +string Name
+    +List<BudgetTransaction> BudgetTransactions
+    +List<BudgetRequest> Requests
+    +AddBudgetTransaction(transaction)
+    +AddBudgetRequest(request, user)
+    +GetTotalBudgetForFiscalYear(fiscalYear) : decimal
+    +GetRequestsByStatus(status) : List<BudgetRequest>
+  }
+
+  class BudgetRequest {
+    +int Id
+    +int UserId
+    +Money Amount
+    +FiscalYear FiscalYear
+    +DateTime RequestDate
+    +string Description
+    +List<RequestEvidence> Evidences
+    +List<RequestStatusChange> StatusHistory
+    +AddEvidence(filePath)
+    +UpdateStatus(newStatus)
+  }
+
+  class BudgetTransaction {
+    +int Id
+    +bool IsIncome
+    +Money Amount
+    +FiscalYear FiscalYear
+    +DateTime TransactionDate
+  }
+
+  class RequestEvidence {
+    +int Id
+    +string FilePath
+  }
+
+  class RequestStatusChange {
+    +int Id
+    +RequestStatus ChangedStatus
+    +DateTime ChangedAt
+  }
+
+  class User {
+    +int Id
+    +string Name
+    +int DiscordUserId
+    +int GroupId
+    +AccountRole Role
+    +bool IsActive
+    +Deactivate()
+    +Activate()
+  }
+}
+
+package "ValueObject" {
+  class Money {
+    +decimal Value
+  }
+
+  class FiscalYear {
+    +int Year
+    +int StartMonth
+  }
+}
+
+package "Enum" {
+  enum RequestStatus {
+    Pending
+    Approved
+    Rejected
+    ApprovalCancelled
+  }
+
+  enum AccountRole {
+    GroupLeader
+    Accountant
+    President
+    Admin
+  }
+}
+
+Group "1" *-- "0..*" BudgetTransaction : BudgetTransactions
+Group "1" *-- "0..*" BudgetRequest : Requests
+BudgetRequest "1" *-- "0..*" RequestEvidence : Evidences
+BudgetRequest "1" *-- "1..*" RequestStatusChange : StatusHistory
+BudgetRequest --> Money : uses
+BudgetRequest --> FiscalYear : uses
+BudgetTransaction --> Money : uses
+BudgetTransaction --> FiscalYear : uses
+RequestStatusChange --> RequestStatus : ChangedStatus
+User --> AccountRole : Role
+User --> Group : GroupId
+Group ..> User : AddBudgetRequest(user)
+
+@enduml
+```
+
 ## ライセンス
 
 このプロジェクトのライセンスはMITライセンスです。
