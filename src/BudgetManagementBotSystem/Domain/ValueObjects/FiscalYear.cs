@@ -12,6 +12,12 @@ public class FiscalYear
         if (DateTime.Now.Month < FiscalYearStartMonth) Year -= 1;
     }
 
+    public FiscalYear(int year, int startMonth)
+    {
+        Year = year;
+        FiscalYearStartMonth = startMonth;
+    }
+
     public override string ToString()
     {
         return Year.ToString();
