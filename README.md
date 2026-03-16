@@ -50,9 +50,9 @@ cp src/BudgetManagementBotSystem/sample.appsettings.json src/BudgetManagementBot
   },
   "ConnectionStrings": {
     "Db": "Host=localhost;Database=budget;Username=postgres;Password=YOUR_PASSWORD"
-    },
-    "FiscalYearStartMonth": {
-        "Month": 4
+  },
+  "FiscalYearStartMonth": {
+    "Month": 4
   }
 }
 ```
@@ -174,28 +174,29 @@ erDiagram
     GROUPS ||--o{ BUDGET_REQUESTS : GroupId
     USERS ||--o{ BUDGET_REQUESTS : UserId
     BUDGET_REQUESTS ||--o{ REQUEST_EVIDENCES : BudgetRequestId
-    BUDGET_REQUESTS ||--o{ REQUEST_STATUS_HISTORIES : BudgetRequestId
+    BUDGET_REQUESTS ||--o{ REQUEST_STATUS_CHANGES : BudgetRequestId
 
     GROUPS {
         int Id PK
-        string Name
+        string Name UK
     }
 
     USERS {
         int Id PK
         string Name
-        int DiscordUserId
+        int DiscordUserId UK
         int GroupId FK
-        int Role
+        string Role
         bool IsActive
     }
 
     BUDGET_TRANSACTIONS {
         int Id PK
-        bool IsIncome
         decimal Amount
-        int FiscalYear
+        int FiscalYear_Year
+        int FiscalYear_StartMonth
         datetime TransactionDate
+        bool IsIncome
         int GroupId FK
     }
 
@@ -203,7 +204,8 @@ erDiagram
         int Id PK
         int UserId FK
         decimal Amount
-        int FiscalYear
+        int FiscalYear_Year
+        int FiscalYear_StartMonth
         datetime RequestDate
         string Description
         int GroupId FK
@@ -215,70 +217,122 @@ erDiagram
         int BudgetRequestId FK
     }
 
-    REQUEST_STATUS_HISTORIES {
+    REQUEST_STATUS_CHANGES {
         int Id PK
-        int ChangedStatus
+        string ChangedStatus
         datetime ChangedAt
         int BudgetRequestId FK
     }
 ```
 
-### クラス図
+### 複合インデックスについて
+
+`RequestStatusChange` には、`BudgetRequestId` と `ChangedAt` の**複合インデックス**を設定しています。
+
+- 設定箇所: `e.HasIndex("BudgetRequestId", nameof(RequestStatusChange.ChangedAt));`
+- 並び順は `(BudgetRequestId, ChangedAt)`（先頭キーは `BudgetRequestId`）
+- 主な目的は「特定の申請の履歴を時系列で取得するクエリ」の高速化
+- 例: `WHERE BudgetRequestId = ? ORDER BY ChangedAt`
+- `IsUnique()` を付けていないため、同じ `BudgetRequestId` と `ChangedAt` の組み合わせは重複可能です
+
+> 補足: このインデックスは先頭キーが `BudgetRequestId` のため、`ChangedAt` 単体条件の検索では効果が出にくい場合があります。
+
+### Domainクラス図
 
 ```mermaid
 classDiagram
-    class Group {
-        +int Id
-        +string Name
-        +List~BudgetTransaction~ BudgetTransactions
-        +List~BudgetRequest~ Requests
-    }
 
-    class User {
-        +int Id
-        +string Name
-        +int DiscordUserId
-        +int GroupId
-        +AccountRole Role
-        +bool IsActive
-    }
+class Group {
+  +int Id
+  +string Name
+  +List~BudgetTransaction~ BudgetTransactions
+  +List~BudgetRequest~ Requests
+  +AddBudgetTransaction(transaction)
+  +AddBudgetRequest(request, user)
+  +GetTotalBudgetForFiscalYear(fiscalYear) decimal
+  +GetRequestsByStatus(status) List~BudgetRequest~
+}
 
-    class BudgetTransaction {
-        +int Id
-        +bool IsIncome
-        +Money Amount
-        +FiscalYear FiscalYear
-        +DateTime TransactionDate
-    }
+class BudgetRequest {
+  +int Id
+  +int UserId
+  +Money Amount
+  +FiscalYear FiscalYear
+  +DateTime RequestDate
+  +string Description
+  +List~RequestEvidence~ Evidences
+  +List~RequestStatusChange~ StatusHistory
+  +AddEvidence(filePath)
+  +UpdateStatus(newStatus)
+}
 
-    class BudgetRequest {
-        +int Id
-        +int UserId
-        +Money Amount
-        +FiscalYear FiscalYear
-        +DateTime RequestDate
-        +string Description
-        +List~RequestEvidence~ Evidences
-        +List~RequestStatusHistory~ StatusHistory
-    }
+class BudgetTransaction {
+  +int Id
+  +bool IsIncome
+  +Money Amount
+  +FiscalYear FiscalYear
+  +DateTime TransactionDate
+}
 
-    class RequestEvidence {
-        +int Id
-        +string FilePath
-    }
+class RequestEvidence {
+  +int Id
+  +string FilePath
+}
 
-    class RequestStatusHistory {
-        +int Id
-        +RequestStatus ChangedStatus
-        +DateTime ChangedAt
-    }
+class RequestStatusChange {
+  +int Id
+  +RequestStatus ChangedStatus
+  +DateTime ChangedAt
+}
 
-    Group "1" --> "*" BudgetTransaction : BudgetTransactions
-    Group "1" --> "*" BudgetRequest : Requests
-    Group ..> User : referenced by User.GroupId
-    BudgetRequest "1" --> "*" RequestEvidence : Evidences
-    BudgetRequest "1" --> "*" RequestStatusHistory : StatusHistory
-    BudgetRequest ..> User : UserId reference
+class User {
+  +int Id
+  +string Name
+  +int DiscordUserId
+  +int GroupId
+  +AccountRole Role
+  +bool IsActive
+  +Deactivate()
+  +Activate()
+}
+
+class Money {
+  +decimal Value
+}
+
+class FiscalYear {
+  +int Year
+  +int StartMonth
+}
+
+class RequestStatus {
+  <<enumeration>>
+  Pending
+  Approved
+  Rejected
+  ApprovalCancelled
+}
+
+class AccountRole {
+  <<enumeration>>
+  GroupLeader
+  Accountant
+  President
+  Admin
+}
+
+Group "1" *-- "0..*" BudgetTransaction : BudgetTransactions
+Group "1" *-- "0..*" BudgetRequest : Requests
+BudgetRequest "1" *-- "0..*" RequestEvidence : Evidences
+BudgetRequest "1" *-- "1..*" RequestStatusChange : StatusHistory
+BudgetRequest --> Money
+BudgetRequest --> FiscalYear
+BudgetTransaction --> Money
+BudgetTransaction --> FiscalYear
+RequestStatusChange --> RequestStatus
+User --> AccountRole
+User --> Group : GroupId
+Group ..> User : AddBudgetRequest(user)
 ```
 
 ## ライセンス
