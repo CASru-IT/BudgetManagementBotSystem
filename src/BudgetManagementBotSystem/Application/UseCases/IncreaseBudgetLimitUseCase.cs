@@ -18,9 +18,11 @@ public class IncreaseBudgetLimitUseCase
     {
         Group? group = await _groupRepository.GetByIdAsync(groupId);
 
-        if (group == null) throw new InvalidOperationException("Group not found");
+        if (group == null) throw new ArgumentNullException(nameof(groupId), "Group not found");
 
-        FiscalYear currentFiscalYear = new FiscalYear(DateTime.Now.Year, _configuration.GetValue<int>("FiscalYearStartMonth"));
+        if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount), "Amount must be non-negative");
+
+        FiscalYear currentFiscalYear = new FiscalYear(DateTime.Now.Year, _configuration.GetValue<int>("FiscalYearStartMonth:Month"));
         BudgetTransaction transaction = new BudgetTransaction(true, amount, currentFiscalYear);
         group.AddBudgetTransaction(transaction);
     }

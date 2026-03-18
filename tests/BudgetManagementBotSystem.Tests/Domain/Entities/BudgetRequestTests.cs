@@ -69,7 +69,7 @@ public class BudgetRequestTests
         var request = Create();
         request.UpdateStatus(RequestStatus.Rejected);
 
-        Assert.Throws<InvalidOperationException>(() =>
-        request.UpdateStatus(RequestStatus.Approved));
+        Assert.Throws<InvalidOperationException>(
+            () => request.UpdateStatus(RequestStatus.Approved));
     }
 }
