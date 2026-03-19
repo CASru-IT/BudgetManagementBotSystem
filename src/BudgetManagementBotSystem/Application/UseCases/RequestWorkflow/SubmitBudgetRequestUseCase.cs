@@ -25,7 +25,7 @@ public class SubmitBudgetRequestUseCase
         _configuration = configuration;
     }
 
-    public async Task ExecuteAsync(string userId, int groupId, decimal amount, string description)
+    public async Task ExecuteAsync(int userId, int groupId, decimal amount, string description)
     {
         User? user = await _userRepository.GetByIdAsync(userId);
         if (user == null) throw new ArgumentNullException(nameof(userId), "User not found");

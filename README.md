@@ -12,9 +12,11 @@ Discord 上で動作する予算管理 Bot システムです。
 - `/test` コマンド（疎通確認）
 - ドメイン層（`Group` / `User` / `BudgetRequest` / `BudgetTransaction` など）
 - `SubmitBudgetRequestUseCase`
+  - 入力: `userId(int)`, `groupId(int)`, `amount(decimal)`, `description(string)`
   - 申請作成
   - 予算上限チェック（不足時は `Rejected`）
 - `IncreaseBudgetLimitUseCase`
+  - 入力: `groupId(int)`, `amount(decimal)`
   - 収入トランザクション追加による予算増額
 - EF Core `BudgetManagementDbContext` とマッピング定義
 

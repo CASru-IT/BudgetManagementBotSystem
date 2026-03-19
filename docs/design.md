@@ -16,10 +16,10 @@
 
 ### SubmitBudgetRequestUseCase
 
-- 入力: `userId`, `groupId`, `amount`, `description`
+- 入力: `userId(int)`, `groupId(int)`, `amount(decimal)`, `description(string)`
 - 処理:
-  1. `IUserRepository.GetByIdAsync` でユーザー取得
-  2. `IGroupRepository.GetByIdAsync` でグループ取得
+  1. `IUserRepository.GetByIdAsync(int userId)` でユーザー取得
+  2. `IGroupRepository.GetByIdAsync(int groupId)` でグループ取得
   3. `amount` のバリデーション（負数禁止）
   4. `BudgetRequest` 生成・グループへ追加
   5. `BudgetRequestBudgetLimitCheckService` で予算上限判定
@@ -28,9 +28,9 @@
 
 ### IncreaseBudgetLimitUseCase
 
-- 入力: `groupId`, `amount`
+- 入力: `groupId(int)`, `amount(decimal)`
 - 処理:
-  1. `IGroupRepository.GetByIdAsync` でグループ取得
+  1. `IGroupRepository.GetByIdAsync(int groupId)` でグループ取得
   2. `amount` のバリデーション（負数禁止）
   3. 会計年度設定値から `FiscalYear` を生成
   4. 収入 `BudgetTransaction` を追加
@@ -55,7 +55,7 @@ erDiagram
     USERS {
         int Id PK
         string Name
-        int DiscordUserId UK
+      ulong DiscordUserId UK
         int GroupId FK
         string Role
         bool IsActive
@@ -165,7 +165,7 @@ class User {
   <<Entity>>
   +int Id
   +string Name
-  +int DiscordUserId
+  +ulong DiscordUserId
   +int GroupId
   +AccountRole Role
   +bool IsActive
@@ -233,8 +233,6 @@ Group ..> User : AddBudgetRequest(user)
 
 ## 既知の不整合・未実装
 
-- `IUserRepository` の引数型（`string userId`）と `User.Id`（`int`）に不整合がある
-- `IUserRepository.GetByDiscordUserIdAsync(string)` と `User.DiscordUserId`（`int`）に不整合がある
 - `Infrastructure/Persistence/Repository/EfCoreGroupRepository.cs` は未実装（空ファイル）
 - `IUserRepository` のインフラ実装が未作成
 - Discord コマンドは現状 `/test` のみ

@@ -15,12 +15,12 @@ public class SubmitBudgetRequestUseCaseTests
     public async Task ExecuteAsync_WithValidInputAndWithinBudget_AddsPendingRequestAndUpdatesGroup()
     {
         // Arrange
-        const string userId = "user-1";
+        const int userId = 1;
         const int groupId = 1;
         const decimal amount = 50_000m;
         const string description = "備品購入";
 
-        var user = new User("Test User", 12345, AccountRole.Accountant);
+        var user = new User("Test User", 12345UL, AccountRole.Accountant);
         var group = new Group("Test Group");
         group.AddBudgetTransaction(new BudgetTransaction(true, 200_000m, new FiscalYear(4)));
 
@@ -55,11 +55,11 @@ public class SubmitBudgetRequestUseCaseTests
     public async Task ExecuteAsync_WhenBudgetIsInsufficient_RejectsRequestAndUpdatesGroup()
     {
         // Arrange
-        const string userId = "user-1";
+        const int userId = 1;
         const int groupId = 1;
         const decimal amount = 10_000m;
 
-        var user = new User("Test User", 12345, AccountRole.Accountant);
+        var user = new User("Test User", 12345UL, AccountRole.Accountant);
         var group = new Group("Test Group"); // 予算0
 
         var mockUserRepository = new Mock<IUserRepository>();
@@ -91,7 +91,7 @@ public class SubmitBudgetRequestUseCaseTests
     public async Task ExecuteAsync_WhenUserNotFound_ThrowsArgumentNullException()
     {
         // Arrange
-        const string userId = "missing-user";
+        const int userId = 999;
         const int groupId = 1;
 
         var mockUserRepository = new Mock<IUserRepository>();
@@ -119,10 +119,10 @@ public class SubmitBudgetRequestUseCaseTests
     public async Task ExecuteAsync_WhenGroupNotFound_ThrowsArgumentNullException()
     {
         // Arrange
-        const string userId = "user-1";
+        const int userId = 1;
         const int groupId = 999;
 
-        var user = new User("Test User", 12345, AccountRole.Accountant);
+        var user = new User("Test User", 12345UL, AccountRole.Accountant);
 
         var mockUserRepository = new Mock<IUserRepository>();
         mockUserRepository.Setup(r => r.GetByIdAsync(userId)).ReturnsAsync(user);
@@ -151,10 +151,10 @@ public class SubmitBudgetRequestUseCaseTests
     public async Task ExecuteAsync_WhenAmountIsNegative_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        const string userId = "user-1";
+        const int userId = 1;
         const int groupId = 1;
 
-        var user = new User("Test User", 12345, AccountRole.Accountant);
+        var user = new User("Test User", 12345UL, AccountRole.Accountant);
         var group = new Group("Test Group");
 
         var mockUserRepository = new Mock<IUserRepository>();
@@ -184,11 +184,11 @@ public class SubmitBudgetRequestUseCaseTests
     public async Task ExecuteAsync_UsesFiscalYearStartMonth_FromConfiguration()
     {
         // Arrange
-        const string userId = "user-1";
+        const int userId = 1;
         const int groupId = 1;
         const int fiscalYearStartMonth = 7;
 
-        var user = new User("Test User", 12345, AccountRole.Accountant);
+        var user = new User("Test User", 12345UL, AccountRole.Accountant);
         var group = new Group("Test Group");
         group.AddBudgetTransaction(new BudgetTransaction(true, 100_000m, new FiscalYear(fiscalYearStartMonth)));
 

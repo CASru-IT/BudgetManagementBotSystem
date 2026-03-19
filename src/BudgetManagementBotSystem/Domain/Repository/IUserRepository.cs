@@ -4,10 +4,10 @@ namespace BudgetManagementBotSystem.Domain.Repository;
 
 public interface IUserRepository
 {
-    Task<User?> GetByIdAsync(string userId);
-    Task<User?> GetByDiscordUserIdAsync(string discordUserId);
-    Task<bool> IsUserExistsAsync(string userId);
+    Task<User?> GetByIdAsync(int userId);
+    Task<User?> GetByDiscordUserIdAsync(ulong discordUserId);
+    Task<bool> IsUserExistsAsync(int userId);
     Task AddAsync(User user);
     Task UpdateAsync(User user);
-    Task DeleteAsync(string userId);
+    Task DeleteAsync(int userId);
 }
