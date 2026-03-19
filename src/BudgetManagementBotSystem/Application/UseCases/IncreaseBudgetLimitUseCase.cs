@@ -22,8 +22,10 @@ public class IncreaseBudgetLimitUseCase
 
         if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount), "Amount must be non-negative");
 
-        FiscalYear currentFiscalYear = new FiscalYear(DateTime.Now.Year, _configuration.GetValue<int>("FiscalYearStartMonth:Month"));
+        FiscalYear currentFiscalYear = new FiscalYear(_configuration.GetValue<int>("FiscalYearStartMonth:Month"));
         BudgetTransaction transaction = new BudgetTransaction(true, amount, currentFiscalYear);
         group.AddBudgetTransaction(transaction);
+
+        await _groupRepository.UpdateAsync(group);
     }
 }
