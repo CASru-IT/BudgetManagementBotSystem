@@ -28,10 +28,12 @@ public class SubmitBudgetRequestUseCase
     public async Task ExecuteAsync(string userId, int groupId, decimal amount, string description)
     {
         User? user = await _userRepository.GetByIdAsync(userId);
-        if (user == null) throw new ArgumentException("User not found", nameof(userId));
+        if (user == null) throw new ArgumentNullException(nameof(userId), "User not found");
 
         Group? group = await _groupRepository.GetByIdAsync(groupId);
-        if (group == null) throw new ArgumentException("Group not found", nameof(groupId));
+        if (group == null) throw new ArgumentNullException(nameof(groupId), "Group not found");
+
+        if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount), "Amount must be non-negative");
 
         BudgetRequest request = new BudgetRequest(user.Id, new Money(amount), new FiscalYear(_configuration.GetValue<int>("FiscalYearStartMonth:Month")), description);
         group.AddBudgetRequest(request, user);

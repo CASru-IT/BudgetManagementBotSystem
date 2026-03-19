@@ -6,6 +6,10 @@ public class Money
 
     public Money(decimal value)
     {
+        if (value < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(value), "Money value cannot be negative");
+        }
         this.Value = value;
     }
 
@@ -17,7 +21,7 @@ public class Money
     {
         if (a.Value < b.Value)
         {
-            throw new InvalidOperationException("Resulting Value cannot be negative.");
+            throw new ArgumentOutOfRangeException(nameof(b), "Resulting money value cannot be negative");
         }
         return new Money(a.Value - b.Value);
     }
