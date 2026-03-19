@@ -17,7 +17,6 @@ public class IncreaseBudgetLimitUseCase
     public async Task ExecuteAsync(int groupId, decimal amount)
     {
         Group? group = await _groupRepository.GetByIdAsync(groupId);
-
         if (group == null) throw new ArgumentNullException(nameof(groupId), "Group not found");
 
         if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount), "Amount must be non-negative");
