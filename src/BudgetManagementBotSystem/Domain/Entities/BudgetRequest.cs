@@ -36,6 +36,11 @@ public class BudgetRequest
         CheckStatusTransition(newStatus);
         StatusHistory.Add(new RequestStatusChange(newStatus, DateTime.Now));
     }
+    public void UpdateStatus(RequestStatus newStatus, User changedBy)
+    {
+        CheckStatusTransition(newStatus, changedBy);
+        StatusHistory.Add(new RequestStatusChange(newStatus, DateTime.Now));
+    }
 
     private void CheckStatusTransition(RequestStatus newStatus)
     {
@@ -66,6 +71,45 @@ public class BudgetRequest
                 throw new InvalidOperationException("ApprovalCancelledからは遷移できません。");
             default:
                 throw new InvalidOperationException("不正な現在のステータスです。");
+        }
+    }
+    private void CheckStatusTransition(RequestStatus newStatus, User changedBy)
+    {
+        if (StatusHistory.Count == 0 && newStatus != RequestStatus.Pending)
+        {
+            throw new ArgumentOutOfRangeException(nameof(newStatus), "最初のステータスはPendingでなければなりません。");
+        }
+
+        var currentStatus = StatusHistory.Last().ChangedStatus;
+        switch (changedBy.Role)
+        {
+            case AccountRole.Accountant:
+                break;
+            case AccountRole.Admin:
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(changedBy), "不正なユーザーロールです。");
+        }
+        switch (currentStatus)
+        {
+            case RequestStatus.Pending:
+                if (newStatus != RequestStatus.Approved && newStatus != RequestStatus.Rejected)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(newStatus), "PendingからはApprovedまたはRejectedにしか遷移できません。");
+                }
+                break;
+            case RequestStatus.Approved:
+                if (newStatus != RequestStatus.ApprovalCancelled)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(newStatus), "ApprovedからはApprovalCancelledにしか遷移できません。");
+                }
+                break;
+            case RequestStatus.Rejected:
+                throw new ArgumentOutOfRangeException(nameof(newStatus), "Rejectedからは遷移できません。");
+            case RequestStatus.ApprovalCancelled:
+                throw new ArgumentOutOfRangeException(nameof(newStatus), "ApprovalCancelledからは遷移できません。");
+            default:
+                throw new ArgumentOutOfRangeException(nameof(newStatus), "不正な現在のステータスです。");
         }
     }
 }
