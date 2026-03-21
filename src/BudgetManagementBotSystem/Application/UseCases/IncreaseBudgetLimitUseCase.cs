@@ -14,6 +14,7 @@ public class IncreaseBudgetLimitUseCase
         _groupRepository = groupRepository;
         _configuration = configuration;
     }
+    
     public async Task ExecuteAsync(int groupId, decimal amount)
     {
         Group? group = await _groupRepository.GetByIdAsync(groupId);
