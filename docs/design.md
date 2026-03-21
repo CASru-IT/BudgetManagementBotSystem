@@ -2,6 +2,10 @@
 
 このドキュメントは、現行実装（2026-03 時点）に合わせた設計資料です。
 
+## 関連ドキュメント
+
+- [実装状況](implementation.md)
+
 ## アーキテクチャ概要
 
 - Layered Architecture を採用
@@ -21,7 +25,7 @@
   1. `IUserRepository.GetByIdAsync(int userId)` でユーザー取得
   2. `IGroupRepository.GetByIdAsync(int groupId)` でグループ取得
   3. `amount` のバリデーション（負数禁止）
-  4. `BudgetRequest` 生成・グループへ追加
+  4. `Group.CreateBudgetRequest(user, amount, fiscalYear, description)` で申請生成
   5. `Group.IsWithinBudgetLimit` で予算上限判定
   6. 上限超過時は `Rejected` に遷移
   7. `IGroupRepository.UpdateAsync` で保存
@@ -135,15 +139,15 @@ class Group {
   <<Entity>>
   +int Id
   +string Name
-  +List~BudgetTransaction~ BudgetTransactions
-  +List~BudgetRequest~ Requests
+  +IReadOnlyCollection~BudgetTransaction~ BudgetTransactions
+  +IReadOnlyCollection~BudgetRequest~ Requests
   +AddBudgetTransaction(transaction) void
   +CreateBudgetRequest(user, amount, fiscalYear, description) int
   +AddBudgetRequestEvidence(requestId, filePath) void
   +UpdateBudgetRequestStatus(requestId, newStatus) void
   +UpdateBudgetRequestStatus(requestId, newStatus, changedBy) void
   +GetTotalBudgetForFiscalYear(fiscalYear) decimal
-  +GetRequestsByStatus(status) List~BudgetRequest~
+  +GetRequestsByStatus(status) IReadOnlyCollection~BudgetRequest~
 }
 
 class BudgetRequest {
@@ -158,6 +162,7 @@ class BudgetRequest {
   +List~RequestStatusChange~ StatusHistory
   +AddEvidence(filePath) void
   +UpdateStatus(newStatus) void
+  +UpdateStatus(newStatus, changedBy) void
 }
 
 class BudgetTransaction {
