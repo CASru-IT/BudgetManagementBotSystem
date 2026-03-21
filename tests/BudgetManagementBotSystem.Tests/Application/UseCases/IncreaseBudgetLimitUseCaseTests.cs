@@ -30,7 +30,7 @@ public class IncreaseBudgetLimitUseCaseTests
 
         // Assert
         Assert.Single(group.BudgetTransactions);
-        var transaction = group.BudgetTransactions[0];
+        var transaction = group.BudgetTransactions.First();
         Assert.True(transaction.IsIncome);
         Assert.Equal(amount, transaction.Amount.Value);
     }
@@ -102,7 +102,7 @@ public class IncreaseBudgetLimitUseCaseTests
 
         // Assert
         Assert.Single(group.BudgetTransactions);
-        var transaction = group.BudgetTransactions[0];
+        var transaction = group.BudgetTransactions.First();
         Assert.Equal(fiscalYearStartMonth, transaction.FiscalYear.StartMonth);
     }
 
@@ -128,7 +128,7 @@ public class IncreaseBudgetLimitUseCaseTests
 
         // Assert
         Assert.Single(group.BudgetTransactions);
-        var transaction = group.BudgetTransactions[0];
+        var transaction = group.BudgetTransactions.First();
         Assert.Equal(fiscalYearStartMonth, transaction.FiscalYear.StartMonth);
     }
 

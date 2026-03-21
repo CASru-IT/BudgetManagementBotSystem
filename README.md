@@ -15,6 +15,12 @@ Discord 上で動作する予算管理 Bot システムです。
   - 入力: `userId(int)`, `groupId(int)`, `amount(decimal)`, `description(string)`
   - 申請作成
   - 予算上限チェック（不足時は `Rejected`）
+- `ApproveBudgetRequestUseCase`
+  - 入力: `groupId(int)`, `requestId(int)`, `changedByUserId(int)`
+  - 申請ステータスを `Approved` に更新
+- `RejectBudgetRequestUseCase`
+  - 入力: `groupId(int)`, `requestId(int)`, `changedByUserId(int)`
+  - 申請ステータスを `Rejected` に更新
 - `IncreaseBudgetLimitUseCase`
   - 入力: `groupId(int)`, `amount(decimal)`
   - 収入トランザクション追加による予算増額
@@ -24,6 +30,8 @@ Discord 上で動作する予算管理 Bot システムです。
 
 - `BudgetRequest` のステータス遷移ルール
 - `SubmitBudgetRequestUseCase` の正常系・異常系
+- `ApproveBudgetRequestUseCase` の正常系・異常系
+- `RejectBudgetRequestUseCase` の正常系・異常系
 - `IncreaseBudgetLimitUseCase` の正常系・異常系
 
 ### 未実装 / 雛形段階

@@ -2,7 +2,6 @@ using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 using BudgetManagementBotSystem.Domain.Entities;
 using BudgetManagementBotSystem.Domain.Enums;
 using BudgetManagementBotSystem.Domain.Repository;
-using BudgetManagementBotSystem.Domain.Services;
 using BudgetManagementBotSystem.Domain.ValueObjects;
 using Microsoft.Extensions.Configuration;
 using Moq;
@@ -31,11 +30,9 @@ public class SubmitBudgetRequestUseCaseTests
         mockGroupRepository.Setup(r => r.GetByIdAsync(groupId)).ReturnsAsync(group);
 
         var configuration = CreateConfiguration(4);
-        var service = new BudgetRequestBudgetLimitCheckService();
         var useCase = new SubmitBudgetRequestUseCase(
             mockUserRepository.Object,
             mockGroupRepository.Object,
-            service,
             configuration);
 
         // Act
@@ -69,11 +66,9 @@ public class SubmitBudgetRequestUseCaseTests
         mockGroupRepository.Setup(r => r.GetByIdAsync(groupId)).ReturnsAsync(group);
 
         var configuration = CreateConfiguration(4);
-        var service = new BudgetRequestBudgetLimitCheckService();
         var useCase = new SubmitBudgetRequestUseCase(
             mockUserRepository.Object,
             mockGroupRepository.Object,
-            service,
             configuration);
 
         // Act
@@ -99,12 +94,9 @@ public class SubmitBudgetRequestUseCaseTests
 
         var mockGroupRepository = new Mock<IGroupRepository>();
         var configuration = CreateConfiguration(4);
-        var service = new BudgetRequestBudgetLimitCheckService();
-
         var useCase = new SubmitBudgetRequestUseCase(
             mockUserRepository.Object,
             mockGroupRepository.Object,
-            service,
             configuration);
 
         // Act & Assert
@@ -131,12 +123,9 @@ public class SubmitBudgetRequestUseCaseTests
         mockGroupRepository.Setup(r => r.GetByIdAsync(groupId)).ReturnsAsync((Group?)null);
 
         var configuration = CreateConfiguration(4);
-        var service = new BudgetRequestBudgetLimitCheckService();
-
         var useCase = new SubmitBudgetRequestUseCase(
             mockUserRepository.Object,
             mockGroupRepository.Object,
-            service,
             configuration);
 
         // Act & Assert
@@ -164,12 +153,9 @@ public class SubmitBudgetRequestUseCaseTests
         mockGroupRepository.Setup(r => r.GetByIdAsync(groupId)).ReturnsAsync(group);
 
         var configuration = CreateConfiguration(4);
-        var service = new BudgetRequestBudgetLimitCheckService();
-
         var useCase = new SubmitBudgetRequestUseCase(
             mockUserRepository.Object,
             mockGroupRepository.Object,
-            service,
             configuration);
 
         // Act & Assert
@@ -199,12 +185,9 @@ public class SubmitBudgetRequestUseCaseTests
         mockGroupRepository.Setup(r => r.GetByIdAsync(groupId)).ReturnsAsync(group);
 
         var configuration = CreateConfiguration(fiscalYearStartMonth);
-        var service = new BudgetRequestBudgetLimitCheckService();
-
         var useCase = new SubmitBudgetRequestUseCase(
             mockUserRepository.Object,
             mockGroupRepository.Object,
-            service,
             configuration);
 
         // Act

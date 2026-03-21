@@ -1,8 +1,7 @@
-using BudgetManagementBotSystem.Domain.Entities;
 using BudgetManagementBotSystem.Domain.Repository;
-using BudgetManagementBotSystem.Domain.Services;
 using BudgetManagementBotSystem.Domain.ValueObjects;
 using BudgetManagementBotSystem.Domain.Enums;
+using BudgetManagementBotSystem.Domain.Entities;
 
 namespace BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 
@@ -10,18 +9,15 @@ public class SubmitBudgetRequestUseCase
 {
     private readonly IUserRepository _userRepository;
     private readonly IGroupRepository _groupRepository;
-    private readonly BudgetRequestBudgetLimitCheckService _budgetLimitCheckService;
     private readonly IConfiguration _configuration;
 
     public SubmitBudgetRequestUseCase(
         IUserRepository userRepository,
         IGroupRepository groupRepository,
-        BudgetRequestBudgetLimitCheckService budgetLimitCheckService,
         IConfiguration configuration)
     {
         _userRepository = userRepository;
         _groupRepository = groupRepository;
-        _budgetLimitCheckService = budgetLimitCheckService;
         _configuration = configuration;
     }
 
@@ -35,10 +31,19 @@ public class SubmitBudgetRequestUseCase
 
         if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount), "Amount must be non-negative");
 
-        BudgetRequest request = new BudgetRequest(user.Id, new Money(amount), new FiscalYear(_configuration.GetValue<int>("FiscalYearStartMonth:Month")), description);
-        group.AddBudgetRequest(request, user);
+        var requestAmount = new Money(amount);
+        var fiscalYear = new FiscalYear(_configuration.GetValue<int>("FiscalYearStartMonth:Month"));
 
-        if (!_budgetLimitCheckService.IsWithinBudgetLimit(request, group)) request.UpdateStatus(RequestStatus.Rejected);
+        int requestId = group.CreateBudgetRequest(
+            user,
+            requestAmount,
+            fiscalYear,
+            description);
+
+        if (!group.IsWithinBudgetLimit(requestAmount, fiscalYear))
+        {
+            group.UpdateBudgetRequestStatus(requestId, RequestStatus.Rejected);
+        }
 
         await _groupRepository.UpdateAsync(group);
     }

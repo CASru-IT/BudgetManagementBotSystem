@@ -22,10 +22,7 @@ public class RejectBudgetRequestUseCase
         User? changedByUser = await _userRepository.GetByIdAsync(changedByUserId);
         if (changedByUser == null) throw new ArgumentNullException(nameof(changedByUserId), "User not found");
 
-        BudgetRequest? request = group.Requests.FirstOrDefault(r => r.Id == requestId);
-        if (request == null) throw new ArgumentNullException(nameof(requestId), "Budget request not found");
-
-        request.UpdateStatus(RequestStatus.Rejected, changedByUser);
+        group.UpdateBudgetRequestStatus(requestId, RequestStatus.Rejected, changedByUser);
 
         await _groupRepository.UpdateAsync(group);
     }

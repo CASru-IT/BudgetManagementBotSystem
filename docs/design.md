@@ -22,7 +22,7 @@
   2. `IGroupRepository.GetByIdAsync(int groupId)` でグループ取得
   3. `amount` のバリデーション（負数禁止）
   4. `BudgetRequest` 生成・グループへ追加
-  5. `BudgetRequestBudgetLimitCheckService` で予算上限判定
+  5. `Group.IsWithinBudgetLimit` で予算上限判定
   6. 上限超過時は `Rejected` に遷移
   7. `IGroupRepository.UpdateAsync` で保存
 
@@ -35,6 +35,24 @@
   3. 会計年度設定値から `FiscalYear` を生成
   4. 収入 `BudgetTransaction` を追加
   5. `IGroupRepository.UpdateAsync` で保存
+
+### ApproveBudgetRequestUseCase
+
+- 入力: `groupId(int)`, `requestId(int)`, `changedByUserId(int)`
+- 処理:
+  1. `IGroupRepository.GetByIdAsync(int groupId)` でグループ取得
+  2. `IUserRepository.GetByIdAsync(int changedByUserId)` で更新者取得
+  3. `Group.UpdateBudgetRequestStatus(requestId, RequestStatus.Approved, changedByUser)` を実行
+  4. `IGroupRepository.UpdateAsync` で保存
+
+### RejectBudgetRequestUseCase
+
+- 入力: `groupId(int)`, `requestId(int)`, `changedByUserId(int)`
+- 処理:
+  1. `IGroupRepository.GetByIdAsync(int groupId)` でグループ取得
+  2. `IUserRepository.GetByIdAsync(int changedByUserId)` で更新者取得
+  3. `Group.UpdateBudgetRequestStatus(requestId, RequestStatus.Rejected, changedByUser)` を実行
+  4. `IGroupRepository.UpdateAsync` で保存
 
 ## ER図
 
@@ -120,7 +138,10 @@ class Group {
   +List~BudgetTransaction~ BudgetTransactions
   +List~BudgetRequest~ Requests
   +AddBudgetTransaction(transaction) void
-  +AddBudgetRequest(request, user) void
+  +CreateBudgetRequest(user, amount, fiscalYear, description) int
+  +AddBudgetRequestEvidence(requestId, filePath) void
+  +UpdateBudgetRequestStatus(requestId, newStatus) void
+  +UpdateBudgetRequestStatus(requestId, newStatus, changedBy) void
   +GetTotalBudgetForFiscalYear(fiscalYear) decimal
   +GetRequestsByStatus(status) List~BudgetRequest~
 }
@@ -215,7 +236,7 @@ BudgetTransaction --> FiscalYear
 RequestStatusChange --> RequestStatus
 User --> AccountRole
 User --> Group : GroupId
-Group ..> User : AddBudgetRequest(user)
+Group ..> User : CreateBudgetRequest(user)
 ```
 
 ## ドメインルール
