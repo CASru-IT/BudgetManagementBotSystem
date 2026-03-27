@@ -30,6 +30,8 @@
   - 収入トランザクション追加による予算増額
 - EF Core `BudgetManagementDbContext` とマッピング定義
 - `EfUnitOfWork`（`IUnitOfWork` 実装）
+- `EfCoreGroupRepository`（`IGroupRepository` 実装）
+- `EfCoreUserRepository`（`IUserRepository` 実装）
 
 ### テスト実装済み
 
@@ -42,10 +44,10 @@
 
 ### 未実装 / 実装途中
 
-- `Infrastructure/Persistence/EfCoreGroupRepository.cs`（メソッドはあるが `NotImplementedException`）
-- `IUserRepository` の EF Core 実装
 - Discord 側の業務コマンド（`/test` 以外）
+- プレゼンテーション層からユースケース呼び出しまでの接続
 - DTOs / Queries の具体実装
+- 監査観点での申請ステータス変更者の永続化（`RequestStatusChange` への保持）
 
 ## プロジェクト構成
 

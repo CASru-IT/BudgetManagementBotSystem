@@ -268,6 +268,7 @@ Group ..> User : CreateBudgetRequest(user)
 
 ## 既知の不整合・未実装
 
-- `Infrastructure/Persistence/EfCoreGroupRepository.cs` は実装途中（各メソッドが `NotImplementedException`）
-- `IUserRepository` のインフラ実装が未作成
-- Discord コマンドは現状 `/test` のみ
+- `EfCoreGroupRepository` / `EfCoreUserRepository` は実装済み
+- Discord コマンドは現状 `/test` のみで、業務ユースケースと未接続
+- `Application/DTOs` / `Application/Queries` は具体実装が未作成
+- `RequestStatusChange` は変更者情報を保持しておらず、監査要件がある場合は拡張が必要

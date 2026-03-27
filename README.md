@@ -3,6 +3,20 @@
 Discord 上で動作する予算管理 Bot システムです。  
 実装状況の詳細は docs を参照してください。
 
+## 現在の状況（2026-03-27）
+
+- 実装済み
+  - Discord Bot 起動とグローバルスラッシュコマンド登録
+  - `/test` コマンド
+  - ドメイン層（申請・取引・ステータス遷移）
+  - 主要ユースケース（申請作成 / 承認 / 却下 / 取消 / 予算増額）
+  - EF Core `DbContext`、`IUnitOfWork`、`IGroupRepository`、`IUserRepository` の実装
+  - xUnit + Moq によるユニットテスト
+- 未実装・未接続
+  - 業務向け Discord コマンド（現状は `/test` のみ）
+  - DTOs / Queries の具体実装
+  - プレゼンテーション層からユースケース呼び出しへの接続
+
 ## ドキュメント
 
 - [設計資料](docs/design.md)
