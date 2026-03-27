@@ -22,10 +22,14 @@
 - `RejectBudgetRequestUseCase`
   - 入力: `groupId(int)`, `requestId(int)`, `changedByUserId(int)`
   - 申請ステータスを `Rejected` に更新
+- `CancelBudgetRequestUseCase`
+  - 入力: `groupId(int)`, `requestId(int)`, `changedByUserId(int)`
+  - 申請ステータスを `ApprovalCancelled` に更新
 - `IncreaseBudgetLimitUseCase`
   - 入力: `groupId(int)`, `amount(decimal)`
   - 収入トランザクション追加による予算増額
 - EF Core `BudgetManagementDbContext` とマッピング定義
+- `EfUnitOfWork`（`IUnitOfWork` 実装）
 
 ### テスト実装済み
 
@@ -34,10 +38,11 @@
 - `ApproveBudgetRequestUseCase` の正常系・異常系
 - `RejectBudgetRequestUseCase` の正常系・異常系
 - `IncreaseBudgetLimitUseCase` の正常系・異常系
+- `CancelBudgetRequestUseCase` の正常系・異常系
 
-### 未実装 / 雛形段階
+### 未実装 / 実装途中
 
-- `Infrastructure/Persistence/Repository/EfCoreGroupRepository.cs`（空ファイル）
+- `Infrastructure/Persistence/EfCoreGroupRepository.cs`（メソッドはあるが `NotImplementedException`）
 - `IUserRepository` の EF Core 実装
 - Discord 側の業務コマンド（`/test` 以外）
 - DTOs / Queries の具体実装

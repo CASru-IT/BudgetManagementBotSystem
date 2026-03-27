@@ -28,7 +28,7 @@
   4. `Group.CreateBudgetRequest(user, amount, fiscalYear, description)` で申請生成
   5. `Group.IsWithinBudgetLimit` で予算上限判定
   6. 上限超過時は `Rejected` に遷移
-  7. `IGroupRepository.UpdateAsync` で保存
+  7. `IUnitOfWork.SaveChangesAsync` で保存
 
 ### IncreaseBudgetLimitUseCase
 
@@ -38,7 +38,7 @@
   2. `amount` のバリデーション（負数禁止）
   3. 会計年度設定値から `FiscalYear` を生成
   4. 収入 `BudgetTransaction` を追加
-  5. `IGroupRepository.UpdateAsync` で保存
+  5. `IUnitOfWork.SaveChangesAsync` で保存
 
 ### ApproveBudgetRequestUseCase
 
@@ -47,7 +47,7 @@
   1. `IGroupRepository.GetByIdAsync(int groupId)` でグループ取得
   2. `IUserRepository.GetByIdAsync(int changedByUserId)` で更新者取得
   3. `Group.UpdateBudgetRequestStatus(requestId, RequestStatus.Approved, changedByUser)` を実行
-  4. `IGroupRepository.UpdateAsync` で保存
+  4. `IUnitOfWork.SaveChangesAsync` で保存
 
 ### RejectBudgetRequestUseCase
 
@@ -56,7 +56,16 @@
   1. `IGroupRepository.GetByIdAsync(int groupId)` でグループ取得
   2. `IUserRepository.GetByIdAsync(int changedByUserId)` で更新者取得
   3. `Group.UpdateBudgetRequestStatus(requestId, RequestStatus.Rejected, changedByUser)` を実行
-  4. `IGroupRepository.UpdateAsync` で保存
+  4. `IUnitOfWork.SaveChangesAsync` で保存
+
+### CancelBudgetRequestUseCase
+
+- 入力: `groupId(int)`, `requestId(int)`, `changedByUserId(int)`
+- 処理:
+  1. `IGroupRepository.GetByIdAsync(int groupId)` でグループ取得
+  2. `IUserRepository.GetByIdAsync(int changedByUserId)` で更新者取得
+  3. `Group.UpdateBudgetRequestStatus(requestId, RequestStatus.ApprovalCancelled, changedByUser)` を実行
+  4. `IUnitOfWork.SaveChangesAsync` で保存
 
 ## ER図
 
@@ -259,6 +268,6 @@ Group ..> User : CreateBudgetRequest(user)
 
 ## 既知の不整合・未実装
 
-- `Infrastructure/Persistence/Repository/EfCoreGroupRepository.cs` は未実装（空ファイル）
+- `Infrastructure/Persistence/EfCoreGroupRepository.cs` は実装途中（各メソッドが `NotImplementedException`）
 - `IUserRepository` のインフラ実装が未作成
 - Discord コマンドは現状 `/test` のみ
