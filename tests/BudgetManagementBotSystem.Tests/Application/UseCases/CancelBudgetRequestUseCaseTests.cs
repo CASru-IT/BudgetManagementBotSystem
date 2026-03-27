@@ -1,4 +1,5 @@
 using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
+using BudgetManagementBotSystem.Application.Interface;
 using BudgetManagementBotSystem.Domain.Entities;
 using BudgetManagementBotSystem.Domain.Enums;
 using BudgetManagementBotSystem.Domain.Repository;
@@ -30,14 +31,17 @@ public class CancelBudgetRequestUseCaseTests
 
         var mockUserRepository = new Mock<IUserRepository>();
         mockUserRepository.Setup(r => r.GetByIdAsync(changedByUserId)).ReturnsAsync(changedByUser);
+        var mockUnitOfWork = new Mock<IUnitOfWork>();
 
-        var approveUseCase = new ApproveBudgetRequestUseCase(mockGroupRepository.Object, mockUserRepository.Object);
-        var useCase = new CancelBudgetRequestUseCase(approveUseCase, mockGroupRepository.Object, mockUserRepository.Object);
+        var useCase = new CancelBudgetRequestUseCase(
+            mockGroupRepository.Object,
+            mockUserRepository.Object,
+            mockUnitOfWork.Object);
 
         await useCase.ExecuteAsync(groupId, requestId, changedByUserId);
 
         Assert.Equal(RequestStatus.ApprovalCancelled, request.StatusHistory.Last().ChangedStatus);
-        mockGroupRepository.Verify(r => r.UpdateAsync(group), Times.Once);
+        mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
     }
 
     [Fact]
@@ -51,9 +55,12 @@ public class CancelBudgetRequestUseCaseTests
         mockGroupRepository.Setup(r => r.GetByIdAsync(groupId)).ReturnsAsync((Group?)null);
 
         var mockUserRepository = new Mock<IUserRepository>();
+        var mockUnitOfWork = new Mock<IUnitOfWork>();
 
-        var approveUseCase = new ApproveBudgetRequestUseCase(mockGroupRepository.Object, mockUserRepository.Object);
-        var useCase = new CancelBudgetRequestUseCase(approveUseCase, mockGroupRepository.Object, mockUserRepository.Object);
+        var useCase = new CancelBudgetRequestUseCase(
+            mockGroupRepository.Object,
+            mockUserRepository.Object,
+            mockUnitOfWork.Object);
 
         var ex = await Assert.ThrowsAsync<ArgumentNullException>(
             () => useCase.ExecuteAsync(groupId, requestId, changedByUserId)
@@ -79,16 +86,19 @@ public class CancelBudgetRequestUseCaseTests
 
         var mockUserRepository = new Mock<IUserRepository>();
         mockUserRepository.Setup(r => r.GetByIdAsync(changedByUserId)).ReturnsAsync((User?)null);
+        var mockUnitOfWork = new Mock<IUnitOfWork>();
 
-        var approveUseCase = new ApproveBudgetRequestUseCase(mockGroupRepository.Object, mockUserRepository.Object);
-        var useCase = new CancelBudgetRequestUseCase(approveUseCase, mockGroupRepository.Object, mockUserRepository.Object);
+        var useCase = new CancelBudgetRequestUseCase(
+            mockGroupRepository.Object,
+            mockUserRepository.Object,
+            mockUnitOfWork.Object);
 
         var ex = await Assert.ThrowsAsync<ArgumentNullException>(
             () => useCase.ExecuteAsync(groupId, requestId, changedByUserId)
         );
 
         Assert.Equal("changedByUserId", ex.ParamName);
-        mockGroupRepository.Verify(r => r.UpdateAsync(It.IsAny<Group>()), Times.Never);
+        mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Never);
     }
 
     [Fact]
@@ -106,16 +116,19 @@ public class CancelBudgetRequestUseCaseTests
 
         var mockUserRepository = new Mock<IUserRepository>();
         mockUserRepository.Setup(r => r.GetByIdAsync(changedByUserId)).ReturnsAsync(changedByUser);
+        var mockUnitOfWork = new Mock<IUnitOfWork>();
 
-        var approveUseCase = new ApproveBudgetRequestUseCase(mockGroupRepository.Object, mockUserRepository.Object);
-        var useCase = new CancelBudgetRequestUseCase(approveUseCase, mockGroupRepository.Object, mockUserRepository.Object);
+        var useCase = new CancelBudgetRequestUseCase(
+            mockGroupRepository.Object,
+            mockUserRepository.Object,
+            mockUnitOfWork.Object);
 
         var ex = await Assert.ThrowsAsync<ArgumentNullException>(
             () => useCase.ExecuteAsync(groupId, requestId, changedByUserId)
         );
 
         Assert.Equal("requestId", ex.ParamName);
-        mockGroupRepository.Verify(r => r.UpdateAsync(It.IsAny<Group>()), Times.Never);
+        mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Never);
     }
 
     [Fact]
@@ -144,14 +157,17 @@ public class CancelBudgetRequestUseCaseTests
 
         var mockUserRepository = new Mock<IUserRepository>();
         mockUserRepository.Setup(r => r.GetByIdAsync(changedByUserId)).ReturnsAsync(changedByUser);
+        var mockUnitOfWork = new Mock<IUnitOfWork>();
 
-        var approveUseCase = new ApproveBudgetRequestUseCase(mockGroupRepository.Object, mockUserRepository.Object);
-        var useCase = new CancelBudgetRequestUseCase(approveUseCase, mockGroupRepository.Object, mockUserRepository.Object);
+        var useCase = new CancelBudgetRequestUseCase(
+            mockGroupRepository.Object,
+            mockUserRepository.Object,
+            mockUnitOfWork.Object);
 
         await useCase.ExecuteAsync(groupId, targetRequestId, changedByUserId);
 
         Assert.Equal(RequestStatus.ApprovalCancelled, request2.StatusHistory.Last().ChangedStatus);
         Assert.Equal(RequestStatus.Pending, request1.StatusHistory.Last().ChangedStatus);
-        mockGroupRepository.Verify(r => r.UpdateAsync(group), Times.Once);
+        mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
     }
 }

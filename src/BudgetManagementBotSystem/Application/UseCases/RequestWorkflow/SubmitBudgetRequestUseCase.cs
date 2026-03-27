@@ -2,6 +2,7 @@ using BudgetManagementBotSystem.Domain.Repository;
 using BudgetManagementBotSystem.Domain.ValueObjects;
 using BudgetManagementBotSystem.Domain.Enums;
 using BudgetManagementBotSystem.Domain.Entities;
+using BudgetManagementBotSystem.Application.Interface;
 
 namespace BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 
@@ -10,15 +11,18 @@ public class SubmitBudgetRequestUseCase
     private readonly IUserRepository _userRepository;
     private readonly IGroupRepository _groupRepository;
     private readonly IConfiguration _configuration;
+    private readonly IUnitOfWork _unitOfWork;
 
     public SubmitBudgetRequestUseCase(
         IUserRepository userRepository,
         IGroupRepository groupRepository,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _groupRepository = groupRepository;
         _configuration = configuration;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task ExecuteAsync(int userId, int groupId, decimal amount, string description)
@@ -45,6 +49,6 @@ public class SubmitBudgetRequestUseCase
             group.UpdateBudgetRequestStatus(requestId, RequestStatus.Rejected);
         }
 
-        await _groupRepository.UpdateAsync(group);
+        await _unitOfWork.SaveChangesAsync();
     }
 }

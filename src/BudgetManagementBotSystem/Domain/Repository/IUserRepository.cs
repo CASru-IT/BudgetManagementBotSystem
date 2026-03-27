@@ -8,6 +8,5 @@ public interface IUserRepository
     Task<User?> GetByDiscordUserIdAsync(ulong discordUserId);
     Task<bool> IsUserExistsAsync(int userId);
     Task AddAsync(User user);
-    Task UpdateAsync(User user);
     Task DeleteAsync(int userId);
 }

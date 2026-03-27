@@ -1,5 +1,6 @@
 using Moq;
 using Microsoft.Extensions.Configuration;
+using BudgetManagementBotSystem.Application.Interface;
 using BudgetManagementBotSystem.Application.UseCases;
 using BudgetManagementBotSystem.Domain.Repository;
 using BudgetManagementBotSystem.Domain.Entities;
@@ -20,10 +21,14 @@ public class IncreaseBudgetLimitUseCaseTests
         mockGroupRepository
             .Setup(repo => repo.GetByIdAsync(groupId))
             .ReturnsAsync(group);
+        var mockUnitOfWork = new Mock<IUnitOfWork>();
 
         var configuration = CreateConfiguration(4);
 
-        var useCase = new IncreaseBudgetLimitUseCase(mockGroupRepository.Object, configuration);
+        var useCase = new IncreaseBudgetLimitUseCase(
+            mockGroupRepository.Object,
+            configuration,
+            mockUnitOfWork.Object);
 
         // Act
         await useCase.ExecuteAsync(groupId, amount);
@@ -33,6 +38,7 @@ public class IncreaseBudgetLimitUseCaseTests
         var transaction = group.BudgetTransactions.First();
         Assert.True(transaction.IsIncome);
         Assert.Equal(amount, transaction.Amount.Value);
+        mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
     }
 
     [Fact]
@@ -46,10 +52,14 @@ public class IncreaseBudgetLimitUseCaseTests
         mockGroupRepository
             .Setup(repo => repo.GetByIdAsync(groupId))
             .ReturnsAsync((Group?)null);
+        var mockUnitOfWork = new Mock<IUnitOfWork>();
 
         var configuration = CreateConfiguration(4);
 
-        var useCase = new IncreaseBudgetLimitUseCase(mockGroupRepository.Object, configuration);
+        var useCase = new IncreaseBudgetLimitUseCase(
+            mockGroupRepository.Object,
+            configuration,
+            mockUnitOfWork.Object);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentNullException>(
@@ -69,10 +79,14 @@ public class IncreaseBudgetLimitUseCaseTests
         mockGroupRepository
             .Setup(repo => repo.GetByIdAsync(groupId))
             .ReturnsAsync(group);
+        var mockUnitOfWork = new Mock<IUnitOfWork>();
 
         var configuration = CreateConfiguration(4);
 
-        var useCase = new IncreaseBudgetLimitUseCase(mockGroupRepository.Object, configuration);
+        var useCase = new IncreaseBudgetLimitUseCase(
+            mockGroupRepository.Object,
+            configuration,
+            mockUnitOfWork.Object);
 
         var exception = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
             () => useCase.ExecuteAsync(groupId, amount));
@@ -92,10 +106,14 @@ public class IncreaseBudgetLimitUseCaseTests
         mockGroupRepository
             .Setup(repo => repo.GetByIdAsync(groupId))
             .ReturnsAsync(group);
+        var mockUnitOfWork = new Mock<IUnitOfWork>();
 
         var configuration = CreateConfiguration(fiscalYearStartMonth);
 
-        var useCase = new IncreaseBudgetLimitUseCase(mockGroupRepository.Object, configuration);
+        var useCase = new IncreaseBudgetLimitUseCase(
+            mockGroupRepository.Object,
+            configuration,
+            mockUnitOfWork.Object);
 
         // Act
         await useCase.ExecuteAsync(groupId, amount);
@@ -104,6 +122,7 @@ public class IncreaseBudgetLimitUseCaseTests
         Assert.Single(group.BudgetTransactions);
         var transaction = group.BudgetTransactions.First();
         Assert.Equal(fiscalYearStartMonth, transaction.FiscalYear.StartMonth);
+        mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
     }
 
     [Fact]
@@ -119,9 +138,13 @@ public class IncreaseBudgetLimitUseCaseTests
         mockGroupRepository
             .Setup(repo => repo.GetByIdAsync(groupId))
             .ReturnsAsync(group);
+        var mockUnitOfWork = new Mock<IUnitOfWork>();
 
         var configuration = CreateConfiguration(fiscalYearStartMonth);
-        var useCase = new IncreaseBudgetLimitUseCase(mockGroupRepository.Object, configuration);
+        var useCase = new IncreaseBudgetLimitUseCase(
+            mockGroupRepository.Object,
+            configuration,
+            mockUnitOfWork.Object);
 
         // Act
         await useCase.ExecuteAsync(groupId, amount);
@@ -130,6 +153,7 @@ public class IncreaseBudgetLimitUseCaseTests
         Assert.Single(group.BudgetTransactions);
         var transaction = group.BudgetTransactions.First();
         Assert.Equal(fiscalYearStartMonth, transaction.FiscalYear.StartMonth);
+        mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
     }
 
     private IConfiguration CreateConfiguration(int fiscalYearStartMonth)

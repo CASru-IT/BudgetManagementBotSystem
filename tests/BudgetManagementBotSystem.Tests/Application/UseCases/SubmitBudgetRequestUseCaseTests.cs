@@ -1,4 +1,5 @@
 using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
+using BudgetManagementBotSystem.Application.Interface;
 using BudgetManagementBotSystem.Domain.Entities;
 using BudgetManagementBotSystem.Domain.Enums;
 using BudgetManagementBotSystem.Domain.Repository;
@@ -28,12 +29,14 @@ public class SubmitBudgetRequestUseCaseTests
 
         var mockGroupRepository = new Mock<IGroupRepository>();
         mockGroupRepository.Setup(r => r.GetByIdAsync(groupId)).ReturnsAsync(group);
+        var mockUnitOfWork = new Mock<IUnitOfWork>();
 
         var configuration = CreateConfiguration(4);
         var useCase = new SubmitBudgetRequestUseCase(
             mockUserRepository.Object,
             mockGroupRepository.Object,
-            configuration);
+            configuration,
+            mockUnitOfWork.Object);
 
         // Act
         await useCase.ExecuteAsync(userId, groupId, amount, description);
@@ -45,7 +48,7 @@ public class SubmitBudgetRequestUseCaseTests
         Assert.Equal(description, request.Description);
         Assert.Equal(RequestStatus.Pending, request.StatusHistory.Last().ChangedStatus);
 
-        mockGroupRepository.Verify(r => r.UpdateAsync(group), Times.Once);
+        mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
     }
 
     [Fact]
@@ -64,12 +67,14 @@ public class SubmitBudgetRequestUseCaseTests
 
         var mockGroupRepository = new Mock<IGroupRepository>();
         mockGroupRepository.Setup(r => r.GetByIdAsync(groupId)).ReturnsAsync(group);
+        var mockUnitOfWork = new Mock<IUnitOfWork>();
 
         var configuration = CreateConfiguration(4);
         var useCase = new SubmitBudgetRequestUseCase(
             mockUserRepository.Object,
             mockGroupRepository.Object,
-            configuration);
+            configuration,
+            mockUnitOfWork.Object);
 
         // Act
         await useCase.ExecuteAsync(userId, groupId, amount, "予算超過テスト");
@@ -79,7 +84,7 @@ public class SubmitBudgetRequestUseCaseTests
         var request = group.Requests.Single();
         Assert.Equal(RequestStatus.Rejected, request.StatusHistory.Last().ChangedStatus);
 
-        mockGroupRepository.Verify(r => r.UpdateAsync(group), Times.Once);
+        mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
     }
 
     [Fact]
@@ -93,11 +98,13 @@ public class SubmitBudgetRequestUseCaseTests
         mockUserRepository.Setup(r => r.GetByIdAsync(userId)).ReturnsAsync((User?)null);
 
         var mockGroupRepository = new Mock<IGroupRepository>();
+        var mockUnitOfWork = new Mock<IUnitOfWork>();
         var configuration = CreateConfiguration(4);
         var useCase = new SubmitBudgetRequestUseCase(
             mockUserRepository.Object,
             mockGroupRepository.Object,
-            configuration);
+            configuration,
+            mockUnitOfWork.Object);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<ArgumentNullException>(
@@ -121,19 +128,21 @@ public class SubmitBudgetRequestUseCaseTests
 
         var mockGroupRepository = new Mock<IGroupRepository>();
         mockGroupRepository.Setup(r => r.GetByIdAsync(groupId)).ReturnsAsync((Group?)null);
+        var mockUnitOfWork = new Mock<IUnitOfWork>();
 
         var configuration = CreateConfiguration(4);
         var useCase = new SubmitBudgetRequestUseCase(
             mockUserRepository.Object,
             mockGroupRepository.Object,
-            configuration);
+            configuration,
+            mockUnitOfWork.Object);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<ArgumentNullException>(
             () => useCase.ExecuteAsync(userId, groupId, 1_000m, "test"));
 
         Assert.Equal("groupId", ex.ParamName);
-        mockGroupRepository.Verify(r => r.UpdateAsync(It.IsAny<Group>()), Times.Never);
+        mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Never);
     }
 
     [Fact]
@@ -151,19 +160,21 @@ public class SubmitBudgetRequestUseCaseTests
 
         var mockGroupRepository = new Mock<IGroupRepository>();
         mockGroupRepository.Setup(r => r.GetByIdAsync(groupId)).ReturnsAsync(group);
+        var mockUnitOfWork = new Mock<IUnitOfWork>();
 
         var configuration = CreateConfiguration(4);
         var useCase = new SubmitBudgetRequestUseCase(
             mockUserRepository.Object,
             mockGroupRepository.Object,
-            configuration);
+            configuration,
+            mockUnitOfWork.Object);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
             () => useCase.ExecuteAsync(userId, groupId, -1m, "test"));
 
         Assert.Equal("amount", ex.ParamName);
-        mockGroupRepository.Verify(r => r.UpdateAsync(It.IsAny<Group>()), Times.Never);
+        mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Never);
     }
 
     [Fact]
@@ -183,12 +194,14 @@ public class SubmitBudgetRequestUseCaseTests
 
         var mockGroupRepository = new Mock<IGroupRepository>();
         mockGroupRepository.Setup(r => r.GetByIdAsync(groupId)).ReturnsAsync(group);
+        var mockUnitOfWork = new Mock<IUnitOfWork>();
 
         var configuration = CreateConfiguration(fiscalYearStartMonth);
         var useCase = new SubmitBudgetRequestUseCase(
             mockUserRepository.Object,
             mockGroupRepository.Object,
-            configuration);
+            configuration,
+            mockUnitOfWork.Object);
 
         // Act
         await useCase.ExecuteAsync(userId, groupId, 10_000m, "fiscal year test");
@@ -197,6 +210,7 @@ public class SubmitBudgetRequestUseCaseTests
         Assert.Single(group.Requests);
         var request = group.Requests.Single();
         Assert.Equal(fiscalYearStartMonth, request.FiscalYear.StartMonth);
+        mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
     }
 
     private static IConfiguration CreateConfiguration(int fiscalYearStartMonth)

@@ -1,6 +1,7 @@
 using BudgetManagementBotSystem.Domain.Repository;
 using BudgetManagementBotSystem.Domain.Entities;
 using BudgetManagementBotSystem.Domain.ValueObjects;
+using BudgetManagementBotSystem.Application.Interface;
 
 namespace BudgetManagementBotSystem.Application.UseCases;
 
@@ -8,13 +9,15 @@ public class IncreaseBudgetLimitUseCase
 {
     private readonly IGroupRepository _groupRepository;
     private readonly IConfiguration _configuration;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public IncreaseBudgetLimitUseCase(IGroupRepository groupRepository, IConfiguration configuration)
+    public IncreaseBudgetLimitUseCase(IGroupRepository groupRepository, IConfiguration configuration, IUnitOfWork unitOfWork)
     {
         _groupRepository = groupRepository;
         _configuration = configuration;
+        _unitOfWork = unitOfWork;
     }
-    
+
     public async Task ExecuteAsync(int groupId, decimal amount)
     {
         Group? group = await _groupRepository.GetByIdAsync(groupId);
@@ -26,6 +29,6 @@ public class IncreaseBudgetLimitUseCase
         BudgetTransaction transaction = new BudgetTransaction(true, amount, currentFiscalYear);
         group.AddBudgetTransaction(transaction);
 
-        await _groupRepository.UpdateAsync(group);
+        await _unitOfWork.SaveChangesAsync();
     }
 }
