@@ -40,17 +40,13 @@ public class Group
         _requests.Add(request);
     }
 
-    public int CreateBudgetRequest(User user, Money amount, FiscalYear fiscalYear, string description)
+    public int CreateBudgetRequest(User user, Money amount, FiscalYear fiscalYear, string description, IEnumerable<string> evidenceFilePaths)
     {
-        var request = new BudgetRequest(user.Id, amount, fiscalYear, description);
+        ArgumentNullException.ThrowIfNull(evidenceFilePaths);
+
+        var request = new BudgetRequest(user.Id, amount, fiscalYear, description, evidenceFilePaths);
         AddBudgetRequest(request, user);
         return request.Id;
-    }
-
-    public void AddBudgetRequestEvidence(int requestId, string filePath)
-    {
-        var request = GetBudgetRequestById(requestId);
-        request.AddEvidence(filePath);
     }
 
     public void UpdateBudgetRequestStatus(int requestId, RequestStatus newStatus)

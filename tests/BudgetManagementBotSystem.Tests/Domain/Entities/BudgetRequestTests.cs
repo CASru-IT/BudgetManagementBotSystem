@@ -6,12 +6,13 @@ namespace BudgetManagementBotSystem.Tests;
 
 public class BudgetRequestTests
 {
-    private static BudgetRequest Create()
+    private static BudgetRequest Create(IEnumerable<string>? evidenceFilePaths = null)
     => new BudgetRequest(
     userId: 1,
     amount: new Money(1000m),
     fiscalYear: new FiscalYear(4),
-    description: "テスト申請");
+    description: "テスト申請",
+    evidenceFilePaths: evidenceFilePaths ?? Array.Empty<string>());
 
     [Fact]
     public void Constructor_InitialStatus_IsPending()
@@ -23,11 +24,9 @@ public class BudgetRequestTests
     }
 
     [Fact]
-    public void AddEvidence_AddsOneItem()
+    public void Constructor_WithEvidenceFilePaths_AddsEvidences()
     {
-        var request = Create();
-
-        request.AddEvidence("evidence/path.png");
+        var request = Create(new[] { "evidence/path.png" });
 
         Assert.Single(request.Evidences);
         Assert.Equal("evidence/path.png", request.Evidences[0].FilePath);

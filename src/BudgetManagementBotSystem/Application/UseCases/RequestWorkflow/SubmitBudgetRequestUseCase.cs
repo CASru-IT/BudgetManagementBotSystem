@@ -25,8 +25,15 @@ public class SubmitBudgetRequestUseCase
         _unitOfWork = unitOfWork;
     }
 
-    public async Task ExecuteAsync(int userId, int groupId, decimal amount, string description)
+    public async Task ExecuteAsync(
+        int userId,
+        int groupId,
+        decimal amount,
+        string description,
+        IEnumerable<string> evidenceFilePaths)
     {
+        ArgumentNullException.ThrowIfNull(evidenceFilePaths);
+
         User? user = await _userRepository.GetByIdAsync(userId);
         if (user == null) throw new ArgumentNullException(nameof(userId), "User not found");
 
@@ -42,7 +49,8 @@ public class SubmitBudgetRequestUseCase
             user,
             requestAmount,
             fiscalYear,
-            description);
+            description,
+            evidenceFilePaths);
 
         if (!group.IsWithinBudgetLimit(requestAmount, fiscalYear))
         {

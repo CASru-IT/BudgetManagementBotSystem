@@ -39,13 +39,14 @@ public class SubmitBudgetRequestUseCaseTests
             mockUnitOfWork.Object);
 
         // Act
-        await useCase.ExecuteAsync(userId, groupId, amount, description);
+        await useCase.ExecuteAsync(userId, groupId, amount, description, Array.Empty<string>());
 
         // Assert
         Assert.Single(group.Requests);
         var request = group.Requests.Single();
         Assert.Equal(amount, request.Amount.Value);
         Assert.Equal(description, request.Description);
+        Assert.Empty(request.Evidences);
         Assert.Equal(RequestStatus.Pending, request.StatusHistory.Last().ChangedStatus);
 
         mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
@@ -77,7 +78,7 @@ public class SubmitBudgetRequestUseCaseTests
             mockUnitOfWork.Object);
 
         // Act
-        await useCase.ExecuteAsync(userId, groupId, amount, "予算超過テスト");
+        await useCase.ExecuteAsync(userId, groupId, amount, "予算超過テスト", Array.Empty<string>());
 
         // Assert
         Assert.Single(group.Requests);
@@ -108,7 +109,7 @@ public class SubmitBudgetRequestUseCaseTests
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<ArgumentNullException>(
-            () => useCase.ExecuteAsync(userId, groupId, 1_000m, "test"));
+            () => useCase.ExecuteAsync(userId, groupId, 1_000m, "test", Array.Empty<string>()));
 
         Assert.Equal("userId", ex.ParamName);
         mockGroupRepository.Verify(r => r.GetByIdAsync(It.IsAny<int>()), Times.Never);
@@ -139,7 +140,7 @@ public class SubmitBudgetRequestUseCaseTests
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<ArgumentNullException>(
-            () => useCase.ExecuteAsync(userId, groupId, 1_000m, "test"));
+            () => useCase.ExecuteAsync(userId, groupId, 1_000m, "test", Array.Empty<string>()));
 
         Assert.Equal("groupId", ex.ParamName);
         mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Never);
@@ -171,7 +172,7 @@ public class SubmitBudgetRequestUseCaseTests
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
-            () => useCase.ExecuteAsync(userId, groupId, -1m, "test"));
+            () => useCase.ExecuteAsync(userId, groupId, -1m, "test", Array.Empty<string>()));
 
         Assert.Equal("amount", ex.ParamName);
         mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Never);
@@ -204,13 +205,50 @@ public class SubmitBudgetRequestUseCaseTests
             mockUnitOfWork.Object);
 
         // Act
-        await useCase.ExecuteAsync(userId, groupId, 10_000m, "fiscal year test");
+        await useCase.ExecuteAsync(userId, groupId, 10_000m, "fiscal year test", Array.Empty<string>());
 
         // Assert
         Assert.Single(group.Requests);
         var request = group.Requests.Single();
         Assert.Equal(fiscalYearStartMonth, request.FiscalYear.StartMonth);
         mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithEvidenceFilePaths_AddsEvidencesToRequest()
+    {
+        // Arrange
+        const int userId = 1;
+        const int groupId = 1;
+
+        var user = new User("Test User", 12345UL, AccountRole.Accountant);
+        var group = new Group("Test Group");
+        group.AddBudgetTransaction(new BudgetTransaction(true, 100_000m, new FiscalYear(4)));
+
+        var mockUserRepository = new Mock<IUserRepository>();
+        mockUserRepository.Setup(r => r.GetByIdAsync(userId)).ReturnsAsync(user);
+
+        var mockGroupRepository = new Mock<IGroupRepository>();
+        mockGroupRepository.Setup(r => r.GetByIdAsync(groupId)).ReturnsAsync(group);
+        var mockUnitOfWork = new Mock<IUnitOfWork>();
+
+        var configuration = CreateConfiguration(4);
+        var useCase = new SubmitBudgetRequestUseCase(
+            mockUserRepository.Object,
+            mockGroupRepository.Object,
+            configuration,
+            mockUnitOfWork.Object);
+
+        var evidenceFilePaths = new[] { "evidences/quote.pdf", "evidences/spec.png" };
+
+        // Act
+        await useCase.ExecuteAsync(userId, groupId, 10_000m, "evidence test", evidenceFilePaths);
+
+        // Assert
+        var request = group.Requests.Single();
+        Assert.Equal(2, request.Evidences.Count);
+        Assert.Equal("evidences/quote.pdf", request.Evidences[0].FilePath);
+        Assert.Equal("evidences/spec.png", request.Evidences[1].FilePath);
     }
 
     private static IConfiguration CreateConfiguration(int fiscalYearStartMonth)

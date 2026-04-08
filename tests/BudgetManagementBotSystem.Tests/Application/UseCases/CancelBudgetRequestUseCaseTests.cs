@@ -21,7 +21,7 @@ public class CancelBudgetRequestUseCaseTests
         var requester = new User("Requester", 22222UL, AccountRole.Accountant);
         var group = new Group("Test Group");
 
-        _ = group.CreateBudgetRequest(requester, new Money(50_000m), new FiscalYear(4), "備品購入");
+        _ = group.CreateBudgetRequest(requester, new Money(50_000m), new FiscalYear(4), "備品購入", Array.Empty<string>());
         var request = group.Requests.Single();
         typeof(BudgetRequest).GetProperty("Id")!.SetValue(request, requestId);
         request.UpdateStatus(RequestStatus.Approved);
@@ -79,7 +79,7 @@ public class CancelBudgetRequestUseCaseTests
 
         var group = new Group("Test Group");
         var requester = new User("Requester", 22222UL, AccountRole.Accountant);
-        _ = group.CreateBudgetRequest(requester, new Money(50_000m), new FiscalYear(4), "備品購入");
+        _ = group.CreateBudgetRequest(requester, new Money(50_000m), new FiscalYear(4), "備品購入", Array.Empty<string>());
 
         var mockGroupRepository = new Mock<IGroupRepository>();
         mockGroupRepository.Setup(r => r.GetByIdAsync(groupId)).ReturnsAsync(group);
@@ -143,8 +143,8 @@ public class CancelBudgetRequestUseCaseTests
         var requester2 = new User("Requester2", 33333UL, AccountRole.Accountant);
         var group = new Group("Test Group");
 
-        _ = group.CreateBudgetRequest(requester1, new Money(30_000m), new FiscalYear(4), "PC購入");
-        _ = group.CreateBudgetRequest(requester2, new Money(50_000m), new FiscalYear(4), "モニター購入");
+        _ = group.CreateBudgetRequest(requester1, new Money(30_000m), new FiscalYear(4), "PC購入", Array.Empty<string>());
+        _ = group.CreateBudgetRequest(requester2, new Money(50_000m), new FiscalYear(4), "モニター購入", Array.Empty<string>());
         var request1 = group.Requests.First(r => r.Description == "PC購入");
         var request2 = group.Requests.First(r => r.Description == "モニター購入");
 

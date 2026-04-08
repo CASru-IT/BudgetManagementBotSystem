@@ -14,23 +14,24 @@ public class BudgetRequest
     public List<RequestEvidence> Evidences { get; private set; } = new List<RequestEvidence>();
     public List<RequestStatusChange> StatusHistory { get; private set; } = new List<RequestStatusChange>();
 
-    public BudgetRequest(int userId, Money amount, FiscalYear fiscalYear, string description)
+    public BudgetRequest(int userId, Money amount, FiscalYear fiscalYear, string description, IEnumerable<string> evidenceFilePaths)
     {
+        ArgumentNullException.ThrowIfNull(evidenceFilePaths);
+
         UserId = userId;
         Amount = amount;
         FiscalYear = fiscalYear;
         Description = description;
         RequestDate = DateTime.Now;
+        Evidences = evidenceFilePaths
+            .Select(filePath => new RequestEvidence(filePath))
+            .ToList();
         if (StatusHistory.Count == 0)
         {
             StatusHistory.Add(new RequestStatusChange(RequestStatus.Pending, DateTime.Now));
         }
     }
 
-    public void AddEvidence(string filePath)
-    {
-        Evidences.Add(new RequestEvidence(filePath));
-    }
     public void UpdateStatus(RequestStatus newStatus)
     {
         CheckStatusTransition(newStatus);
