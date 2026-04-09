@@ -1,6 +1,6 @@
 # BudgetManagementBotSystem 設計資料
 
-このドキュメントは、現行実装（2026-03 時点）に合わせた設計資料です。
+このドキュメントは、現行実装（2026-04 時点）に合わせた設計資料です。
 
 ## 関連ドキュメント
 
@@ -15,20 +15,22 @@
   - `Presentation`: Discord コマンドモジュール
 - 起動時に `Program` で `DbContext`・`DiscordBotService`・`Worker` を DI 登録
 - `Worker` が `Discord:Token` を読み、Bot を開始
+  - `DiscordBotService` はアセンブリ内の `InteractionModule` を自動登録し、グローバルスラッシュコマンドを登録
 
 ## ユースケース設計（実装済み）
 
 ### SubmitBudgetRequestUseCase
 
-- 入力: `userId(int)`, `groupId(int)`, `amount(decimal)`, `description(string)`
+- 入力: `userId(int)`, `groupId(int)`, `amount(decimal)`, `description(string)`, `evidenceFilePaths(IEnumerable<string>)`
 - 処理:
   1. `IUserRepository.GetByIdAsync(int userId)` でユーザー取得
   2. `IGroupRepository.GetByIdAsync(int groupId)` でグループ取得
   3. `amount` のバリデーション（負数禁止）
-  4. `Group.CreateBudgetRequest(user, amount, fiscalYear, description)` で申請生成
-  5. `Group.IsWithinBudgetLimit` で予算上限判定
-  6. 上限超過時は `Rejected` に遷移
-  7. `IUnitOfWork.SaveChangesAsync` で保存
+  4. `evidenceFilePaths` の null チェック
+  5. `Group.CreateBudgetRequest(user, amount, fiscalYear, description, evidenceFilePaths)` で申請生成
+  6. `Group.IsWithinBudgetLimit` で予算上限判定
+  7. 上限超過時は `Rejected` に遷移
+  8. `IUnitOfWork.SaveChangesAsync` で保存
 
 ### IncreaseBudgetLimitUseCase
 
@@ -151,11 +153,11 @@ class Group {
   +IReadOnlyCollection~BudgetTransaction~ BudgetTransactions
   +IReadOnlyCollection~BudgetRequest~ Requests
   +AddBudgetTransaction(transaction) void
-  +CreateBudgetRequest(user, amount, fiscalYear, description) int
-  +AddBudgetRequestEvidence(requestId, filePath) void
+  +CreateBudgetRequest(user, amount, fiscalYear, description, evidenceFilePaths) int
   +UpdateBudgetRequestStatus(requestId, newStatus) void
   +UpdateBudgetRequestStatus(requestId, newStatus, changedBy) void
   +GetTotalBudgetForFiscalYear(fiscalYear) decimal
+  +IsWithinBudgetLimit(amount, fiscalYear) bool
   +GetRequestsByStatus(status) IReadOnlyCollection~BudgetRequest~
 }
 
@@ -269,6 +271,7 @@ Group ..> User : CreateBudgetRequest(user)
 ## 既知の不整合・未実装
 
 - `EfCoreGroupRepository` / `EfCoreUserRepository` は実装済み
-- Discord コマンドは現状 `/test` のみで、業務ユースケースと未接続
+- Discord コマンドは `/test` と `StartBudgetRequestWizard` があるが、業務ユースケースとの接続は未実装
 - `Application/DTOs` / `Application/Queries` は具体実装が未作成
+- `IFileStorage` は IF のみ存在し、実装クラス未作成
 - `RequestStatusChange` は変更者情報を保持しておらず、監査要件がある場合は拡張が必要

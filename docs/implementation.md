@@ -4,17 +4,19 @@
 
 - [設計資料](design.md)
 
-## 現在の実装状況（2026-03 時点）
+## 現在の実装状況（2026-04 時点）
 
 ### 実装済み
 
 - Worker 起動時に `Discord:Token` を読み取り、Discord Bot を起動
 - スラッシュコマンドのグローバル登録
 - `/test` コマンド（疎通確認）
+- `StartBudgetRequestWizard` コマンド（現状は案内メッセージ応答のみ）
 - ドメイン層（`Group` / `User` / `BudgetRequest` / `BudgetTransaction` など）
 - `SubmitBudgetRequestUseCase`
-  - 入力: `userId(int)`, `groupId(int)`, `amount(decimal)`, `description(string)`
+  - 入力: `userId(int)`, `groupId(int)`, `amount(decimal)`, `description(string)`, `evidenceFilePaths(IEnumerable<string>)`
   - 申請作成
+  - 証跡ファイルパスを `BudgetRequest.Evidences` に反映
   - 予算上限チェック（不足時は `Rejected`）
 - `ApproveBudgetRequestUseCase`
   - 入力: `groupId(int)`, `requestId(int)`, `changedByUserId(int)`
@@ -32,11 +34,13 @@
 - `EfUnitOfWork`（`IUnitOfWork` 実装）
 - `EfCoreGroupRepository`（`IGroupRepository` 実装）
 - `EfCoreUserRepository`（`IUserRepository` 実装）
+- `IFileStorage`（IF のみ）
 
 ### テスト実装済み
 
 - `BudgetRequest` のステータス遷移ルール
 - `SubmitBudgetRequestUseCase` の正常系・異常系
+  - 証跡ファイルパス付き申請のテストを含む
 - `ApproveBudgetRequestUseCase` の正常系・異常系
 - `RejectBudgetRequestUseCase` の正常系・異常系
 - `IncreaseBudgetLimitUseCase` の正常系・異常系
@@ -44,9 +48,10 @@
 
 ### 未実装 / 実装途中
 
-- Discord 側の業務コマンド（`/test` 以外）
+- Discord 側の業務コマンド本実装（`StartBudgetRequestWizard` はプレースホルダー応答のみ）
 - プレゼンテーション層からユースケース呼び出しまでの接続
 - DTOs / Queries の具体実装
+- `IFileStorage` の実装クラス（ローカル/クラウド保存）
 - 監査観点での申請ステータス変更者の永続化（`RequestStatusChange` への保持）
 
 ## プロジェクト構成
