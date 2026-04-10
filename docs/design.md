@@ -11,9 +11,9 @@
 - Layered Architecture を採用
   - `Domain`: エンティティ / 値オブジェクト / ドメインサービス / Repository IF
   - `Application`: ユースケース（アプリケーションサービス）
-  - `Infrastructure`: Discord 連携、EF Core `DbContext`
+  - `Infrastructure`: Discord 連携、EF Core `DbContext`、ローカルファイル保存
   - `Presentation`: Discord コマンドモジュール
-- 起動時に `Program` で `DbContext`・`DiscordBotService`・`Worker` を DI 登録
+- 起動時に `Program` で `DbContext`・`Repository`・`UnitOfWork`・`IFileStorage(LocalFileStorage)`・`DiscordBotService`・`Worker` を DI 登録
 - `Worker` が `Discord:Token` を読み、Bot を開始
   - `DiscordBotService` はアセンブリ内の `InteractionModule` を自動登録し、グローバルスラッシュコマンドを登録
 
@@ -273,5 +273,5 @@ Group ..> User : CreateBudgetRequest(user)
 - `EfCoreGroupRepository` / `EfCoreUserRepository` は実装済み
 - Discord コマンドは `/test` と `StartBudgetRequestWizard` があるが、業務ユースケースとの接続は未実装
 - `Application/DTOs` / `Application/Queries` は具体実装が未作成
-- `IFileStorage` は IF のみ存在し、実装クラス未作成
+- `IFileStorage` は `LocalFileStorage` 実装済み（ローカル保存のみ）
 - `RequestStatusChange` は変更者情報を保持しておらず、監査要件がある場合は拡張が必要

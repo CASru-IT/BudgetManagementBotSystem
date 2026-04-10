@@ -62,6 +62,9 @@ cp src/BudgetManagementBotSystem/sample.appsettings.json src/BudgetManagementBot
   "ConnectionStrings": {
     "Db": "Host=localhost;Database=budget;Username=postgres;Password=YOUR_PASSWORD"
   },
+  "EvidenceStorage": {
+    "BasePath": "data/evidences"
+  },
   "FiscalYearStartMonth": {
     "Month": 4
   }
@@ -69,6 +72,7 @@ cp src/BudgetManagementBotSystem/sample.appsettings.json src/BudgetManagementBot
 ```
 
 > 現在の `Program.cs` では `AddDbContext(...UseNpgsql(...))` を実行しているため、`ConnectionStrings:Db` は実質必須です。
+> 証跡ファイル保存は `IFileStorage` の `LocalFileStorage` 実装を使用し、`EvidenceStorage:BasePath`（既定: `data/evidences`）配下に保存されます。
 
 ### 4. PostgreSQL データベース作成
 

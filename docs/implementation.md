@@ -34,7 +34,8 @@
 - `EfUnitOfWork`（`IUnitOfWork` 実装）
 - `EfCoreGroupRepository`（`IGroupRepository` 実装）
 - `EfCoreUserRepository`（`IUserRepository` 実装）
-- `IFileStorage`（IF のみ）
+- `LocalFileStorage`（`IFileStorage` 実装）
+  - `EvidenceStorage:BasePath`（既定: `data/evidences`）配下へ保存
 
 ### テスト実装済み
 
@@ -51,7 +52,7 @@
 - Discord 側の業務コマンド本実装（`StartBudgetRequestWizard` はプレースホルダー応答のみ）
 - プレゼンテーション層からユースケース呼び出しまでの接続
 - DTOs / Queries の具体実装
-- `IFileStorage` の実装クラス（ローカル/クラウド保存）
+- ファイル保存のクラウド実装（現状はローカル保存のみ）
 - 監査観点での申請ステータス変更者の永続化（`RequestStatusChange` への保持）
 
 ## プロジェクト構成
@@ -69,6 +70,7 @@ BudgetManagementBotSystem/
 │  │  └─ ValueObjects/
 │  ├─ Infrastructure/
 │  │  ├─ Discord/
+│  │  ├─ FileStorage/
 │  │  └─ Persistence/
 │  ├─ Presentation/Discord/Modules/
 │  ├─ Program.cs
