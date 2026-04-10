@@ -11,6 +11,9 @@
   "ConnectionStrings": {
     "Db": "Host=localhost;Database=budget;Username=postgres;Password=pass"
   },
+  "EvidenceStorage": {
+    "BasePath": "data/evidences"
+  },
   "FiscalYearStartMonth":{
     "Month": 4
   }
