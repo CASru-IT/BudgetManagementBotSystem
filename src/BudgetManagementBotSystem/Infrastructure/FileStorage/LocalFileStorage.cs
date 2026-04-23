@@ -44,7 +44,7 @@ public class LocalFileStorage : IFileStorage
         return destinationPath;
     }
 
-    public Task<Stream> GetFileAsync(string filePath)
+    public async Task<Stream> GetFileAsync(string filePath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
 
@@ -57,10 +57,10 @@ public class LocalFileStorage : IFileStorage
             81920,
             useAsync: true);
             
-        return Task.FromResult(stream);
+        return stream;
     }
 
-    public Task DeleteFileAsync(string filePath)
+    public async Task DeleteFileAsync(string filePath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
 
@@ -71,6 +71,6 @@ public class LocalFileStorage : IFileStorage
             File.Delete(normalizedPath);
         }
 
-        return Task.CompletedTask;
+        return;
     }
 }
