@@ -10,7 +10,8 @@ public class LocalFileStorage : IFileStorage
     {
         //ルートがついていないパスを入れないといけない
         string configuredPath = configuration["EvidenceStorage:BasePath"] ?? "data/evidences";
-
+        
+        //環境のルートパスと結合して絶対パスを作成
         _storageRootPath = Path.GetFullPath(Path.Combine(environment.ContentRootPath, configuredPath));
 
         Directory.CreateDirectory(_storageRootPath);
