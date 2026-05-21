@@ -21,12 +21,5 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
         [SlashCommand("expired-requests", "長期間未処理の申請を表示する")]
         public async Task ExpiredRequests() => await RespondAsync("未実装: 期限切れ申請");
-
-        // 統合: 既存の GroupLeaderModule のコマンドを移動
-        [SlashCommand("start-budget-request-wizard","グループリーダーが予算申請を行うコマンドです。")]
-        public async Task BudgetRequestWizard()
-        {
-            await RespondAsync("予算申請ウィザードが開始されました。");
-        }
     }
 }
