@@ -4,6 +4,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {
     public class RequestModule : InteractionModuleBase<SocketInteractionContext>
     {
+        [SlashCommand("officer-request", "役員会用の予算申請を行う")]
+        public async Task OfficerRequest() => await RespondAsync("未実装: 役員会申請");
+
         [SlashCommand("create-request", "予算使用申請を作成する")]
         public async Task CreateRequest() => await RespondAsync("未実装: 申請作成");
 

@@ -2,17 +2,8 @@ using Discord.Interactions;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {
-    public class AdminModule : InteractionModuleBase<SocketInteractionContext>
+    public class SystemModule : InteractionModuleBase<SocketInteractionContext>
     {
-        [SlashCommand("set-user-role", "ユーザーの権限やロールを設定する")]
-        public async Task SetUserRole() => await RespondAsync("未実装: ユーザー権限設定");
-
-        [SlashCommand("register-group", "新しい班を登録する")]
-        public async Task RegisterGroup() => await RespondAsync("未実装: 班登録");
-
-        [SlashCommand("delete-group", "班を削除または無効化する")]
-        public async Task DeleteGroup() => await RespondAsync("未実装: 班削除");
-
         [SlashCommand("settings", "システム全体の設定を変更する")]
         public async Task Settings() => await RespondAsync("未実装: 設定");
 
