@@ -16,6 +16,26 @@
 - 既存の実装済みユースケースは申請作成・承認・却下・取消・予算増額に集中している
 - そのため、まずは「申請ワークフロー」と「予算参照系」を固め、その後に管理系・集計系・低優先度機能へ広げるのが効率的
 
+## 実装状況サマリ
+
+- 実装済みコマンド:
+  - `/create-request` (申請作成)
+  - `/list-requests` (申請一覧、ページング・フィルタ)
+  - `/pending-list` (未承認一覧)
+  - `/approve` (承認)
+  - `/reject` (却下)
+  - `/remaining-budget` (残予算表示)
+  - `/usage-history` (予算取引履歴)
+  - `/register-group` (班登録)
+  - `/register-user` (ユーザー登録)
+
+- 追加済みの基盤:
+  - 認可ヘルパー (スタブ実装)
+  - ページング用共通モデル (`PaginatedResult<T>`)
+  - Application 層ユースケースの単体テスト（tests/\* に追加・既存テスト合計 33 件、全成功）
+
+上記は `Presentation/Discord/Modules` の実装と `Application/UseCases` への接続を含みます。
+
 ## 実装方針
 
 1. 先に共通の土台を整える
@@ -39,9 +59,9 @@
 
 ### 実施項目
 
-- Discord コマンド共通の認可ヘルパーの整理
+- Discord コマンド共通の認可ヘルパーの整理 (実装済み)
 - ロールとコマンドの対応表の明文化
-- 一覧表示用のページングモデルを追加
+- 一覧表示用のページングモデルを追加 (実装済み)
 - 申請・予算・ユーザー・班に共通する参照 DTO を追加
 - 失敗時レスポンスの共通化
 - 必要に応じて Repository の検索系メソッドを追加
@@ -55,80 +75,80 @@
 
 ### 1-1 申請作成・確認系
 
-| コマンド | 実装内容 | 主な依存 |
-| --- | --- | --- |
-| `/create-request` | 申請作成フロー、証跡添付、入力バリデーション | SubmitBudgetRequestUseCase, IFileStorage |
-| `/list-requests` | 班または役員会単位の申請一覧、ページング | 申請検索 Query, Repository 参照拡張 |
-| `/request-detail` | 申請詳細、証跡、状態履歴の表示 | 申請詳細 Query, 状態履歴参照 |
-| `/cancel-request` | 確認待ち申請の取消 | CancelBudgetRequestUseCase |
-| `/reapply` | 過去申請の複製と新規申請化 | 申請詳細取得, SubmitBudgetRequestUseCase |
-| `/expired-requests` | 長期未処理申請の抽出 | 申請一覧 Query, 日付条件検索 |
-| `/officer-request` | 役員会向けの申請作成 | `/create-request` の派生実装 |
+| コマンド                     | 実装内容                                     | 主な依存                                 |
+| ---------------------------- | -------------------------------------------- | ---------------------------------------- |
+| `/create-request` (実装済み) | 申請作成フロー、証跡添付、入力バリデーション | SubmitBudgetRequestUseCase, IFileStorage |
+| `/list-requests` (実装済み)  | 班または役員会単位の申請一覧、ページング     | 申請検索 Query, Repository 参照拡張      |
+| `/request-detail`            | 申請詳細、証跡、状態履歴の表示               | 申請詳細 Query, 状態履歴参照             |
+| `/cancel-request`            | 確認待ち申請の取消                           | CancelBudgetRequestUseCase               |
+| `/reapply`                   | 過去申請の複製と新規申請化                   | 申請詳細取得, SubmitBudgetRequestUseCase |
+| `/expired-requests`          | 長期未処理申請の抽出                         | 申請一覧 Query, 日付条件検索             |
+| `/officer-request`           | 役員会向けの申請作成                         | `/create-request` の派生実装             |
 
 ### 1-2 承認系
 
-| コマンド | 実装内容 | 主な依存 |
-| --- | --- | --- |
-| `/pending-list` | 未承認申請の一覧、対象班ごとの絞り込み | 申請一覧 Query |
-| `/approve` | 承認処理、対象申請の状態遷移 | ApproveBudgetRequestUseCase |
-| `/reject` | 却下処理、理由入力の扱い | RejectBudgetRequestUseCase |
-| `/revoke-approval` | 承認済み申請の承認取消 | 状態遷移ルールの拡張 |
-| `/finance-dashboard` | 全班の申請・承認状況の集約表示 | Dashboard Query, 集計処理 |
+| コマンド                   | 実装内容                               | 主な依存                    |
+| -------------------------- | -------------------------------------- | --------------------------- |
+| `/pending-list` (実装済み) | 未承認申請の一覧、対象班ごとの絞り込み | 申請一覧 Query              |
+| `/approve` (実装済み)      | 承認処理、対象申請の状態遷移           | ApproveBudgetRequestUseCase |
+| `/reject` (実装済み)       | 却下処理、理由入力の扱い               | RejectBudgetRequestUseCase  |
+| `/revoke-approval`         | 承認済み申請の承認取消                 | 状態遷移ルールの拡張        |
+| `/finance-dashboard`       | 全班の申請・承認状況の集約表示         | Dashboard Query, 集計処理   |
 
 ### 1-3 予算参照・登録系
 
-| コマンド | 実装内容 | 主な依存 |
-| --- | --- | --- |
-| `/remaining-budget` | 現在の残予算表示 | 予算集計 Query |
-| `/usage-history` | 予算使用履歴の表示 | 履歴 Query, ページング |
-| `/register-budget` | 年度予算の登録 | Budget 登録用 UseCase |
-| `/add-budget` | 追加予算の登録 | IncreaseBudgetLimitUseCase |
-| `/change-budget` | 登録済み予算の修正 | 予算更新 UseCase, 監査記録 |
-| `/create-year` | 新年度の初期化 | 年度生成処理, 初期データ作成 |
-| `/low-budget-warnings` | 残予算が少ない班の抽出 | 予算集計 Query |
+| コマンド                       | 実装内容               | 主な依存                     |
+| ------------------------------ | ---------------------- | ---------------------------- |
+| `/remaining-budget` (実装済み) | 現在の残予算表示       | 予算集計 Query               |
+| `/usage-history` (実装済み)    | 予算使用履歴の表示     | 履歴 Query, ページング       |
+| `/register-budget`             | 年度予算の登録         | Budget 登録用 UseCase        |
+| `/add-budget`                  | 追加予算の登録         | IncreaseBudgetLimitUseCase   |
+| `/change-budget`               | 登録済み予算の修正     | 予算更新 UseCase, 監査記録   |
+| `/create-year`                 | 新年度の初期化         | 年度生成処理, 初期データ作成 |
+| `/low-budget-warnings`         | 残予算が少ない班の抽出 | 予算集計 Query               |
 
 ### 1-4 管理系の基礎
 
-| コマンド | 実装内容 | 主な依存 |
-| --- | --- | --- |
-| `/register-group` | 班登録 | RegisterGroupUseCase |
-| `/register-user` | ユーザー登録 | RegisterUserUseCase |
-| `/grant-role` | 権限付与 | Role 更新 UseCase |
-| `/revoke-role` | 権限解除 | Role 更新 UseCase |
-| `/assign-group` | 班所属の設定 | User 更新 UseCase |
+| コマンド                     | 実装内容     | 主な依存             |
+| ---------------------------- | ------------ | -------------------- |
+| `/register-group` (実装済み) | 班登録       | RegisterGroupUseCase |
+| `/register-user` (実装済み)  | ユーザー登録 | RegisterUserUseCase  |
+| `/grant-role`                | 権限付与     | Role 更新 UseCase    |
+| `/revoke-role`               | 権限解除     | Role 更新 UseCase    |
+| `/assign-group`              | 班所属の設定 | User 更新 UseCase    |
 
 ## フェーズ 2: 中優先度コマンド
 
 ### 2-1 管理系の拡張
 
-| コマンド | 実装内容 | 主な依存 |
-| --- | --- | --- |
-| `/set-user-role` | ユーザーの役割設定 | 権限モデルの整理 |
-| `/settings` | システム全体設定の変更 | 設定保存基盤 |
-| `/audit-log` | 操作履歴の確認 | 監査ログ保存, Query |
-| `/remove-user` | ユーザーの無効化または削除 | ユーザー状態管理 |
-| `/list-users` | 登録済みユーザー一覧 | User Query |
-| `/user-info` | 所属・権限詳細の表示 | User Query, Group 参照 |
-| `/unassign-group` | 班所属の解除 | User 更新 UseCase |
-| `/group-members` | 班ごとの所属メンバー一覧 | Group Query |
+| コマンド          | 実装内容                   | 主な依存               |
+| ----------------- | -------------------------- | ---------------------- |
+| `/set-user-role`  | ユーザーの役割設定         | 権限モデルの整理       |
+| `/settings`       | システム全体設定の変更     | 設定保存基盤           |
+| `/audit-log`      | 操作履歴の確認             | 監査ログ保存, Query    |
+| `/remove-user`    | ユーザーの無効化または削除 | ユーザー状態管理       |
+| `/list-users`     | 登録済みユーザー一覧       | User Query             |
+| `/user-info`      | 所属・権限詳細の表示       | User Query, Group 参照 |
+| `/unassign-group` | 班所属の解除               | User 更新 UseCase      |
+| `/group-members`  | 班ごとの所属メンバー一覧   | Group Query            |
 
 ### 2-2 集計・出力系
 
-| コマンド | 実装内容 | 主な依存 |
-| --- | --- | --- |
-| `/monthly-summary` | 当月支出の集計表示 | 月次集計 Query |
-| `/all-history` | 全班の履歴閲覧 | 横断 Query |
-| `/export-csv` | CSV 出力 | CSV エクスポート処理 |
+| コマンド           | 実装内容           | 主な依存             |
+| ------------------ | ------------------ | -------------------- |
+| `/monthly-summary` | 当月支出の集計表示 | 月次集計 Query       |
+| `/all-history`     | 全班の履歴閲覧     | 横断 Query           |
+| `/export-csv`      | CSV 出力           | CSV エクスポート処理 |
 
 ## フェーズ 3: 低優先度コマンド
 
-| コマンド | 実装内容 | 主な依存 |
-| --- | --- | --- |
-| `/delete-group` | 班の削除または無効化 | 参照整合性、Soft Delete 方針 |
-| `/backup` | DB / 設定のバックアップ | バックアップ実行基盤 |
-| `/maintenance` | メンテナンスモード切替 | システム状態管理 |
-| `/budget-ranking` | 予算使用率ランキング | 集計 Query |
-| `/search-purpose` | 用途名検索 | 検索用 Index / Query |
+| コマンド          | 実装内容                | 主な依存                     |
+| ----------------- | ----------------------- | ---------------------------- |
+| `/delete-group`   | 班の削除または無効化    | 参照整合性、Soft Delete 方針 |
+| `/backup`         | DB / 設定のバックアップ | バックアップ実行基盤         |
+| `/maintenance`    | メンテナンスモード切替  | システム状態管理             |
+| `/budget-ranking` | 予算使用率ランキング    | 集計 Query                   |
+| `/search-purpose` | 用途名検索              | 検索用 Index / Query         |
 
 ## 推奨実装順序
 
