@@ -3,8 +3,6 @@ using BudgetManagementBotSystem.Domain.Repository;
 using BudgetManagementBotSystem.InfraStructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using BudgetManagementBotSystem.Domain.Enums;
-using Microsoft.Extensions.Configuration;
-using System.Linq;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {
@@ -230,114 +228,6 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             catch (Exception ex)
             {
                 await RespondAsync($"追加予算処理中にエラーが発生しました: {ex.Message}", ephemeral: true);
-            }
-        }
-
-        [SlashCommand("change-budget", "登録済み予算を修正する")]
-        public async Task ChangeBudget() => await RespondAsync("未実装: 予算変更");
-
-        [SlashCommand("create-year", "新年度データを作成する")]
-        public async Task CreateYear() => await RespondAsync("未実装: 年度作成");
-
-        [SlashCommand("low-budget-warnings", "残予算が少ない班を表示する")]
-        public async Task LowBudgetWarnings()
-        {
-            try
-            {
-                int startMonth = _configuration.GetValue<int>("FiscalYearStartMonth:Month");
-                var fiscalYear = new BudgetManagementBotSystem.Domain.ValueObjects.FiscalYear(startMonth);
-
-                var groups = await _dbContext.Groups
-                    .Include(g => g.BudgetTransactions)
-                    .Include(g => g.Requests)
-                        .ThenInclude(r => r.StatusHistory)
-                    .ToListAsync();
-
-                var warnings = new List<string>();
-                foreach (var g in groups)
-                {
-                    var total = g.GetTotalBudgetForFiscalYear(fiscalYear);
-                    var pending = g.Requests.Where(r => r.StatusHistory.Last().ChangedStatus == BudgetManagementBotSystem.Domain.Enums.RequestStatus.Pending && r.FiscalYear == fiscalYear).Sum(r => r.Amount.Value);
-                    var available = total - pending;
-                    if (total == 0 || available <= 0 || available < total * 0.1m)
-                    {
-                        warnings.Add($"班:{g.Name} 予算:{total:C} 未承認合計:{pending:C} 利用可能:{available:C}");
-                    }
-                }
-
-                if (!warnings.Any())
-                {
-                    await RespondAsync("残予算が少ない班は見つかりませんでした。", ephemeral: true);
-                    return;
-                }
-
-                await RespondAsync(string.Join("\n", warnings));
-            }
-            catch (Exception ex)
-            {
-                await RespondAsync($"残予算警告取得中にエラーが発生しました: {ex.Message}", ephemeral: true);
-            }
-        }
-
-        [SlashCommand("budget-ranking", "班ごとの予算使用率ランキングを表示する")]
-        public async Task BudgetRanking(int top = 10)
-        {
-            try
-            {
-                int startMonth = _configuration.GetValue<int>("FiscalYearStartMonth:Month");
-                var fiscalYear = new BudgetManagementBotSystem.Domain.ValueObjects.FiscalYear(startMonth);
-
-                var groups = await _dbContext.Groups
-                    .Include(g => g.BudgetTransactions)
-                    .Include(g => g.Requests)
-                        .ThenInclude(r => r.StatusHistory)
-                    .ToListAsync();
-
-                var ranking = groups.Select(g =>
-                {
-                    var total = g.GetTotalBudgetForFiscalYear(fiscalYear);
-                    var pending = g.Requests.Where(r => r.StatusHistory.Last().ChangedStatus == BudgetManagementBotSystem.Domain.Enums.RequestStatus.Pending && r.FiscalYear == fiscalYear).Sum(r => r.Amount.Value);
-                    var available = total - pending;
-                    decimal usedPercent = 0;
-                    if (total > 0) usedPercent = Math.Clamp(1 - (available / total), 0, 1);
-                    return new { Group = g, Total = total, Available = available, UsedPercent = usedPercent };
-                })
-                .OrderByDescending(x => x.UsedPercent)
-                .Take(Math.Max(1, top))
-                .ToList();
-
-                var lines = ranking.Select((r, idx) => $"{idx + 1}. 班:{r.Group.Name} 使用率:{r.UsedPercent:P1} 予算:{r.Total:C} 残:{r.Available:C}");
-                await RespondAsync(string.Join("\n", lines));
-            }
-            catch (Exception ex)
-            {
-                await RespondAsync($"予算ランキング取得中にエラーが発生しました: {ex.Message}", ephemeral: true);
-            }
-        }
-
-        [SlashCommand("monthly-summary", "今月の支出状況を集計表示する")]
-        public async Task MonthlySummary()
-        {
-            try
-            {
-                var now = DateTime.Now;
-                var groups = await _dbContext.Groups
-                    .Include(g => g.BudgetTransactions)
-                    .ToListAsync();
-
-                var lines = groups.Select(g =>
-                {
-                    var monthTx = g.BudgetTransactions.Where(t => t.TransactionDate.Year == now.Year && t.TransactionDate.Month == now.Month).ToList();
-                    var income = monthTx.Where(t => t.IsIncome).Sum(t => t.Amount.Value);
-                    var expense = monthTx.Where(t => !t.IsIncome).Sum(t => t.Amount.Value);
-                    return $"班:{g.Name} 収入:{income:C} 支出:{expense:C} 件数:{monthTx.Count}";
-                });
-
-                await RespondAsync(string.Join("\n", lines));
-            }
-            catch (Exception ex)
-            {
-                await RespondAsync($"月次集計取得中にエラーが発生しました: {ex.Message}", ephemeral: true);
             }
         }
 

@@ -202,35 +202,5 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 await RespondAsync($"承認取消中にエラーが発生しました: {ex.Message}", ephemeral: true);
             }
         }
-
-        [SlashCommand("finance-dashboard", "全班の予算・申請状況を一覧表示する")]
-        public async Task FinanceDashboard()
-        {
-            try
-            {
-                int startMonth = _configuration.GetValue<int>("FiscalYearStartMonth:Month");
-                var fiscalYear = new BudgetManagementBotSystem.Domain.ValueObjects.FiscalYear(startMonth);
-
-                var groups = await _dbContext.Groups
-                    .Include(g => g.BudgetTransactions)
-                    .Include(g => g.Requests)
-                        .ThenInclude(r => r.StatusHistory)
-                    .ToListAsync();
-
-                var lines = groups.Select(g =>
-                {
-                    var totalBudget = g.GetTotalBudgetForFiscalYear(fiscalYear);
-                    var pending = g.Requests.Where(r => r.StatusHistory.Last().ChangedStatus == BudgetManagementBotSystem.Domain.Enums.RequestStatus.Pending && r.FiscalYear == fiscalYear).ToList();
-                    var pendingSum = pending.Sum(r => r.Amount.Value);
-                    return $"班:{g.Name} 予算:{totalBudget:C} 未承認合計:{pendingSum:C} 未承認件数:{pending.Count}";
-                });
-
-                await RespondAsync(string.Join("\n", lines));
-            }
-            catch (Exception ex)
-            {
-                await RespondAsync($"会計ダッシュボード取得中にエラーが発生しました: {ex.Message}", ephemeral: true);
-            }
-        }
     }
 }

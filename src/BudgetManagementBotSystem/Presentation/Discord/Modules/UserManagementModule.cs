@@ -2,7 +2,6 @@ using Discord.Interactions;
 using BudgetManagementBotSystem.Application.UseCases;
 using BudgetManagementBotSystem.Domain.Entities;
 using BudgetManagementBotSystem.Domain.Enums;
-using System.Linq;
 using Microsoft.EntityFrameworkCore;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules
@@ -10,10 +9,10 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
     public class UserManagementModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly RegisterUserUseCase _registerUserUseCase;
-        private readonly BudgetManagementBotSystem.Domain.Repository.IUserRepository _userRepository;
-        private readonly BudgetManagementBotSystem.InfraStructure.Persistence.BudgetManagementDbContext _dbContext;
+        private readonly Domain.Repository.IUserRepository _userRepository;
+        private readonly InfraStructure.Persistence.BudgetManagementDbContext _dbContext;
 
-        public UserManagementModule(RegisterUserUseCase registerUserUseCase, BudgetManagementBotSystem.Domain.Repository.IUserRepository userRepository, BudgetManagementBotSystem.InfraStructure.Persistence.BudgetManagementDbContext dbContext)
+        public UserManagementModule(RegisterUserUseCase registerUserUseCase, Domain.Repository.IUserRepository userRepository, BudgetManagementBotSystem.InfraStructure.Persistence.BudgetManagementDbContext dbContext)
         {
             _registerUserUseCase = registerUserUseCase;
             _userRepository = userRepository;

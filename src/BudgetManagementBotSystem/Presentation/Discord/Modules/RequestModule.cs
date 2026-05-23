@@ -15,7 +15,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         private readonly UserCancelBudgetRequestUseCase _userCancelRequestUseCase;
         private readonly IUserRepository _userRepository;
         private readonly BudgetManagementDbContext _dbContext;
-        private readonly BudgetManagementBotSystem.InfraStructure.Discord.DiscordBotService _discordBotService;
+        private readonly InfraStructure.Discord.DiscordBotService _discordBotService;
 
         public RequestModule(SubmitBudgetRequestUseCase submitBudgetRequestUseCase, CancelBudgetRequestUseCase cancelBudgetRequestUseCase, UserCancelBudgetRequestUseCase userCancelRequestUseCase, IUserRepository userRepository, BudgetManagementDbContext dbContext, BudgetManagementBotSystem.InfraStructure.Discord.DiscordBotService discordBotService)
         {
@@ -25,46 +25,6 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             _userRepository = userRepository;
             _dbContext = dbContext;
             _discordBotService = discordBotService;
-        }
-
-        [SlashCommand("officer-request", "役員会用の予算申請を行う")]
-        public async Task OfficerRequest(
-            [Summary("group-id")] int groupId,
-            [Summary("amount")] double amount,
-            [Summary("description")] string description,
-            [Summary("attach")] bool attach = false)
-        {
-            try
-            {
-                var discordUserId = Context.User.Id;
-                var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
-                if (user == null)
-                {
-                    await RespondAsync("エラー: Discord ユーザーがシステムに登録されていません。", ephemeral: true);
-                    return;
-                }
-
-                decimal amountDec = Convert.ToDecimal(amount);
-
-                var tempPaths = new List<string>();
-                if (attach)
-                {
-                    await RespondAsync("証跡ファイルをこのチャンネルに添付してください。30秒以内にアップロードしてください。", ephemeral: true);
-                    var uploaded = await _discordBotService.WaitForAttachmentUploadAsync(Context.User.Id, TimeSpan.FromSeconds(30), Context.Channel);
-                    if (uploaded != null && uploaded.Any())
-                    {
-                        tempPaths.AddRange(uploaded);
-                    }
-                }
-
-                await _submitBudgetRequestUseCase.ExecuteAsync(user.Id, groupId, amountDec, description, tempPaths);
-
-                await RespondAsync($"役員会申請を作成しました: 班 {groupId} 金額 {amountDec:C}");
-            }
-            catch (Exception ex)
-            {
-                await RespondAsync($"役員会申請中にエラーが発生しました: {ex.Message}", ephemeral: true);
-            }
         }
 
         [SlashCommand("create-request", "予算使用申請を作成する")]
@@ -297,118 +257,6 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             catch (Exception ex)
             {
                 await RespondAsync($"申請取消中にエラーが発生しました: {ex.Message}", ephemeral: true);
-            }
-        }
-
-        [SlashCommand("reapply", "過去の申請内容をコピーして再申請する")]
-        public async Task Reapply([Summary("request-id")] string requestId)
-        {
-            try
-            {
-                if (!int.TryParse(requestId, out var reqId))
-                {
-                    await RespondAsync($"申請IDは数値で指定してください: {requestId}", ephemeral: true);
-                    return;
-                }
-
-                var req = await _dbContext.BudgetRequests
-                    .Include(r => r.Evidences)
-                    .FirstOrDefaultAsync(r => r.Id == reqId);
-
-                if (req == null)
-                {
-                    await RespondAsync($"申請が見つかりません: {reqId}", ephemeral: true);
-                    return;
-                }
-
-                var discordUserId = Context.User.Id;
-                var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
-                if (user == null)
-                {
-                    await RespondAsync("エラー: Discord ユーザーがシステムに登録されていません。", ephemeral: true);
-                    return;
-                }
-
-                if (!user.GroupId.HasValue)
-                {
-                    await RespondAsync("エラー: 班が未設定のため、再申請できません。", ephemeral: true);
-                    return;
-                }
-
-                var isPrivileged = await BudgetManagementBotSystem.Presentation.Discord.Helpers.AuthorizationHelper.IsPrivilegedAsync(_userRepository, discordUserId);
-                if (!isPrivileged && user.Id != req.UserId)
-                {
-                    await RespondAsync("エラー: 再申請の権限がありません。", ephemeral: true);
-                    return;
-                }
-
-                int groupId = _dbContext.Entry(req).Property<int>("GroupId").CurrentValue;
-                decimal amount = req.Amount.Value;
-                string description = req.Description;
-                var evidencePaths = req.Evidences.Select(e => e.FilePath).ToList();
-
-                await _submitBudgetRequestUseCase.ExecuteAsync(user.Id, groupId, amount, description, evidencePaths);
-
-                await RespondAsync($"申請 {reqId} を元に再申請を作成しました。", ephemeral: true);
-            }
-            catch (Exception ex)
-            {
-                await RespondAsync($"再申請中にエラーが発生しました: {ex.Message}", ephemeral: true);
-            }
-        }
-
-        [SlashCommand("expired-requests", "長期間未処理の申請を表示する")]
-        public async Task ExpiredRequests(int days = 30)
-        {
-            try
-            {
-                if (days < 1) days = 30;
-
-                var cutoff = DateTime.Now.AddDays(-days);
-
-                var discordUserId = Context.User.Id;
-                var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
-                if (user == null)
-                {
-                    await RespondAsync("エラー: Discord ユーザーがシステムに登録されていません。", ephemeral: true);
-                    return;
-                }
-
-                var query = _dbContext.BudgetRequests
-                    .Include(r => r.StatusHistory)
-                    .Where(r => r.RequestDate < cutoff)
-                    .AsQueryable();
-
-                var isPrivileged = await BudgetManagementBotSystem.Presentation.Discord.Helpers.AuthorizationHelper.IsPrivilegedAsync(_userRepository, discordUserId);
-                if (!isPrivileged)
-                {
-                    if (!user.GroupId.HasValue)
-                    {
-                        await RespondAsync("エラー: 班が未設定のため、期限切れ申請を表示できません。", ephemeral: true);
-                        return;
-                    }
-
-                    query = query.Where(r => EF.Property<int>(r, "GroupId") == user.GroupId.Value);
-                }
-
-                var items = await query.OrderByDescending(r => r.RequestDate).Take(100).ToListAsync();
-                if (!items.Any())
-                {
-                    await RespondAsync("期限切れ申請は見つかりませんでした。", ephemeral: true);
-                    return;
-                }
-
-                var lines = items.Select(r =>
-                {
-                    var status = r.StatusHistory.Last().ChangedStatus;
-                    return $"ID:{r.Id} 班ID:{_dbContext.Entry(r).Property<int>("GroupId").CurrentValue} 金額:{r.Amount.Value:C} 状態:{status} 日付:{r.RequestDate:yyyy-MM-dd} 説明:{(r.Description.Length>80? r.Description.Substring(0,80)+"...": r.Description)}";
-                });
-
-                await RespondAsync($"期限切れ申請（{days}日以上）\n{string.Join("\n", lines)}");
-            }
-            catch (Exception ex)
-            {
-                await RespondAsync($"期限切れ申請取得中にエラーが発生しました: {ex.Message}", ephemeral: true);
             }
         }
     }
