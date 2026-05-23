@@ -1,14 +1,124 @@
 using Discord.Interactions;
+using BudgetManagementBotSystem.Domain.Repository;
+using BudgetManagementBotSystem.InfraStructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+using BudgetManagementBotSystem.Domain.Enums;
+using Microsoft.Extensions.Configuration;
+using System.Linq;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {
     public class BudgetModule : InteractionModuleBase<SocketInteractionContext>
     {
+        private readonly IUserRepository _userRepository;
+        private readonly BudgetManagementDbContext _dbContext;
+        private readonly IConfiguration _configuration;
+
+        public BudgetModule(IUserRepository userRepository, BudgetManagementDbContext dbContext, IConfiguration configuration)
+        {
+            _userRepository = userRepository;
+            _dbContext = dbContext;
+            _configuration = configuration;
+        }
+
         [SlashCommand("remaining-budget", "現在の残予算を確認する")]
-        public async Task RemainingBudget() => await RespondAsync("未実装: 残予算");
+        public async Task RemainingBudget(int? groupId = null)
+        {
+            try
+            {
+                var discordUserId = Context.User.Id;
+                var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
+                if (user == null)
+                {
+                    await RespondAsync("エラー: Discord ユーザーが登録されていません。", ephemeral: true);
+                    return;
+                }
+
+                int targetGroupId = groupId ?? user.GroupId;
+                if ((user.Role != AccountRole.Admin && user.Role != AccountRole.Accountant) && groupId.HasValue && groupId.Value != user.GroupId)
+                {
+                    await RespondAsync("エラー: 指定した班の情報を参照する権限がありません。", ephemeral: true);
+                    return;
+                }
+
+                var group = await _dbContext.Groups
+                    .Include(g => g.BudgetTransactions)
+                    .Include(g => g.Requests)
+                        .ThenInclude(r => r.StatusHistory)
+                    .FirstOrDefaultAsync(g => g.Id == targetGroupId);
+
+                if (group == null)
+                {
+                    await RespondAsync($"班が見つかりません: {targetGroupId}", ephemeral: true);
+                    return;
+                }
+
+                int startMonth = _configuration.GetValue<int>("FiscalYearStartMonth:Month");
+                var fiscalYear = new BudgetManagementBotSystem.Domain.ValueObjects.FiscalYear(startMonth);
+
+                decimal totalBudget = group.GetTotalBudgetForFiscalYear(fiscalYear);
+                // 未承認の申請合計
+                var pendingTotal = group.Requests
+                    .Where(r => r.StatusHistory.Last().ChangedStatus == RequestStatus.Pending && r.FiscalYear == fiscalYear)
+                    .Sum(r => r.Amount.Value);
+
+                decimal available = totalBudget - pendingTotal;
+
+                await RespondAsync($"班:{group.Name} 現在予算:{totalBudget:C} 未承認合計:{pendingTotal:C} 利用可能:{available:C}");
+            }
+            catch (Exception ex)
+            {
+                await RespondAsync($"残予算取得中にエラーが発生しました: {ex.Message}", ephemeral: true);
+            }
+        }
 
         [SlashCommand("usage-history", "予算使用履歴を表示する")]
-        public async Task UsageHistory() => await RespondAsync("未実装: 使用履歴");
+        public async Task UsageHistory(int page = 1, int pageSize = 10, int? groupId = null)
+        {
+            try
+            {
+                if (page < 1) page = 1;
+                if (pageSize < 1) pageSize = 10;
+                pageSize = Math.Min(pageSize, 50);
+
+                var discordUserId = Context.User.Id;
+                var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
+                if (user == null)
+                {
+                    await RespondAsync("エラー: Discord ユーザーが登録されていません。", ephemeral: true);
+                    return;
+                }
+
+                int targetGroupId = groupId ?? user.GroupId;
+                if ((user.Role != AccountRole.Admin && user.Role != AccountRole.Accountant) && groupId.HasValue && groupId.Value != user.GroupId)
+                {
+                    await RespondAsync("エラー: 指定した班の情報を参照する権限がありません。", ephemeral: true);
+                    return;
+                }
+
+                var query = _dbContext.BudgetTransactions
+                    .Where(t => EF.Property<int>(t, "GroupId") == targetGroupId)
+                    .OrderByDescending(t => t.TransactionDate)
+                    .AsQueryable();
+
+                var total = await query.CountAsync();
+                var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+
+                if (!items.Any())
+                {
+                    await RespondAsync("予算取引の履歴は見つかりませんでした。", ephemeral: true);
+                    return;
+                }
+
+                var lines = items.Select(t => $"{(t.IsIncome?"収入":"支出")} {t.Amount.Value:C} 日付:{t.TransactionDate:yyyy-MM-dd} 年度:{t.FiscalYear.Year}");
+                var header = $"取引履歴 (ページ {page}/{Math.Max(1, (int)Math.Ceiling(total/(double)pageSize))}) 合計:{total}";
+                await RespondAsync($"{header}\n{string.Join("\n", lines)}");
+            }
+            catch (Exception ex)
+            {
+                await RespondAsync($"使用履歴取得中にエラーが発生しました: {ex.Message}", ephemeral: true);
+            }
+        }
 
         [SlashCommand("register-budget", "年度ごとの班予算を登録する")]
         public async Task RegisterBudget() => await RespondAsync("未実装: 予算登録");
