@@ -1,4 +1,5 @@
 using BudgetManagementBotSystem.Application.Interface;
+using BudgetManagementBotSystem.Application.UseCases;
 using BudgetManagementBotSystem.Domain.Repository;
 using BudgetManagementBotSystem.InfraStructure.Discord;
 using BudgetManagementBotSystem.InfraStructure.Persistence;
@@ -17,6 +18,8 @@ builder.Services.AddDbContext<BudgetManagementDbContext>(options =>
 builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 builder.Services.AddScoped<IGroupRepository, EfCoreGroupRepository>();
 builder.Services.AddScoped<IUserRepository, EfCoreUserRepository>();
+builder.Services.AddScoped<RegisterGroupUseCase>();
+builder.Services.AddScoped<RegisterUserUseCase>();
 builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
 
 builder.Services.AddSingleton<DiscordBotService>();

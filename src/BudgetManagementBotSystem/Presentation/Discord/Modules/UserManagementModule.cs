@@ -1,14 +1,30 @@
 using Discord.Interactions;
+using BudgetManagementBotSystem.Application.UseCases;
+using BudgetManagementBotSystem.Domain.Enums;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {
     public class UserManagementModule : InteractionModuleBase<SocketInteractionContext>
     {
-        [SlashCommand("set-user-role", "ユーザーの権限やロールを設定する")]
-        public async Task SetUserRole() => await RespondAsync("未実装: ユーザー権限設定");
+        private readonly RegisterUserUseCase _registerUserUseCase;
+
+        public UserManagementModule(RegisterUserUseCase registerUserUseCase)
+        {
+            _registerUserUseCase = registerUserUseCase;
+        }
 
         [SlashCommand("register-user", "システム利用ユーザーを登録する")]
-        public async Task RegisterUser() => await RespondAsync("未実装: ユーザー登録");
+        public async Task RegisterUser(
+            [Summary("名前")] string name,
+            [Summary("DiscordユーザーID")] ulong discordUserId,
+            [Summary("権限")] AccountRole role)
+        {
+            await _registerUserUseCase.ExecuteAsync(name, discordUserId, role);
+            await RespondAsync($"ユーザーを登録しました: {name} ({role})");
+        }
+
+        [SlashCommand("set-user-role", "ユーザーの権限やロールを設定する")]
+        public async Task SetUserRole() => await RespondAsync("未実装: ユーザー権限設定");
 
         [SlashCommand("remove-user", "ユーザーを無効化または削除する")]
         public async Task RemoveUser() => await RespondAsync("未実装: ユーザー削除");
