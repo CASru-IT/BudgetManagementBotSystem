@@ -15,9 +15,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
         [SlashCommand("register-user", "システム利用ユーザーを登録する")]
         public async Task RegisterUser(
-            [Summary("名前")] string name,
-            [Summary("DiscordユーザーID")] ulong discordUserId,
-            [Summary("権限")] AccountRole role)
+            [Summary("name")] string name,
+            [Summary("discord-user-id")] ulong discordUserId,
+            [Summary("role")] AccountRole role)
         {
             await _registerUserUseCase.ExecuteAsync(name, discordUserId, role);
             await RespondAsync($"ユーザーを登録しました: {name} ({role})");

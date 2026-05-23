@@ -143,7 +143,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("revoke-approval", "承認済み申請の承認を取り消す")]
-        public async Task RevokeApproval([Summary("申請ID")] string requestId) => await RespondAsync($"未実装: 承認取消 {requestId}");
+        public async Task RevokeApproval([Summary("request-id")] string requestId) => await RespondAsync($"未実装: 承認取消 {requestId}");
 
         [SlashCommand("finance-dashboard", "全班の予算・申請状況を一覧表示する")]
         public async Task FinanceDashboard() => await RespondAsync("未実装: 会計ダッシュボード");

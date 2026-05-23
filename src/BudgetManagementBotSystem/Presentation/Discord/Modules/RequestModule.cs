@@ -32,10 +32,10 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
         [SlashCommand("create-request", "予算使用申請を作成する")]
         public async Task CreateRequest(
-            [Summary("班ID")] int groupId,
-            [Summary("金額（例: 1234.56）")] double amount,
-            [Summary("用途説明")] string description,
-            [Summary("ファイル添付を行うか（true の場合アップロード指示を行います）、任意")]
+            [Summary("group-id")] int groupId,
+            [Summary("amount")] double amount,
+            [Summary("description")] string description,
+            [Summary("attach")]
             bool attach = false)
         {
             try
@@ -81,10 +81,10 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
         [SlashCommand("list-requests", "自分の班または役員会の申請一覧を表示する")]
         public async Task ListRequests(
-            [Summary("状態（任意）")] string? status = null,
-            [Summary("ページ番号(1-)")] int page = 1,
-            [Summary("ページサイズ(最大50)")] int pageSize = 10,
-            [Summary("班ID（役員専用、任意）")] int? groupId = null)
+            [Summary("status")] string? status = null,
+            [Summary("page")] int page = 1,
+            [Summary("page-size")] int pageSize = 10,
+            [Summary("group-id")] int? groupId = null)
         {
             try
             {
@@ -164,10 +164,10 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("request-detail", "指定した申請の詳細を表示する")]
-        public async Task RequestDetail([Summary("申請ID")] string requestId) => await RespondAsync($"未実装: 申請詳細 {requestId}");
+        public async Task RequestDetail([Summary("request-id")] string requestId) => await RespondAsync($"未実装: 申請詳細 {requestId}");
 
         [SlashCommand("cancel-request", "確認待ち状態の申請を取り消す")]
-        public async Task CancelRequest([Summary("申請ID")] string requestId)
+        public async Task CancelRequest([Summary("request-id")] string requestId)
         {
             try
             {
@@ -223,7 +223,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("reapply", "過去の申請内容をコピーして再申請する")]
-        public async Task Reapply([Summary("申請ID")] string requestId) => await RespondAsync($"未実装: 再申請 {requestId}");
+        public async Task Reapply([Summary("request-id")] string requestId) => await RespondAsync($"未実装: 再申請 {requestId}");
 
         [SlashCommand("expired-requests", "長期間未処理の申請を表示する")]
         public async Task ExpiredRequests() => await RespondAsync("未実装: 期限切れ申請");

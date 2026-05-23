@@ -13,7 +13,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("register-group", "新しい班を登録する")]
-        public async Task RegisterGroup([Summary("班名")] string name)
+        public async Task RegisterGroup([Summary("group-name")] string name)
         {
             await _registerGroupUseCase.ExecuteAsync(name);
             await RespondAsync($"班を登録しました: {name}");
