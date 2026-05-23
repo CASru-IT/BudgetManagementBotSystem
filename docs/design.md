@@ -1,10 +1,11 @@
-# BudgetManagementBotSystem 設計資料
+# BudgetManagementBotSystem — 設計資料
 
-このドキュメントは、現行実装（2026-04 時点）に合わせた設計資料です。
+このドキュメントは現行実装（2026-04 時点）の設計をまとめます。
 
 ## 関連ドキュメント
 
 - [実装状況](implementation.md)
+- [コマンド実装計画](command-implementation-plan.md)
 
 ## アーキテクチャ概要
 

@@ -7,6 +7,9 @@ Discord 上で動作する予算管理 Bot システムです。
 
 - [設計資料](docs/design.md)
 - [実装状況](docs/implementation.md)
+ - [コマンド実装計画](docs/command-implementation-plan.md)
+
+ドキュメント全体の目次は `docs/INDEX.md` を参照してください。
 
 ## 必要な環境
 
