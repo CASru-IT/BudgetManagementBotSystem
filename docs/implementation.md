@@ -3,6 +3,7 @@
 ## 関連ドキュメント
 
 - [設計資料](design.md)
+- [コマンド実装計画](command-implementation-plan.md)
 
 ## 現在の実装状況（2026-04 時点）
 
