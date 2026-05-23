@@ -55,9 +55,9 @@ public class BudgetRequest
         switch (currentStatus)
         {
             case RequestStatus.Pending:
-                if (newStatus != RequestStatus.Approved && newStatus != RequestStatus.Rejected)
+                if (newStatus != RequestStatus.Approved && newStatus != RequestStatus.Rejected && newStatus != RequestStatus.Cancelled)
                 {
-                    throw new InvalidOperationException("PendingからはApprovedまたはRejectedにしか遷移できません。");
+                    throw new InvalidOperationException("PendingからはApproved、Rejected、またはCancelledにしか遷移できません。");
                 }
                 break;
             case RequestStatus.Approved:

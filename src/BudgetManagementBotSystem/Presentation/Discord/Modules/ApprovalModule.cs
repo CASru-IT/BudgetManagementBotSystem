@@ -50,7 +50,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     .Where(r => r.StatusHistory.Last().ChangedStatus == Domain.Enums.RequestStatus.Pending)
                     .AsQueryable();
 
-                if (user.Role != Domain.Enums.AccountRole.Admin && user.Role != Domain.Enums.AccountRole.Accountant)
+                var isPrivileged = await BudgetManagementBotSystem.Presentation.Discord.Helpers.AuthorizationHelper.IsPrivilegedAsync(_userRepository, discordUserId);
+                if (!isPrivileged)
                 {
                     query = query.Where(r => EF.Property<int>(r, "GroupId") == user.GroupId);
                 }

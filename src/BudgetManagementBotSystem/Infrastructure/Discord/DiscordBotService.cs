@@ -11,6 +11,7 @@ public class DiscordBotService
     private readonly IServiceProvider _provider;
     private DiscordSocketClient _client = null!;
     private InteractionService _interactions = null!;
+        private readonly HttpClient _httpClient = new HttpClient();
 
     public DiscordBotService(IServiceProvider provider)
     {
@@ -70,5 +71,62 @@ public class DiscordBotService
 
         await _client.LoginAsync(TokenType.Bot, token);
         await _client.StartAsync();
+    }
+
+    /// <summary>
+    /// 指定ユーザーが同一チャンネルに添付ファイルを含むメッセージを送るのを待ち、添付ファイルを一時保存してパスを返します。
+    /// タイムアウト時は空リストを返します。
+    /// </summary>
+    public async Task<List<string>> WaitForAttachmentUploadAsync(ulong userId, TimeSpan timeout, IMessageChannel? channel = null)
+    {
+        var tcs = new TaskCompletionSource<List<string>>();
+
+        Task Handler(SocketMessage msg)
+        {
+            if (msg.Author.Id != userId) return Task.CompletedTask;
+            if (channel != null && msg.Channel.Id != channel.Id) return Task.CompletedTask;
+            if (msg.Attachments == null || msg.Attachments.Count == 0) return Task.CompletedTask;
+
+            _ = Task.Run(async () =>
+            {
+                var paths = new List<string>();
+                foreach (var att in msg.Attachments)
+                {
+                    try
+                    {
+                        var ext = Path.GetExtension(att.Filename);
+                        if (string.IsNullOrWhiteSpace(ext)) ext = ".bin";
+                        var tempFile = Path.Combine(Path.GetTempPath(), $"evidence_{Guid.NewGuid():N}{ext}");
+                        using var resp = await _httpClient.GetAsync(att.Url);
+                        resp.EnsureSuccessStatusCode();
+                        await using var fs = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
+                        await (await resp.Content.ReadAsStreamAsync()).CopyToAsync(fs);
+                        paths.Add(tempFile);
+                    }
+                    catch
+                    {
+                        // skip failed attachment
+                    }
+                }
+                tcs.TrySetResult(paths);
+            });
+
+            return Task.CompletedTask;
+        }
+
+        _client.MessageReceived += Handler;
+
+        var delay = Task.Delay(timeout);
+        var completed = await Task.WhenAny(tcs.Task, delay);
+        _client.MessageReceived -= Handler;
+
+        if (completed == tcs.Task)
+        {
+            return await tcs.Task;
+        }
+        else
+        {
+            return new List<string>();
+        }
     }
 }

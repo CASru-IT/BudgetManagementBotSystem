@@ -13,12 +13,14 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         private readonly IUserRepository _userRepository;
         private readonly BudgetManagementDbContext _dbContext;
         private readonly IConfiguration _configuration;
+        private readonly BudgetManagementBotSystem.Application.UseCases.IncreaseBudgetLimitUseCase _increaseBudgetLimitUseCase;
 
-        public BudgetModule(IUserRepository userRepository, BudgetManagementDbContext dbContext, IConfiguration configuration)
+        public BudgetModule(IUserRepository userRepository, BudgetManagementDbContext dbContext, IConfiguration configuration, BudgetManagementBotSystem.Application.UseCases.IncreaseBudgetLimitUseCase increaseBudgetLimitUseCase)
         {
             _userRepository = userRepository;
             _dbContext = dbContext;
             _configuration = configuration;
+            _increaseBudgetLimitUseCase = increaseBudgetLimitUseCase;
         }
 
         [SlashCommand("remaining-budget", "現在の残予算を確認する")]
@@ -35,7 +37,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 }
 
                 int targetGroupId = groupId ?? user.GroupId;
-                if ((user.Role != AccountRole.Admin && user.Role != AccountRole.Accountant) && groupId.HasValue && groupId.Value != user.GroupId)
+                var isPrivileged = await BudgetManagementBotSystem.Presentation.Discord.Helpers.AuthorizationHelper.IsPrivilegedAsync(_userRepository, discordUserId);
+                if (!isPrivileged && groupId.HasValue && groupId.Value != user.GroupId)
                 {
                     await RespondAsync("エラー: 指定した班の情報を参照する権限がありません。", ephemeral: true);
                     return;
@@ -90,7 +93,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 }
 
                 int targetGroupId = groupId ?? user.GroupId;
-                if ((user.Role != AccountRole.Admin && user.Role != AccountRole.Accountant) && groupId.HasValue && groupId.Value != user.GroupId)
+                var isPrivileged2 = await BudgetManagementBotSystem.Presentation.Discord.Helpers.AuthorizationHelper.IsPrivilegedAsync(_userRepository, discordUserId);
+                if (!isPrivileged2 && groupId.HasValue && groupId.Value != user.GroupId)
                 {
                     await RespondAsync("エラー: 指定した班の情報を参照する権限がありません。", ephemeral: true);
                     return;
@@ -124,7 +128,51 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         public async Task RegisterBudget() => await RespondAsync("未実装: 予算登録");
 
         [SlashCommand("add-budget", "追加予算を付与する")]
-        public async Task AddBudget() => await RespondAsync("未実装: 予算追加");
+        public async Task AddBudget(int groupId, double amount)
+        {
+            try
+            {
+                var discordUserId = Context.User.Id;
+                var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
+                if (user == null)
+                {
+                    await RespondAsync("エラー: Discord ユーザーが登録されていません。", ephemeral: true);
+                    return;
+                }
+
+                // Only Admins and Accountants are allowed to add budget
+                var canAddBudget = await BudgetManagementBotSystem.Presentation.Discord.Helpers.AuthorizationHelper.IsPrivilegedAsync(_userRepository, discordUserId);
+                if (!canAddBudget)
+                {
+                    await RespondAsync("エラー: 追加予算の付与を行う権限がありません。", ephemeral: true);
+                    return;
+                }
+
+                if (amount <= 0)
+                {
+                    await RespondAsync("エラー: 追加金額は正の数で指定してください。", ephemeral: true);
+                    return;
+                }
+
+                decimal decAmount = Convert.ToDecimal(amount);
+
+                await _increaseBudgetLimitUseCase.ExecuteAsync(groupId, decAmount);
+
+                await RespondAsync($"班 {groupId} に {decAmount:C} の予算を追加しました。", ephemeral: true);
+            }
+            catch (ArgumentNullException ex)
+            {
+                await RespondAsync($"エラー: {ex.Message}", ephemeral: true);
+            }
+            catch (ArgumentOutOfRangeException ex)
+            {
+                await RespondAsync($"エラー: {ex.Message}", ephemeral: true);
+            }
+            catch (Exception ex)
+            {
+                await RespondAsync($"追加予算処理中にエラーが発生しました: {ex.Message}", ephemeral: true);
+            }
+        }
 
         [SlashCommand("change-budget", "登録済み予算を修正する")]
         public async Task ChangeBudget() => await RespondAsync("未実装: 予算変更");

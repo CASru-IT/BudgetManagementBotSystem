@@ -11,14 +11,20 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
     public class RequestModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly SubmitBudgetRequestUseCase _submitBudgetRequestUseCase;
+        private readonly CancelBudgetRequestUseCase _cancelBudgetRequestUseCase;
+        private readonly UserCancelBudgetRequestUseCase _userCancelRequestUseCase;
         private readonly IUserRepository _userRepository;
         private readonly BudgetManagementDbContext _dbContext;
+        private readonly BudgetManagementBotSystem.InfraStructure.Discord.DiscordBotService _discordBotService;
 
-        public RequestModule(SubmitBudgetRequestUseCase submitBudgetRequestUseCase, IUserRepository userRepository, BudgetManagementDbContext dbContext)
+        public RequestModule(SubmitBudgetRequestUseCase submitBudgetRequestUseCase, CancelBudgetRequestUseCase cancelBudgetRequestUseCase, UserCancelBudgetRequestUseCase userCancelRequestUseCase, IUserRepository userRepository, BudgetManagementDbContext dbContext, BudgetManagementBotSystem.InfraStructure.Discord.DiscordBotService discordBotService)
         {
             _submitBudgetRequestUseCase = submitBudgetRequestUseCase;
+            _cancelBudgetRequestUseCase = cancelBudgetRequestUseCase;
+            _userCancelRequestUseCase = userCancelRequestUseCase;
             _userRepository = userRepository;
             _dbContext = dbContext;
+            _discordBotService = discordBotService;
         }
 
         [SlashCommand("officer-request", "役員会用の予算申請を行う")]
@@ -28,7 +34,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         public async Task CreateRequest(
             [Summary("班ID")] int groupId,
             [Summary("金額（例: 1234.56）")] double amount,
-            [Summary("用途説明")] string description)
+            [Summary("用途説明")] string description,
+            [Summary("ファイル添付を行うか（true の場合アップロード指示を行います）、任意")]
+            bool attach = false)
         {
             try
             {
@@ -42,7 +50,18 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
                 decimal amountDec = Convert.ToDecimal(amount);
 
-                await _submitBudgetRequestUseCase.ExecuteAsync(user.Id, groupId, amountDec, description, Enumerable.Empty<string>());
+                var tempPaths = new List<string>();
+                if (attach)
+                {
+                    await RespondAsync("証跡ファイルをこのチャンネルに添付してください。30秒以内にアップロードしてください。", ephemeral: true);
+                    var uploaded = await _discordBotService.WaitForAttachmentUploadAsync(Context.User.Id, TimeSpan.FromSeconds(30), Context.Channel);
+                    if (uploaded != null && uploaded.Any())
+                    {
+                        tempPaths.AddRange(uploaded);
+                    }
+                }
+
+                await _submitBudgetRequestUseCase.ExecuteAsync(user.Id, groupId, amountDec, description, tempPaths);
 
                 await RespondAsync($"申請を作成しました: 班 {groupId} 金額 {amountDec:C}");
             }
@@ -62,7 +81,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
         [SlashCommand("list-requests", "自分の班または役員会の申請一覧を表示する")]
         public async Task ListRequests(
-            [Summary("状態（任意）")] string status = null,
+            [Summary("状態（任意）")] string? status = null,
             [Summary("ページ番号(1-)")] int page = 1,
             [Summary("ページサイズ(最大50)")] int pageSize = 10,
             [Summary("班ID（役員専用、任意）")] int? groupId = null)
@@ -86,8 +105,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     .Include(r => r.Evidences)
                     .AsQueryable();
 
-                // 権限に応じた範囲制限
-                if (user.Role == AccountRole.Admin || user.Role == AccountRole.Accountant)
+                // 権限に応じた範囲制限（DB の Role を参照）
+                var isPrivileged = await BudgetManagementBotSystem.Presentation.Discord.Helpers.AuthorizationHelper.IsPrivilegedAsync(_userRepository, discordUserId);
+                if (isPrivileged)
                 {
                     if (groupId.HasValue)
                     {
@@ -147,7 +167,60 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         public async Task RequestDetail([Summary("申請ID")] string requestId) => await RespondAsync($"未実装: 申請詳細 {requestId}");
 
         [SlashCommand("cancel-request", "確認待ち状態の申請を取り消す")]
-        public async Task CancelRequest([Summary("申請ID")] string requestId) => await RespondAsync($"未実装: 申請取消 {requestId}");
+        public async Task CancelRequest([Summary("申請ID")] string requestId)
+        {
+            try
+            {
+                if (!int.TryParse(requestId, out var reqId))
+                {
+                    await RespondAsync($"申請IDは数値で指定してください: {requestId}", ephemeral: true);
+                    return;
+                }
+
+                var discordUserId = Context.User.Id;
+                var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
+                if (user == null)
+                {
+                    await RespondAsync("エラー: Discord ユーザーがシステムに登録されていません。", ephemeral: true);
+                    return;
+                }
+
+                var req = await _dbContext.BudgetRequests.FirstOrDefaultAsync(r => r.Id == reqId);
+                if (req == null)
+                {
+                    await RespondAsync($"申請が見つかりません: {reqId}", ephemeral: true);
+                    return;
+                }
+
+                int groupId = _dbContext.Entry(req).Property<int>("GroupId").CurrentValue;
+
+                // If the request owner wants to cancel a Pending request, allow it
+                var isRequestOwner = req.UserId == user.Id;
+                var currentStatus = req.StatusHistory.Last().ChangedStatus;
+                if (isRequestOwner && currentStatus == BudgetManagementBotSystem.Domain.Enums.RequestStatus.Pending)
+                {
+                    await _userCancelRequestUseCase.ExecuteAsync(groupId, reqId, user.Id);
+                    await RespondAsync($"申請 {reqId} を申請者が取消しました。", ephemeral: true);
+                    return;
+                }
+
+                // Otherwise, require privileged role to cancel (admin/accountant/etc.)
+                var isPrivilegedCancel = await BudgetManagementBotSystem.Presentation.Discord.Helpers.AuthorizationHelper.IsPrivilegedAsync(_userRepository, discordUserId);
+                if (!isPrivilegedCancel)
+                {
+                    await RespondAsync("エラー: 申請取消の権限がありません。", ephemeral: true);
+                    return;
+                }
+
+                await _cancelBudgetRequestUseCase.ExecuteAsync(groupId, reqId, user.Id);
+
+                await RespondAsync($"申請 {reqId} を取消しました。", ephemeral: true);
+            }
+            catch (Exception ex)
+            {
+                await RespondAsync($"申請取消中にエラーが発生しました: {ex.Message}", ephemeral: true);
+            }
+        }
 
         [SlashCommand("reapply", "過去の申請内容をコピーして再申請する")]
         public async Task Reapply([Summary("申請ID")] string requestId) => await RespondAsync($"未実装: 再申請 {requestId}");
