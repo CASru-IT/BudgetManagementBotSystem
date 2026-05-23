@@ -14,17 +14,20 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         private readonly RejectBudgetRequestUseCase _rejectUseCase;
         private readonly IUserRepository _userRepository;
         private readonly BudgetManagementDbContext _dbContext;
+        private readonly IConfiguration _configuration;
 
         public ApprovalModule(
             ApproveBudgetRequestUseCase approveUseCase,
             RejectBudgetRequestUseCase rejectUseCase,
             IUserRepository userRepository,
-            BudgetManagementDbContext dbContext)
+            BudgetManagementDbContext dbContext,
+            IConfiguration configuration)
         {
             _approveUseCase = approveUseCase;
             _rejectUseCase = rejectUseCase;
             _userRepository = userRepository;
             _dbContext = dbContext;
+            _configuration = configuration;
         }
 
         [SlashCommand("pending-list", "未承認の申請一覧を表示する")]
@@ -44,16 +47,22 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
+                var isPrivileged = await BudgetManagementBotSystem.Presentation.Discord.Helpers.AuthorizationHelper.IsPrivilegedAsync(_userRepository, discordUserId);
+                if (!user.GroupId.HasValue && !isPrivileged)
+                {
+                    await RespondAsync("エラー: 班が未設定のため、未承認申請を表示できません。", ephemeral: true);
+                    return;
+                }
+
                 var query = _dbContext.BudgetRequests
                     .Include(r => r.StatusHistory)
                     .Include(r => r.Evidences)
                     .Where(r => r.StatusHistory.Last().ChangedStatus == Domain.Enums.RequestStatus.Pending)
                     .AsQueryable();
 
-                var isPrivileged = await BudgetManagementBotSystem.Presentation.Discord.Helpers.AuthorizationHelper.IsPrivilegedAsync(_userRepository, discordUserId);
                 if (!isPrivileged)
                 {
-                    query = query.Where(r => EF.Property<int>(r, "GroupId") == user.GroupId);
+                    query = query.Where(r => EF.Property<int>(r, "GroupId") == user.GroupId!.Value);
                 }
 
                 var total = await query.CountAsync();
@@ -143,9 +152,87 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("revoke-approval", "承認済み申請の承認を取り消す")]
-        public async Task RevokeApproval([Summary("request-id")] string requestId) => await RespondAsync($"未実装: 承認取消 {requestId}");
+        public async Task RevokeApproval([Summary("request-id")] string requestId)
+        {
+            try
+            {
+                if (!int.TryParse(requestId, out var reqId))
+                {
+                    await RespondAsync($"申請IDは数値で指定してください: {requestId}", ephemeral: true);
+                    return;
+                }
+
+                var req = await _dbContext.BudgetRequests
+                    .Include(r => r.StatusHistory)
+                    .FirstOrDefaultAsync(r => r.Id == reqId);
+
+                if (req == null)
+                {
+                    await RespondAsync($"申請が見つかりません: {reqId}", ephemeral: true);
+                    return;
+                }
+
+                var currentStatus = req.StatusHistory.Last().ChangedStatus;
+                if (currentStatus != BudgetManagementBotSystem.Domain.Enums.RequestStatus.Approved)
+                {
+                    await RespondAsync($"申請 {reqId} は承認済みではありません。現在の状態: {currentStatus}", ephemeral: true);
+                    return;
+                }
+
+                var discordUserId = Context.User.Id;
+                var actingUser = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
+                if (actingUser == null)
+                {
+                    await RespondAsync("エラー: Discord ユーザーが登録されていません。", ephemeral: true);
+                    return;
+                }
+
+                var isPrivileged = await BudgetManagementBotSystem.Presentation.Discord.Helpers.AuthorizationHelper.IsPrivilegedAsync(_userRepository, discordUserId);
+                if (!isPrivileged)
+                {
+                    await RespondAsync("エラー: 承認取消の権限がありません。", ephemeral: true);
+                    return;
+                }
+
+                req.UpdateStatus(BudgetManagementBotSystem.Domain.Enums.RequestStatus.ApprovalCancelled, actingUser);
+                await _dbContext.SaveChangesAsync();
+
+                await RespondAsync($"申請 {reqId} の承認を取り消しました。", ephemeral: true);
+            }
+            catch (Exception ex)
+            {
+                await RespondAsync($"承認取消中にエラーが発生しました: {ex.Message}", ephemeral: true);
+            }
+        }
 
         [SlashCommand("finance-dashboard", "全班の予算・申請状況を一覧表示する")]
-        public async Task FinanceDashboard() => await RespondAsync("未実装: 会計ダッシュボード");
+        public async Task FinanceDashboard()
+        {
+            try
+            {
+                int startMonth = _configuration.GetValue<int>("FiscalYearStartMonth:Month");
+                var fiscalYear = new BudgetManagementBotSystem.Domain.ValueObjects.FiscalYear(startMonth);
+
+                var groups = await _dbContext.Groups
+                    .Include(g => g.BudgetTransactions)
+                    .Include(g => g.Requests)
+                        .ThenInclude(r => r.StatusHistory)
+                    .ToListAsync();
+
+                var lines = groups.Select(g =>
+                {
+                    var totalBudget = g.GetTotalBudgetForFiscalYear(fiscalYear);
+                    var pending = g.Requests.Where(r => r.StatusHistory.Last().ChangedStatus == BudgetManagementBotSystem.Domain.Enums.RequestStatus.Pending && r.FiscalYear == fiscalYear).ToList();
+                    var pendingSum = pending.Sum(r => r.Amount.Value);
+                    return $"班:{g.Name} 予算:{totalBudget:C} 未承認合計:{pendingSum:C} 未承認件数:{pending.Count}";
+                });
+
+                await RespondAsync(string.Join("\n", lines));
+            }
+            catch (Exception ex)
+            {
+                await RespondAsync($"会計ダッシュボード取得中にエラーが発生しました: {ex.Message}", ephemeral: true);
+            }
+        }
     }
 }

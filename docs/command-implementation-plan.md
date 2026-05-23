@@ -33,12 +33,25 @@
   - `/register-group` (班登録)
   - `/list-groups` (班一覧、管理者限定)
   - `/register-user` (ユーザー登録)
+  - `/request-detail` (申請詳細表示)
+  - `/reapply` (過去申請の再申請)
+  - `/officer-request` (役員会用申請)
+  - `/expired-requests` (長期間未処理申請一覧)
+  - `/revoke-approval` (承認取消)
+  - `/finance-dashboard` (会計ダッシュボード)
+  - `/register-budget` (年度予算登録)
+  - `/low-budget-warnings` (残予算警告一覧)
+  - `/budget-ranking` (予算使用率ランキング)
+  - `/monthly-summary` (月次サマリ)
+  - `/all-history` (全班の取引履歴)
+  - `/list-users` (管理者向けユーザー一覧)
+  - `/group-members` (班メンバー一覧)
 
 - モジュール定義済みだが未実装のコマンド:
-  - 申請系: `/request-detail`, `/reapply`, `/expired-requests`, `/officer-request`
-  - 承認系: `/revoke-approval`, `/finance-dashboard`
-  - 予算系: `/register-budget`, `/change-budget`, `/create-year`, `/low-budget-warnings`, `/budget-ranking`, `/monthly-summary`, `/all-history`
-  - 管理系: `/set-user-role`, `/remove-user`, `/list-users`, `/user-info`, `/grant-role`, `/revoke-role`, `/assign-group`, `/unassign-group`, `/group-members`
+  - 申請系: `/request-detail` (一部実装済み), `/reapply` (一部実装済み), `/expired-requests` (一部実装済み), `/officer-request` (一部実装済み)
+  - 承認系: `/revoke-approval` (一部実装済み), `/finance-dashboard` (一部実装済み)
+  - 予算系: `/register-budget` (一部実装済み), `/change-budget`, `/create-year`, `/low-budget-warnings` (一部実装済み), `/budget-ranking` (一部実装済み), `/monthly-summary` (一部実装済み), `/all-history` (一部実装済み)
+  - 管理系: `/set-user-role`, `/remove-user`, `/list-users` (一部実装済み), `/user-info`, `/grant-role`, `/revoke-role`, `/assign-group`, `/unassign-group`, `/group-members` (一部実装済み)
   - システム/出力/運用系: `/settings`, `/audit-log`, `/backup`, `/maintenance`, `/export-csv`, `/search-purpose`, `/delete-group`
 
 - 追加済みの基盤:
@@ -50,42 +63,42 @@
 
 ## コマンド一覧 (権限付き)
 
-| コマンド | 権限 | 概要 |
-| --- | --- | --- |
-| `/reject` | 会計 | 指定した申請を却下する |
-| `/register-budget` | 会長 | 年度ごとの班予算を登録する |
-| `/add-budget` | 会長 | 追加予算を付与する |
-| `/register-group` | 管理者 | 新しい班を登録する |
-| `/list-groups` | 管理者 | 登録済みの班一覧を表示する |
-| `/register-user` | 管理者 | システム利用ユーザーを登録する |
-| `/grant-role` | 管理者 | ユーザーへ権限を付与する |
-| `/revoke-role` | 管理者 | ユーザーから権限を解除する |
-| `/assign-group` | 管理者 | ユーザーを班へ所属させる |
-| `/cancel-request` | 班長, 会長 | 確認待ち状態の申請を取り消す |
-| `/revoke-approval` | 会計 | 承認済み申請の承認を取り消す |
-| `/finance-dashboard` | 会計 | 全班の予算・申請状況を一覧表示する |
-| `/low-budget-warnings` | 会計 | 残予算が少ない班を表示する |
-| `/change-budget` | 会長 | 登録済み予算を修正する |
-| `/create-year` | 会長 | 新年度データを作成する |
-| `/all-history` | 会長, 会計 | 全班の予算使用履歴を閲覧する |
-| `/officer-request` | 会長 | 役員会用の予算申請を行う |
-| `/set-user-role` | 管理者 | ユーザーの権限やロールを設定する |
-| `/settings` | 管理者 | システム全体の設定を変更する |
-| `/audit-log` | 管理者 | 操作履歴や変更履歴を確認する |
-| `/monthly-summary` | 会長, 会計 | 今月の支出状況を集計表示する |
-| `/export-csv` | 会計, 会長, 管理者 | 履歴や予算情報をCSV形式で出力する |
-| `/remove-user` | 管理者 | ユーザーを無効化または削除する |
-| `/list-users` | 管理者 | 登録済みユーザーを表示する |
-| `/user-info` | 管理者 | ユーザーの所属・権限情報を表示する |
-| `/unassign-group` | 管理者 | ユーザーの班所属を解除する |
-| `/group-members` | 管理者, 会長 | 班ごとの所属メンバー一覧を表示する |
-| `/delete-group` | 管理者 | 班を削除または無効化する |
-| `/backup` | 管理者 | データベースや設定をバックアップする |
-| `/maintenance` | 管理者 | メンテナンスモードを切り替える |
-| `/budget-ranking` | 会長, 会計 | 班ごとの予算使用率ランキングを表示する |
-| `/search-purpose` | 会長, 会計 | 用途名で申請や履歴を検索する |
-| `/expired-requests` | 会計 | 長期間未処理の申請を表示する |
-| `/reapply` | 班長, 会長 | 過去の申請内容をコピーして再申請する |
+| コマンド               | 権限               | 概要                                   |
+| ---------------------- | ------------------ | -------------------------------------- |
+| `/reject`              | 会計               | 指定した申請を却下する                 |
+| `/register-budget`     | 会長               | 年度ごとの班予算を登録する             |
+| `/add-budget`          | 会長               | 追加予算を付与する                     |
+| `/register-group`      | 管理者             | 新しい班を登録する                     |
+| `/list-groups`         | 管理者             | 登録済みの班一覧を表示する             |
+| `/register-user`       | 管理者             | システム利用ユーザーを登録する         |
+| `/grant-role`          | 管理者             | ユーザーへ権限を付与する               |
+| `/revoke-role`         | 管理者             | ユーザーから権限を解除する             |
+| `/assign-group`        | 管理者             | ユーザーを班へ所属させる               |
+| `/cancel-request`      | 班長, 会長         | 確認待ち状態の申請を取り消す           |
+| `/revoke-approval`     | 会計               | 承認済み申請の承認を取り消す           |
+| `/finance-dashboard`   | 会計               | 全班の予算・申請状況を一覧表示する     |
+| `/low-budget-warnings` | 会計               | 残予算が少ない班を表示する             |
+| `/change-budget`       | 会長               | 登録済み予算を修正する                 |
+| `/create-year`         | 会長               | 新年度データを作成する                 |
+| `/all-history`         | 会長, 会計         | 全班の予算使用履歴を閲覧する           |
+| `/officer-request`     | 会長               | 役員会用の予算申請を行う               |
+| `/set-user-role`       | 管理者             | ユーザーの権限やロールを設定する       |
+| `/settings`            | 管理者             | システム全体の設定を変更する           |
+| `/audit-log`           | 管理者             | 操作履歴や変更履歴を確認する           |
+| `/monthly-summary`     | 会長, 会計         | 今月の支出状況を集計表示する           |
+| `/export-csv`          | 会計, 会長, 管理者 | 履歴や予算情報をCSV形式で出力する      |
+| `/remove-user`         | 管理者             | ユーザーを無効化または削除する         |
+| `/list-users`          | 管理者             | 登録済みユーザーを表示する             |
+| `/user-info`           | 管理者             | ユーザーの所属・権限情報を表示する     |
+| `/unassign-group`      | 管理者             | ユーザーの班所属を解除する             |
+| `/group-members`       | 管理者, 会長       | 班ごとの所属メンバー一覧を表示する     |
+| `/delete-group`        | 管理者             | 班を削除または無効化する               |
+| `/backup`              | 管理者             | データベースや設定をバックアップする   |
+| `/maintenance`         | 管理者             | メンテナンスモードを切り替える         |
+| `/budget-ranking`      | 会長, 会計         | 班ごとの予算使用率ランキングを表示する |
+| `/search-purpose`      | 会長, 会計         | 用途名で申請や履歴を検索する           |
+| `/expired-requests`    | 会計               | 長期間未処理の申請を表示する           |
+| `/reapply`             | 班長, 会長         | 過去の申請内容をコピーして再申請する   |
 
 ## 実装方針
 
