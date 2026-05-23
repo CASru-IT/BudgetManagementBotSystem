@@ -7,13 +7,13 @@
 
 ## 目的
 
-この文書は、現時点で未実装または実装途中の Discord スラッシュコマンドについて、実装順序・依存関係・担当レイヤーを整理した計画書です。
+この文書は、現時点で未実装または実装途中の Discord スラッシュコマンドについて、実装順序・依存関係・担当レイヤーを整理した計画書です。実装済みのコマンドは別途明示し、現状との差分が分かるようにしています。
 
 ## 現状認識
 
 - `Presentation/Discord/Modules` にコマンド定義は存在している
-- ただし多くのコマンドはプレースホルダーで、Application / Domain / Infrastructure までの実処理が未接続
-- 既存の実装済みユースケースは申請作成・承認・却下・取消・予算増額に集中している
+- いくつかのコマンドは実処理まで接続済みだが、まだプレースホルダーのままのコマンドも多い
+- 既存の実装済みユースケースは申請作成・承認・却下・取消・予算増額・班登録・ユーザー登録に集中している
 - そのため、まずは「申請ワークフロー」と「予算参照系」を固め、その後に管理系・集計系・低優先度機能へ広げるのが効率的
 
 ## 実装状況サマリ
@@ -21,13 +21,22 @@
 - 実装済みコマンド:
   - `/create-request` (申請作成)
   - `/list-requests` (申請一覧、ページング・フィルタ)
+  - `/cancel-request` (申請取消)
   - `/pending-list` (未承認一覧)
   - `/approve` (承認)
   - `/reject` (却下)
   - `/remaining-budget` (残予算表示)
   - `/usage-history` (予算取引履歴)
+  - `/add-budget` (追加予算付与)
   - `/register-group` (班登録)
   - `/register-user` (ユーザー登録)
+
+- モジュール定義済みだが未実装のコマンド:
+  - 申請系: `/request-detail`, `/reapply`, `/expired-requests`, `/officer-request`
+  - 承認系: `/revoke-approval`, `/finance-dashboard`
+  - 予算系: `/register-budget`, `/change-budget`, `/create-year`, `/low-budget-warnings`, `/budget-ranking`, `/monthly-summary`, `/all-history`
+  - 管理系: `/set-user-role`, `/remove-user`, `/list-users`, `/user-info`, `/grant-role`, `/revoke-role`, `/assign-group`, `/unassign-group`, `/group-members`
+  - システム/出力/運用系: `/settings`, `/audit-log`, `/backup`, `/maintenance`, `/export-csv`, `/search-purpose`, `/delete-group`
 
 - 追加済みの基盤:
   - 認可ヘルパー (スタブ実装)
@@ -71,15 +80,15 @@
 
 ### 1-1 申請作成・確認系
 
-| コマンド                     | 実装内容                                     | 主な依存                                 |
-| ---------------------------- | -------------------------------------------- | ---------------------------------------- |
-| `/create-request` (実装済み) | 申請作成フロー、証跡添付、入力バリデーション | SubmitBudgetRequestUseCase, IFileStorage |
-| `/list-requests` (実装済み)  | 班または役員会単位の申請一覧、ページング     | 申請検索 Query, Repository 参照拡張      |
-| `/request-detail`            | 申請詳細、証跡、状態履歴の表示               | 申請詳細 Query, 状態履歴参照             |
-| `/cancel-request`            | 確認待ち申請の取消                           | CancelBudgetRequestUseCase               |
-| `/reapply`                   | 過去申請の複製と新規申請化                   | 申請詳細取得, SubmitBudgetRequestUseCase |
-| `/expired-requests`          | 長期未処理申請の抽出                         | 申請一覧 Query, 日付条件検索             |
-| `/officer-request`           | 役員会向けの申請作成                         | `/create-request` の派生実装             |
+| コマンド                     | 実装内容                                     | 主な依存                                                   |
+| ---------------------------- | -------------------------------------------- | ---------------------------------------------------------- |
+| `/create-request` (実装済み) | 申請作成フロー、証跡添付、入力バリデーション | SubmitBudgetRequestUseCase, IFileStorage                   |
+| `/list-requests` (実装済み)  | 班または役員会単位の申請一覧、ページング     | 申請検索 Query, Repository 参照拡張                        |
+| `/request-detail`            | 申請詳細、証跡、状態履歴の表示               | 申請詳細 Query, 状態履歴参照                               |
+| `/cancel-request` (実装済み) | 確認待ち申請の取消                           | CancelBudgetRequestUseCase, UserCancelBudgetRequestUseCase |
+| `/reapply`                   | 過去申請の複製と新規申請化                   | 申請詳細取得, SubmitBudgetRequestUseCase                   |
+| `/expired-requests`          | 長期未処理申請の抽出                         | 申請一覧 Query, 日付条件検索                               |
+| `/officer-request`           | 役員会向けの申請作成                         | `/create-request` の派生実装                               |
 
 ### 1-2 承認系
 
@@ -98,7 +107,7 @@
 | `/remaining-budget` (実装済み) | 現在の残予算表示       | 予算集計 Query               |
 | `/usage-history` (実装済み)    | 予算使用履歴の表示     | 履歴 Query, ページング       |
 | `/register-budget`             | 年度予算の登録         | Budget 登録用 UseCase        |
-| `/add-budget`                  | 追加予算の登録         | IncreaseBudgetLimitUseCase   |
+| `/add-budget` (実装済み)       | 追加予算の登録         | IncreaseBudgetLimitUseCase   |
 | `/change-budget`               | 登録済み予算の修正     | 予算更新 UseCase, 監査記録   |
 | `/create-year`                 | 新年度の初期化         | 年度生成処理, 初期データ作成 |
 | `/low-budget-warnings`         | 残予算が少ない班の抽出 | 予算集計 Query               |
