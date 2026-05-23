@@ -29,6 +29,7 @@
   - `/usage-history` (予算取引履歴)
   - `/add-budget` (追加予算付与)
   - `/register-group` (班登録)
+  - `/list-groups` (班一覧、管理者限定)
   - `/register-user` (ユーザー登録)
 
 - モジュール定義済みだが未実装のコマンド:
@@ -114,13 +115,14 @@
 
 ### 1-4 管理系の基礎
 
-| コマンド                     | 実装内容     | 主な依存             |
-| ---------------------------- | ------------ | -------------------- |
-| `/register-group` (実装済み) | 班登録       | RegisterGroupUseCase |
-| `/register-user` (実装済み)  | ユーザー登録 | RegisterUserUseCase  |
-| `/grant-role`                | 権限付与     | Role 更新 UseCase    |
-| `/revoke-role`               | 権限解除     | Role 更新 UseCase    |
-| `/assign-group`              | 班所属の設定 | User 更新 UseCase    |
+| コマンド                     | 実装内容     | 主な依存                                    |
+| ---------------------------- | ------------ | ------------------------------------------- |
+| `/register-group` (実装済み) | 班登録       | RegisterGroupUseCase                        |
+| `/list-groups` (実装済み)    | 班一覧表示   | IGroupRepository, IUserRepository, 認可判定 |
+| `/register-user` (実装済み)  | ユーザー登録 | RegisterUserUseCase                         |
+| `/grant-role`                | 権限付与     | Role 更新 UseCase                           |
+| `/revoke-role`               | 権限解除     | Role 更新 UseCase                           |
+| `/assign-group`              | 班所属の設定 | User 更新 UseCase                           |
 
 ## フェーズ 2: 中優先度コマンド
 
