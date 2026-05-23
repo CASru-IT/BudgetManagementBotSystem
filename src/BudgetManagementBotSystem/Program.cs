@@ -22,6 +22,8 @@ builder.Services.AddScoped<IUserRepository, EfCoreUserRepository>();
 builder.Services.AddScoped<RegisterGroupUseCase>();
 builder.Services.AddScoped<RegisterUserUseCase>();
 builder.Services.AddScoped<SubmitBudgetRequestUseCase>();
+builder.Services.AddScoped<ApproveBudgetRequestUseCase>();
+builder.Services.AddScoped<RejectBudgetRequestUseCase>();
 builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
 
 builder.Services.AddSingleton<DiscordBotService>();
