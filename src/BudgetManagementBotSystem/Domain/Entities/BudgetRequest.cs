@@ -14,6 +14,10 @@ public class BudgetRequest
     public List<RequestEvidence> Evidences { get; private set; } = new List<RequestEvidence>();
     public List<RequestStatusChange> StatusHistory { get; private set; } = new List<RequestStatusChange>();
 
+    private BudgetRequest()
+    {
+    }
+
     public BudgetRequest(int userId, Money amount, FiscalYear fiscalYear, string description, IEnumerable<string> evidenceFilePaths)
     {
         ArgumentNullException.ThrowIfNull(evidenceFilePaths);

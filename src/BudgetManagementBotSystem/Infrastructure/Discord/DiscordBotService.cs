@@ -2,6 +2,7 @@ using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 using System.Reflection;
 
 namespace BudgetManagementBotSystem.InfraStructure.Discord;
@@ -34,13 +35,34 @@ public class DiscordBotService
         });
 
         _client.Log += m => { Console.WriteLine(m); return Task.CompletedTask; };
+        _interactions.Log += m => { Console.WriteLine(m); return Task.CompletedTask; };
 
         await _interactions.AddModulesAsync(Assembly.GetExecutingAssembly(), _provider);
 
         //サーバーへのコマンドの登録
         _client.Ready += async () =>
         {
-            await _interactions.RegisterCommandsGloballyAsync();
+            try
+            {
+                var configuration = _provider.GetService<IConfiguration>();
+                var guildIdStr = configuration?["Discord:TestGuildId"];
+                if (!string.IsNullOrWhiteSpace(guildIdStr) && ulong.TryParse(guildIdStr, out var guildId))
+                {
+                    Console.WriteLine($"Registering commands to test guild {guildId}");
+                    await _interactions.RegisterCommandsToGuildAsync(guildId);
+                    Console.WriteLine("Registered commands to test guild.");
+                }
+                else
+                {
+                    Console.WriteLine("Registering commands globally (may take up to an hour to appear)");
+                    await _interactions.RegisterCommandsGloballyAsync();
+                    Console.WriteLine("Registered commands globally.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Command registration failed: {ex}");
+            }
         };
 
         //コマンドが呼び出されたときのイベントハンドラーの登録

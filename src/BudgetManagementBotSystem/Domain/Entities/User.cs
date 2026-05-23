@@ -28,4 +28,9 @@ public class User
     {
         IsActive = true;
     }
+
+    public void ChangeRole(AccountRole role)
+    {
+        Role = role;
+    }
 }

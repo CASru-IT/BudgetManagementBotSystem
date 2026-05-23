@@ -8,6 +8,9 @@
   "Discord": {
     "Token": "BOT_TOKEN"
   },
+  "AdminBootstrap": {
+    "Password": "CHANGE_ME"
+  },
   "ConnectionStrings": {
     "Db": "Host=localhost;Database=budget;Username=postgres;Password=pass"
   },

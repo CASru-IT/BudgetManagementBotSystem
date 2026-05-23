@@ -18,7 +18,7 @@ public class RegisterUserUseCaseTests
         var useCase = new RegisterUserUseCase(mockUserRepository.Object, mockUnitOfWork.Object);
 
         // Act
-        await useCase.ExecuteAsync("Test User", 12345UL, AccountRole.Member);
+        await useCase.ExecuteAsync("Test User", 12345UL, AccountRole.GroupLeader);
 
         // Assert
         mockUserRepository.Verify(r => r.AddAsync(It.IsAny<BudgetManagementBotSystem.Domain.Entities.User>()), Times.Once);
@@ -34,7 +34,7 @@ public class RegisterUserUseCaseTests
         var useCase = new RegisterUserUseCase(mockUserRepository.Object, mockUnitOfWork.Object);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => useCase.ExecuteAsync("   ", 12345UL, AccountRole.Member));
+        await Assert.ThrowsAsync<ArgumentException>(() => useCase.ExecuteAsync("   ", 12345UL, AccountRole.GroupLeader));
         mockUserRepository.Verify(r => r.AddAsync(It.IsAny<BudgetManagementBotSystem.Domain.Entities.User>()), Times.Never);
         mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Never);
     }

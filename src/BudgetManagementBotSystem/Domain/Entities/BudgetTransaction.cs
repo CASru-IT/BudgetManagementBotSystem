@@ -10,6 +10,10 @@ public class BudgetTransaction
     public FiscalYear FiscalYear { get; private set; }
     public DateTime TransactionDate { get; private set; }
 
+    private BudgetTransaction()
+    {
+    }
+
     public BudgetTransaction(bool isIncome, decimal amount, FiscalYear fiscalYear)
     {
         IsIncome = isIncome;
