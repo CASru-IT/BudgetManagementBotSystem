@@ -1,7 +1,7 @@
 using Moq;
 using Microsoft.Extensions.Configuration;
 using BudgetManagementBotSystem.Application.Interface;
-using BudgetManagementBotSystem.Application.UseCases;
+using BudgetManagementBotSystem.Application.UseCases.Budget;
 using BudgetManagementBotSystem.Domain.Repository;
 using BudgetManagementBotSystem.Domain.Entities;
 

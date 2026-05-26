@@ -27,6 +27,7 @@ namespace BudgetManagementBotSystem.Tests.Application.UseCases
             const string description = "備品購入";
 
             var user = new User("Test User", 12345UL, AccountRole.Accountant);
+                user.ChangeGroupId(0);
             var group = new Group("Test Group");
             group.AddBudgetTransaction(new BudgetTransaction(true, 200_000m, new FiscalYear(4)));
 
@@ -67,6 +68,7 @@ namespace BudgetManagementBotSystem.Tests.Application.UseCases
             const decimal amount = 10_000m;
 
             var user = new User("Test User", 12345UL, AccountRole.Accountant);
+                user.ChangeGroupId(0);
             var group = new Group("Test Group"); // 予算0
 
             var mockUserRepository = new Mock<IUserRepository>();
@@ -129,6 +131,7 @@ namespace BudgetManagementBotSystem.Tests.Application.UseCases
             const int groupId = 999;
 
             var user = new User("Test User", 12345UL, AccountRole.Accountant);
+                user.ChangeGroupId(0);
 
             var mockUserRepository = new Mock<IUserRepository>();
             mockUserRepository.Setup(r => r.GetByIdAsync(userId)).ReturnsAsync(user);
@@ -159,6 +162,7 @@ namespace BudgetManagementBotSystem.Tests.Application.UseCases
             const int groupId = 1;
 
             var user = new User("Test User", 12345UL, AccountRole.Accountant);
+                user.ChangeGroupId(0);
             var group = new Group("Test Group");
 
             var mockUserRepository = new Mock<IUserRepository>();
@@ -192,6 +196,7 @@ namespace BudgetManagementBotSystem.Tests.Application.UseCases
             const int fiscalYearStartMonth = 7;
 
             var user = new User("Test User", 12345UL, AccountRole.Accountant);
+            user.ChangeGroupId(0);
             var group = new Group("Test Group");
             group.AddBudgetTransaction(new BudgetTransaction(true, 100_000m, new FiscalYear(fiscalYearStartMonth)));
 
@@ -227,6 +232,7 @@ namespace BudgetManagementBotSystem.Tests.Application.UseCases
             const int groupId = 1;
 
             var user = new User("Test User", 12345UL, AccountRole.Accountant);
+            user.ChangeGroupId(0);
             var group = new Group("Test Group");
             group.AddBudgetTransaction(new BudgetTransaction(true, 100_000m, new FiscalYear(4)));
 

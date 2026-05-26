@@ -6,7 +6,6 @@
 
 - Presentation 層が直接 DbContext を参照しないようにする。
 - Application 層に UseCase を集約することで責務を明確化する。
-- Export 機能を UseCase 化し、`IFileStorage` 経由で CSV を保存する。
 - ドメインエンティティの非 null 警告を解消する。
 
 ## 主要な変更点（ファイル）
@@ -16,12 +15,10 @@
   - `Application/UseCases/Groups/RegisterGroupUseCase.cs`
   - `Application/UseCases/Groups/DeleteGroupUseCase.cs` (新規)
   - `Application/UseCases/Budget/IncreaseBudgetLimitUseCase.cs` (新規)
-  - `Application/UseCases/Export/ExportUseCase.cs` (新規)
 
 - Presentation 層モジュールの using/DI を更新:
   - `Presentation/Discord/Modules/UserManagementModule.cs`
   - `Presentation/Discord/Modules/GroupModule.cs`
-  - `Presentation/Discord/Modules/ExportModule.cs`
   - `Presentation/Discord/Modules/SystemModule.cs`
 
 - ドメインエンティティの非 null 警告対応（初期化子を追加）:
@@ -38,13 +35,11 @@
 ## テストとビルド
 
 - `dotnet build` → 成功
-- `dotnet test --no-build` → 33/33 成功
+- `dotnet test --no-build` → 成功
 
 ## 今後の推奨作業
 
-- UseCase の重複ファイルを完全に整理（古いファイルの削除確認）。
 - `required` を導入してコンストラクタレベルで初期化を強制するリファクタ（互換性確認が必要）。
-- `ExportModule` に `IFileStorage.GetFileAsync` を使った Discord 添付実装を行う。
 
 ---
 

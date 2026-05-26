@@ -1,4 +1,4 @@
-using BudgetManagementBotSystem.Application.UseCases;
+using BudgetManagementBotSystem.Application.UseCases.Groups;
 using BudgetManagementBotSystem.Application.Interface;
 using BudgetManagementBotSystem.Domain.Repository;
 using Moq;

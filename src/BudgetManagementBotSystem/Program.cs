@@ -5,7 +5,6 @@ using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 using BudgetManagementBotSystem.Application.UseCases.UserManagement;
 using BudgetManagementBotSystem.Application.UseCases.Groups;
 using BudgetManagementBotSystem.Application.UseCases.Budget;
-using BudgetManagementBotSystem.Application.UseCases.Export;
 using BudgetManagementBotSystem.Domain.Repository;
 using BudgetManagementBotSystem.InfraStructure.Discord;
 using BudgetManagementBotSystem.InfraStructure.Persistence;
@@ -51,7 +50,6 @@ builder.Services.AddScoped<BudgetManagementBotSystem.Application.UseCases.UserMa
 builder.Services.AddScoped<RequestListUseCase>();
 builder.Services.AddScoped<RequestDetailUseCase>();
 builder.Services.AddScoped<BudgetManagementBotSystem.Application.UseCases.Budget.BudgetQueryUseCase>();
-builder.Services.AddScoped<ExportUseCase>();
 builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
 builder.Services.Configure<AdminBootstrapOptions>(builder.Configuration.GetSection("AdminBootstrap"));
 

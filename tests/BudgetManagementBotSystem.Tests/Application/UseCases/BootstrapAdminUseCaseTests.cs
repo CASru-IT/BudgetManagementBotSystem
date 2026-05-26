@@ -1,6 +1,6 @@
 using BudgetManagementBotSystem.Application.Interface;
 using BudgetManagementBotSystem.Application.Options;
-using BudgetManagementBotSystem.Application.UseCases;
+using BudgetManagementBotSystem.Application.UseCases.UserManagement;
 using BudgetManagementBotSystem.Domain.Entities;
 using BudgetManagementBotSystem.Domain.Enums;
 using BudgetManagementBotSystem.Domain.Repository;
