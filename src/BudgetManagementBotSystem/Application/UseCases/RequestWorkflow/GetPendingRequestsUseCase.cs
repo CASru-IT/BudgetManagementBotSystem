@@ -33,7 +33,9 @@ namespace BudgetManagementBotSystem.Application.UseCases.RequestWorkflow
             var groups = await _groupRepository.GetAllAsync();
             if (groups == null) return new PagedResult<PendingRequestDto> { Total = 0, Page = page, PageSize = pageSize };
 
-            var allRequests = groups.SelectMany(g => g.Requests.Select(r => new PendingRequestDto
+            var allRequests = groups
+                .SelectMany(g => g.GetRequestsByStatus(RequestStatus.Pending)
+                    .Select(r => new PendingRequestDto
             {
                 Id = r.Id,
                 Amount = r.Amount.Value,

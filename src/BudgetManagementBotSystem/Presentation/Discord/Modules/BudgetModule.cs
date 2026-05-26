@@ -26,7 +26,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 try
                 {
                     var dto = await _budgetQueryUseCase.GetRemainingBudgetAsync(discordUserId, groupId, fiscalYear);
-                    await RespondAsync($"班:{dto.GroupName} 現在予算:{dto.TotalBudget:C} 未承認合計:{dto.PendingTotal:C} 利用可能:{dto.Available:C} 会計年度:{fiscalYear?.ToString() ?? "自動"}");
+                    await RespondAsync($"班:{dto.GroupName} 現在予算:{dto.TotalBudget:C} 承認済合計:{dto.ApprovedTotal:C} 未承認合計:{dto.PendingTotal:C} 利用可能:{dto.Available:C} 会計年度:{fiscalYear?.ToString() ?? "自動"}");
                 }
                 catch (Exception ex)
                 {
@@ -67,46 +67,6 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             }
         }
 
-        [SlashCommand("register-budget", "年度ごとの班予算を登録する")]
-        public async Task RegisterBudget(
-            [Summary("group-id")] int groupId,
-            [Summary("amount")] double amount,
-            [Summary("fiscal-year")] int? fiscalYear = null)
-        {
-            try
-            {
-                var discordUserId = Context.User.Id;
-                var caller = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
-                if (caller == null)
-                {
-                    await RespondAsync("エラー: Discord ユーザーが登録されていません。", ephemeral: true);
-                    return;
-                }
-
-                var canRegister = await BudgetManagementBotSystem.Presentation.Discord.Helpers.AuthorizationHelper.IsPrivilegedAsync(_userRepository, discordUserId);
-                if (!canRegister)
-                {
-                    await RespondAsync("エラー: 予算登録の権限がありません。", ephemeral: true);
-                    return;
-                }
-
-                if (amount <= 0)
-                {
-                    await RespondAsync("エラー: 予算金額は正の数で指定してください。", ephemeral: true);
-                    return;
-                }
-
-                decimal decAmount = Convert.ToDecimal(amount);
-                await _increaseBudgetLimitUseCase.ExecuteAsync(groupId, decAmount, fiscalYear);
-
-                await RespondAsync($"班 {groupId} の年度予算を {decAmount:C} として登録しました。", ephemeral: true);
-            }
-            catch (Exception ex)
-            {
-                await RespondAsync($"予算登録中にエラーが発生しました: {ex.Message}", ephemeral: true);
-            }
-        }
-
         [SlashCommand("add-budget", "追加予算を付与する")]
         public async Task AddBudget(
             int groupId,
@@ -140,7 +100,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
                 await _increaseBudgetLimitUseCase.ExecuteAsync(groupId, decAmount, fiscalYear);
 
-                await RespondAsync($"班 {groupId} に {decAmount:C} の予算を追加しました。", ephemeral: true);
+                var remainingBudget = await _budgetQueryUseCase.GetRemainingBudgetAsync(discordUserId, groupId, fiscalYear);
+
+                await RespondAsync($"班 {groupId} に {decAmount:C} を追加して、合計 {remainingBudget.TotalBudget:C} となりました。", ephemeral: true);
             }
             catch (ArgumentNullException ex)
             {

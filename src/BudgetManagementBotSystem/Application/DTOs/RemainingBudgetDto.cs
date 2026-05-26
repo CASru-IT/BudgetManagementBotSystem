@@ -6,6 +6,7 @@ namespace BudgetManagementBotSystem.Application.DTOs
         public string GroupName { get; set; } = string.Empty;
         public decimal TotalBudget { get; set; }
         public decimal PendingTotal { get; set; }
+        public decimal ApprovedTotal { get; set; }
         public decimal Available { get; set; }
     }
 }

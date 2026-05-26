@@ -22,7 +22,9 @@ public class BudgetQueryUseCaseTests
         user.ChangeGroupId(0);
         var group = new Group("Test Group");
         group.AddBudgetTransaction(new BudgetTransaction(true, 200_000m, new FiscalYear(specifiedFiscalYear, fiscalYearStartMonth)));
-        group.CreateBudgetRequest(user, new Money(50_000m), new FiscalYear(specifiedFiscalYear, fiscalYearStartMonth), "test", Array.Empty<string>());
+        group.CreateBudgetRequest(user, new Money(50_000m), new FiscalYear(specifiedFiscalYear, fiscalYearStartMonth), "approved", Array.Empty<string>());
+        group.CreateBudgetRequest(user, new Money(25_000m), new FiscalYear(specifiedFiscalYear, fiscalYearStartMonth), "pending", Array.Empty<string>());
+        group.Requests.First(r => r.Description == "approved").UpdateStatus(RequestStatus.Approved);
         group.AddBudgetTransaction(new BudgetTransaction(true, 100_000m, new FiscalYear(specifiedFiscalYear + 1, fiscalYearStartMonth)));
 
         var mockUserRepository = new Mock<IUserRepository>();
@@ -36,7 +38,8 @@ public class BudgetQueryUseCaseTests
         var result = await useCase.GetRemainingBudgetAsync(discordUserId, groupId, specifiedFiscalYear);
 
         Assert.Equal(200_000m, result.TotalBudget);
-        Assert.Equal(50_000m, result.PendingTotal);
+        Assert.Equal(25_000m, result.PendingTotal);
+        Assert.Equal(50_000m, result.ApprovedTotal);
         Assert.Equal(150_000m, result.Available);
     }
 
@@ -52,6 +55,8 @@ public class BudgetQueryUseCaseTests
         user.ChangeGroupId(0);
         var group = new Group("Test Group");
         group.AddBudgetTransaction(new BudgetTransaction(true, 200_000m, new FiscalYear(expectedFiscalYear, fiscalYearStartMonth)));
+        group.CreateBudgetRequest(user, new Money(20_000m), new FiscalYear(expectedFiscalYear, fiscalYearStartMonth), "approved", Array.Empty<string>());
+        group.Requests.First(r => r.Description == "approved").UpdateStatus(RequestStatus.Approved);
 
         var mockUserRepository = new Mock<IUserRepository>();
         mockUserRepository.Setup(repo => repo.GetByDiscordUserIdAsync(discordUserId)).ReturnsAsync(user);
@@ -64,7 +69,9 @@ public class BudgetQueryUseCaseTests
         var result = await useCase.GetRemainingBudgetAsync(discordUserId, groupId);
 
         Assert.Equal(200_000m, result.TotalBudget);
-        Assert.Equal(200_000m, result.Available);
+        Assert.Equal(0m, result.PendingTotal);
+        Assert.Equal(20_000m, result.ApprovedTotal);
+        Assert.Equal(180_000m, result.Available);
     }
 
     [Fact]

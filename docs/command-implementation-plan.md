@@ -22,8 +22,7 @@
 | コマンド           | 権限             | 概要                               |
 | ------------------ | ---------------- | ---------------------------------- |
 | `/reject`          | 会計             | 指定した申請を却下する             |
-| `/register-budget` | 会長             | 年度ごとの班予算を登録する         |
-| `/add-budget`      | 会長             | 追加予算を付与する                 |
+| `/add-budget`      | 会長             | 年度ごとの班予算を追加する         |
 | `/register-group`  | 管理者           | 新しい班を登録する                 |
 | `/list-groups`     | 管理者           | 登録済みの班一覧を表示する         |
 | `/register-user`   | 管理者           | システム利用ユーザーを登録する     |
@@ -56,8 +55,7 @@
 | ------------------------------ | ------------------ | -------------------------- |
 | `/remaining-budget` (実装済み) | 現在の残予算表示   | 予算集計 Query             |
 | `/usage-history` (実装済み)    | 予算使用履歴の表示 | 履歴 Query, ページング     |
-| `/register-budget`             | 年度予算の登録     | Budget 登録用 UseCase      |
-| `/add-budget` (実装済み)       | 追加予算の登録     | IncreaseBudgetLimitUseCase |
+| `/add-budget` (実装済み)       | 年度予算の追加     | IncreaseBudgetLimitUseCase |
 
 ### 1-4 管理系の基礎
 
@@ -100,7 +98,7 @@
 1. `/create-request` と `/list-requests` を実装する
 2. `/pending-list`、`/approve`、`/reject` を実装する
 3. `/remaining-budget` と `/usage-history` を実装する
-4. `/register-budget`、`/add-budget` を実装する
+4. `/add-budget` を実装する
 5. `/register-group`、`/register-user`、`/grant-role`、`/assign-group` を整える
 6. 集計 Query の整備を進める
 7. 運用系（班削除の運用ポリシー策定など）を完了する

@@ -39,7 +39,8 @@ namespace BudgetManagementBotSystem.Application.UseCases.Budget
 
             decimal totalBudget = group.GetTotalBudgetForFiscalYear(resolvedFiscalYear);
             var pendingTotal = group.Requests.Where(r => r.StatusHistory.Last().ChangedStatus == BudgetManagementBotSystem.Domain.Enums.RequestStatus.Pending && r.FiscalYear == resolvedFiscalYear).Sum(r => r.Amount.Value);
-            var available = totalBudget - pendingTotal;
+            var approvedTotal = group.Requests.Where(r => r.StatusHistory.Last().ChangedStatus == BudgetManagementBotSystem.Domain.Enums.RequestStatus.Approved && r.FiscalYear == resolvedFiscalYear).Sum(r => r.Amount.Value);
+            var available = totalBudget - approvedTotal;
 
             return new RemainingBudgetDto
             {
@@ -47,6 +48,7 @@ namespace BudgetManagementBotSystem.Application.UseCases.Budget
                 GroupName = group.Name,
                 TotalBudget = totalBudget,
                 PendingTotal = pendingTotal,
+                ApprovedTotal = approvedTotal,
                 Available = available
             };
         }
