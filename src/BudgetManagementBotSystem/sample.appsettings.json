@@ -6,7 +6,8 @@
     }
   },
   "Discord": {
-    "Token": "BOT_TOKEN"
+    "Token": "BOT_TOKEN",
+    "TestGuildId": 123456789012345678
   },
   "AdminBootstrap": {
     "Password": "CHANGE_ME"
@@ -17,7 +18,8 @@
   "EvidenceStorage": {
     "BasePath": "data/evidences"
   },
-  "FiscalYearStartMonth":{
+  "FiscalYearStartMonth": {
     "Month": 4
-  }
+  },
+  "UseInMemoryDatabase": true
 }
