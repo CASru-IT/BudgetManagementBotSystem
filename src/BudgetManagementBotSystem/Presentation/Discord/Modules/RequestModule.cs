@@ -61,11 +61,15 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
                 await RespondAsync($"証跡ファイルをこのチャンネルに {attachCount} 件添付してください。30秒以内にアップロードしてください。", ephemeral: true);
                 var uploaded = await _discordBotService.WaitForAttachmentUploadAsync(Context.User.Id, TimeSpan.FromSeconds(30), attachCount, Context.Channel);
-                if (uploaded != null && uploaded.Any())
+                // 指定数の証跡を受け取れなかった場合は申請を中止する
+                if (uploaded == null || !uploaded.Any() || uploaded.Count < attachCount)
                 {
-                    evidenceFiles.AddRange(uploaded);
-                    await RespondAsync("証跡ファイルを受け取りました。保存を開始します。", ephemeral: true);
+                    await RespondAsync("証跡ファイルの受け取りに失敗しました。申請を中止します。", ephemeral: true);
+                    return;
                 }
+
+                evidenceFiles.AddRange(uploaded);
+                await RespondAsync("証跡ファイルを受け取りました。保存を開始します。", ephemeral: true);
 
                 var savedEvidenceCount = await _submitBudgetRequestUseCase.ExecuteAsync(user.Id, groupId, amountDec, description, evidenceFiles);
 
