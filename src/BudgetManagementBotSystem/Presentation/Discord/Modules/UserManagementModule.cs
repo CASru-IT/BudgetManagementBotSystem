@@ -55,6 +55,12 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         {
             var discordUserId = targetUser.Id;
 
+            var caller = await GetCallerAsync();
+            if (!await EnsureAdminAsync(caller))
+            {
+                return;
+            }
+
             try
             {
                 await _userCommand.UpdateUserRoleByDiscordIdAsync(discordUserId, role);
@@ -146,39 +152,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             }
         }
 
-        [SlashCommand("grant-role", "ユーザーへ権限を付与する")]
-        public async Task GrantRole(
-            [Summary("user")] IUser targetUser,
-            [Summary("role")] AccountRole role)
-        {
-            var discordUserId = targetUser.Id;
-
-            try
-            {
-                await _userCommand.UpdateUserRoleByDiscordIdAsync(discordUserId, role);
-                await RespondAsync("権限を付与しました。", ephemeral: true);
-            }
-            catch (ArgumentException ex)
-            {
-                await RespondAsync($"エラー: {ex.Message}", ephemeral: true);
-            }
-        }
-
-        [SlashCommand("revoke-role", "ユーザーから権限を解除する")]
-        public async Task RevokeRole([Summary("user")] IUser targetUser)
-        {
-            var discordUserId = targetUser.Id;
-
-            try
-            {
-                await _userCommand.UpdateUserRoleByDiscordIdAsync(discordUserId, AccountRole.GroupLeader);
-                await RespondAsync("権限を解除しました。", ephemeral: true);
-            }
-            catch (ArgumentException ex)
-            {
-                await RespondAsync($"エラー: {ex.Message}", ephemeral: true);
-            }
-        }
+        // `grant-role` と `revoke-role` は `set-user-role` に統合しました。
+        // 管理者は `set-user-role` を使用して任意のロールを設定してください。
 
         [SlashCommand("assign-group", "ユーザーを班へ所属させる")]
         public async Task AssignGroup(

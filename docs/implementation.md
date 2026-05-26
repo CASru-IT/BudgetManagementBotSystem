@@ -39,6 +39,8 @@
 
 注: Presentation 層の一部コマンドについて、スラッシュコマンド引数の受け取り方を改善しました。管理系コマンド（`/register-user` 等）は文字列での Discord ID 受け取りから、Discord のユーザー選択 (`IUser` 相当の `user` パラメータ) に変更されています。これによりコマンド UI 上で直接ユーザーを選べるようになり、`targetUser.Id` から Discord ID を取得します。
 
+追記: 管理系の権限操作についてはコマンド整理を行い、`/grant-role` と `/revoke-role` を `/set-user-role` に統合しました。`/set-user-role` は管理者のみ実行可能となるよう、Presentation 層で権限チェックを導入しています。
+
 ### テスト実装済み
 
 - `BudgetRequest` のステータス遷移ルール

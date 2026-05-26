@@ -26,8 +26,7 @@
 | `/register-group`  | 管理者           | 新しい班を登録する                 |
 | `/list-groups`     | 管理者           | 登録済みの班一覧を表示する         |
 | `/register-user`   | 管理者           | システム利用ユーザーを登録する     |
-| `/grant-role`      | 管理者           | ユーザーへ権限を付与する           |
-| `/revoke-role`     | 管理者           | ユーザーから権限を解除する         |
+<!-- `/grant-role` と `/revoke-role` は `/set-user-role` に統合しました -->
 | `/assign-group`    | 管理者           | ユーザーを班へ所属させる           |
 | `/cancel-request`  | 班長, 会長       | 確認待ち状態の申請を取り消す       |
 | `/revoke-approval` | 会計             | 承認済み申請の承認を取り消す       |
@@ -64,8 +63,7 @@
 | `/register-group` (実装済み) | 班登録       | RegisterGroupUseCase                        |
 | `/list-groups` (実装済み)    | 班一覧表示   | IGroupRepository, IUserRepository, 認可判定 |
 | `/register-user` (実装済み)  | ユーザー登録 | RegisterUserUseCase                         |
-| `/grant-role`                | 権限付与     | Role 更新 UseCase                           |
-| `/revoke-role`               | 権限解除     | Role 更新 UseCase                           |
+| `/set-user-role`             | ユーザーの役割を設定（統合） | Role 更新 UseCase               |
 | `/assign-group`              | 班所属の設定 | User 更新 UseCase                           |
 
 ## フェーズ 2: 中優先度コマンド
@@ -99,7 +97,7 @@
 2. `/pending-list`、`/approve`、`/reject` を実装する
 3. `/remaining-budget` と `/usage-history` を実装する
 4. `/add-budget` を実装する
-5. `/register-group`、`/register-user`、`/grant-role`、`/assign-group` を整える
+5. `/register-group`、`/register-user`、`/set-user-role`（`/grant-role`/`/revoke-role` 統合） 、`/assign-group` を整える
 6. 集計 Query の整備を進める
 7. 運用系（班削除の運用ポリシー策定など）を完了する
 
@@ -122,4 +120,4 @@
 
 この計画は、既存の実装済みユースケースを活かしながら、依存が小さいものから順番に積み上げる前提で書いています。実装が進んだら、この文書の各コマンド行を「未実装 / 実装途中 / 実装済み」に更新してください。
 
-注: 管理系コマンド（例: `/register-user`, `/grant-role`, `/assign-group` など）は、以前は文字列で Discord ユーザー ID を受け取っていましたが、実装を `IUser` 相当の `user` パラメータへ変更しました。これによりスラッシュコマンドの UI 上でユーザーを選択でき、`targetUser.Id` から内部で Discord ID を取得します。手入力の ID ではなくユーザー選択が推奨されます。
+注: 管理系コマンド（例: `/register-user`, `/set-user-role`, `/assign-group` など）は、以前は文字列で Discord ユーザー ID を受け取っていましたが、実装を `IUser` 相当の `user` パラメータへ変更しました。これによりスラッシュコマンドの UI 上でユーザーを選択でき、`targetUser.Id` から内部で Discord ID を取得します。手入力の ID ではなくユーザー選択が推奨されます。

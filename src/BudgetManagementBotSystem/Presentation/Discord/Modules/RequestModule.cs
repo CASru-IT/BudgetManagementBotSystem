@@ -37,8 +37,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             [Summary("group-id")] int groupId,
             [Summary("amount")] double amount,
             [Summary("description")] string description,
-            [Summary("attach")]
-            bool attach = false)
+            [Summary("attach-count")]
+            int attachCount = 1)
         {
             try
             {
@@ -53,15 +53,18 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 decimal amountDec = Convert.ToDecimal(amount);
 
                 var evidenceFiles = new List<UploadedEvidenceDto>();
-                if (attach)
+                if (attachCount < 1)
                 {
-                    await RespondAsync("証跡ファイルをこのチャンネルに添付してください。30秒以内にアップロードしてください。", ephemeral: true);
-                    var uploaded = await _discordBotService.WaitForAttachmentUploadAsync(Context.User.Id, TimeSpan.FromSeconds(30), Context.Channel);
-                    if (uploaded != null && uploaded.Any())
-                    {
-                        evidenceFiles.AddRange(uploaded);
-                        await RespondAsync("証跡ファイルを受け取りました。保存を開始します。", ephemeral: true);
-                    }
+                    await RespondAsync("添付ファイル数は1以上で指定してください。", ephemeral: true);
+                    return;
+                }
+
+                await RespondAsync($"証跡ファイルをこのチャンネルに {attachCount} 件添付してください。30秒以内にアップロードしてください。", ephemeral: true);
+                var uploaded = await _discordBotService.WaitForAttachmentUploadAsync(Context.User.Id, TimeSpan.FromSeconds(30), attachCount, Context.Channel);
+                if (uploaded != null && uploaded.Any())
+                {
+                    evidenceFiles.AddRange(uploaded);
+                    await RespondAsync("証跡ファイルを受け取りました。保存を開始します。", ephemeral: true);
                 }
 
                 var savedEvidenceCount = await _submitBudgetRequestUseCase.ExecuteAsync(user.Id, groupId, amountDec, description, evidenceFiles);

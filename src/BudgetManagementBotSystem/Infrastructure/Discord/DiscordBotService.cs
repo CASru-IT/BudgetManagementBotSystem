@@ -25,7 +25,7 @@ public class DiscordBotService
         //インテントの管理
         var config = new DiscordSocketConfig
         {
-            GatewayIntents = GatewayIntents.Guilds
+            GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages
         };
 
         _client = new DiscordSocketClient(config);
@@ -100,9 +100,17 @@ public class DiscordBotService
     /// 指定ユーザーが同一チャンネルに添付ファイルを含むメッセージを送るのを待ち、添付ファイルを保存してパスを返します。
     /// タイムアウト時は空リストを返します。
     /// </summary>
-    public async Task<List<UploadedEvidenceDto>> WaitForAttachmentUploadAsync(ulong userId, TimeSpan timeout, IMessageChannel? channel = null)
+    public async Task<List<UploadedEvidenceDto>> WaitForAttachmentUploadAsync(ulong userId, TimeSpan timeout, int expectedAttachmentCount, IMessageChannel? channel = null)
     {
+        if (expectedAttachmentCount < 1)
+        {
+            return new List<UploadedEvidenceDto>();
+        }
+
         var tcs = new TaskCompletionSource<List<UploadedEvidenceDto>>();
+        var uploads = new List<UploadedEvidenceDto>();
+        var receivedCount = 0;
+        var syncRoot = new object();
 
         Task Handler(SocketMessage msg)
         {
@@ -115,39 +123,62 @@ public class DiscordBotService
 
         async Task HandleAttachmentMessageAsync(SocketMessage msg)
         {
-            var uploads = new List<UploadedEvidenceDto>();
             foreach (var att in msg.Attachments)
             {
+                UploadedEvidenceDto? uploaded = null;
                 try
                 {
                     using var resp = await _httpClient.GetAsync(att.Url);
                     resp.EnsureSuccessStatusCode();
 
                     var content = await resp.Content.ReadAsByteArrayAsync();
-                    uploads.Add(new UploadedEvidenceDto(att.Filename, content));
+                    uploaded = new UploadedEvidenceDto(att.Filename, content);
                 }
                 catch
                 {
                     // skip failed attachment
                 }
-            }
 
-            tcs.TrySetResult(uploads);
+                if (uploaded == null)
+                {
+                    continue;
+                }
+
+                lock (syncRoot)
+                {
+                    if (receivedCount >= expectedAttachmentCount)
+                    {
+                        break;
+                    }
+
+                    uploads.Add(uploaded);
+                    receivedCount++;
+
+                    if (receivedCount >= expectedAttachmentCount)
+                    {
+                        tcs.TrySetResult(new List<UploadedEvidenceDto>(uploads));
+                    }
+                }
+            }
         }
 
         _client.MessageReceived += Handler;
 
-        var delay = Task.Delay(timeout);
-        var completed = await Task.WhenAny(tcs.Task, delay);
-        _client.MessageReceived -= Handler;
+        try
+        {
+            var delay = Task.Delay(timeout);
+            var completed = await Task.WhenAny(tcs.Task, delay);
 
-        if (completed == tcs.Task)
-        {
-            return await tcs.Task;
-        }
-        else
-        {
+            if (completed == tcs.Task)
+            {
+                return await tcs.Task;
+            }
+
             return new List<UploadedEvidenceDto>();
+        }
+        finally
+        {
+            _client.MessageReceived -= Handler;
         }
     }
 }
