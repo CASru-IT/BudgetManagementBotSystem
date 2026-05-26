@@ -1,4 +1,5 @@
 using Discord.Interactions;
+using BudgetManagementBotSystem.Application.DTOs;
 using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 using BudgetManagementBotSystem.Domain.Repository;
 using BudgetManagementBotSystem.Domain.Enums;
@@ -51,20 +52,25 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
                 decimal amountDec = Convert.ToDecimal(amount);
 
-                var tempPaths = new List<string>();
+                var evidenceFiles = new List<UploadedEvidenceDto>();
                 if (attach)
                 {
                     await RespondAsync("証跡ファイルをこのチャンネルに添付してください。30秒以内にアップロードしてください。", ephemeral: true);
                     var uploaded = await _discordBotService.WaitForAttachmentUploadAsync(Context.User.Id, TimeSpan.FromSeconds(30), Context.Channel);
                     if (uploaded != null && uploaded.Any())
                     {
-                        tempPaths.AddRange(uploaded);
+                        evidenceFiles.AddRange(uploaded);
+                        await RespondAsync("証跡ファイルを受け取りました。保存を開始します。", ephemeral: true);
                     }
                 }
 
-                await _submitBudgetRequestUseCase.ExecuteAsync(user.Id, groupId, amountDec, description, tempPaths);
+                var savedEvidenceCount = await _submitBudgetRequestUseCase.ExecuteAsync(user.Id, groupId, amountDec, description, evidenceFiles);
 
                 await RespondAsync($"申請を作成しました: 班 {groupId} 金額 {amountDec:C}");
+                if (savedEvidenceCount > 0)
+                {
+                    await RespondAsync($"証跡ファイルの保存に成功しました: {savedEvidenceCount}件", ephemeral: true);
+                }
             }
             catch (ArgumentNullException ex)
             {
@@ -73,6 +79,10 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             catch (ArgumentOutOfRangeException ex)
             {
                 await RespondAsync($"入力エラー: {ex.Message}", ephemeral: true);
+            }
+            catch (BudgetLimitExceededException ex)
+            {
+                await RespondAsync(ex.Message, ephemeral: true);
             }
             catch (Exception ex)
             {

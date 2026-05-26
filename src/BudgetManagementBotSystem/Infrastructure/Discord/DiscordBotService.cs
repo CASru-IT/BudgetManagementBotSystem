@@ -1,6 +1,7 @@
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using BudgetManagementBotSystem.Application.DTOs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using System.Reflection;
@@ -12,7 +13,7 @@ public class DiscordBotService
     private readonly IServiceProvider _provider;
     private DiscordSocketClient _client = null!;
     private InteractionService _interactions = null!;
-        private readonly HttpClient _httpClient = new HttpClient();
+    private readonly HttpClient _httpClient = new HttpClient();
 
     public DiscordBotService(IServiceProvider provider)
     {
@@ -96,12 +97,12 @@ public class DiscordBotService
     }
 
     /// <summary>
-    /// 指定ユーザーが同一チャンネルに添付ファイルを含むメッセージを送るのを待ち、添付ファイルを一時保存してパスを返します。
+    /// 指定ユーザーが同一チャンネルに添付ファイルを含むメッセージを送るのを待ち、添付ファイルを保存してパスを返します。
     /// タイムアウト時は空リストを返します。
     /// </summary>
-    public async Task<List<string>> WaitForAttachmentUploadAsync(ulong userId, TimeSpan timeout, IMessageChannel? channel = null)
+    public async Task<List<UploadedEvidenceDto>> WaitForAttachmentUploadAsync(ulong userId, TimeSpan timeout, IMessageChannel? channel = null)
     {
-        var tcs = new TaskCompletionSource<List<string>>();
+        var tcs = new TaskCompletionSource<List<UploadedEvidenceDto>>();
 
         Task Handler(SocketMessage msg)
         {
@@ -109,31 +110,29 @@ public class DiscordBotService
             if (channel != null && msg.Channel.Id != channel.Id) return Task.CompletedTask;
             if (msg.Attachments == null || msg.Attachments.Count == 0) return Task.CompletedTask;
 
-            _ = Task.Run(async () =>
-            {
-                var paths = new List<string>();
-                foreach (var att in msg.Attachments)
-                {
-                    try
-                    {
-                        var ext = Path.GetExtension(att.Filename);
-                        if (string.IsNullOrWhiteSpace(ext)) ext = ".bin";
-                        var tempFile = Path.Combine(Path.GetTempPath(), $"evidence_{Guid.NewGuid():N}{ext}");
-                        using var resp = await _httpClient.GetAsync(att.Url);
-                        resp.EnsureSuccessStatusCode();
-                        await using var fs = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
-                        await (await resp.Content.ReadAsStreamAsync()).CopyToAsync(fs);
-                        paths.Add(tempFile);
-                    }
-                    catch
-                    {
-                        // skip failed attachment
-                    }
-                }
-                tcs.TrySetResult(paths);
-            });
+            return HandleAttachmentMessageAsync(msg);
+        }
 
-            return Task.CompletedTask;
+        async Task HandleAttachmentMessageAsync(SocketMessage msg)
+        {
+            var uploads = new List<UploadedEvidenceDto>();
+            foreach (var att in msg.Attachments)
+            {
+                try
+                {
+                    using var resp = await _httpClient.GetAsync(att.Url);
+                    resp.EnsureSuccessStatusCode();
+
+                    var content = await resp.Content.ReadAsByteArrayAsync();
+                    uploads.Add(new UploadedEvidenceDto(att.Filename, content));
+                }
+                catch
+                {
+                    // skip failed attachment
+                }
+            }
+
+            tcs.TrySetResult(uploads);
         }
 
         _client.MessageReceived += Handler;
@@ -148,7 +147,7 @@ public class DiscordBotService
         }
         else
         {
-            return new List<string>();
+            return new List<UploadedEvidenceDto>();
         }
     }
 }

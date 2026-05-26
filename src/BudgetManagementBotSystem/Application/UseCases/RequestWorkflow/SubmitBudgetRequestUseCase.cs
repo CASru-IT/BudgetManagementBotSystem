@@ -1,11 +1,12 @@
 using BudgetManagementBotSystem.Domain.Repository;
-using System.IO;
+using BudgetManagementBotSystem.Application.Interface;
+using BudgetManagementBotSystem.Application.DTOs;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 using BudgetManagementBotSystem.Domain.ValueObjects;
 using BudgetManagementBotSystem.Domain.Enums;
 using BudgetManagementBotSystem.Domain.Entities;
-using BudgetManagementBotSystem.Application.Interface;
 
 namespace BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 
@@ -15,14 +16,14 @@ public class SubmitBudgetRequestUseCase
     private readonly IGroupRepository _groupRepository;
     private readonly IConfiguration _configuration;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly BudgetManagementBotSystem.Application.Interface.IFileStorage? _fileStorage;
+    private readonly IFileStorage _fileStorage;
 
     public SubmitBudgetRequestUseCase(
         IUserRepository userRepository,
         IGroupRepository groupRepository,
         IConfiguration configuration,
         IUnitOfWork unitOfWork,
-        BudgetManagementBotSystem.Application.Interface.IFileStorage? fileStorage = null)
+        IFileStorage fileStorage)
     {
         _userRepository = userRepository;
         _groupRepository = groupRepository;
@@ -31,14 +32,14 @@ public class SubmitBudgetRequestUseCase
         _fileStorage = fileStorage;
     }
 
-    public async Task ExecuteAsync(
+    public async Task<int> ExecuteAsync(
         int userId,
         int groupId,
         decimal amount,
         string description,
-        IEnumerable<string> evidenceFilePaths)
+        IEnumerable<UploadedEvidenceDto> evidenceFiles)
     {
-        ArgumentNullException.ThrowIfNull(evidenceFilePaths);
+        ArgumentNullException.ThrowIfNull(evidenceFiles);
 
         User? user = await _userRepository.GetByIdAsync(userId);
         if (user == null) throw new ArgumentNullException(nameof(userId), "User not found");
@@ -51,47 +52,31 @@ public class SubmitBudgetRequestUseCase
         var requestAmount = new Money(amount);
         var fiscalYear = new FiscalYear(_configuration.GetValue<int>("FiscalYearStartMonth:Month"));
 
-        // If file storage is available and evidenceFilePaths are local temp paths, save them to storage
-        var savedPaths = new List<string>();
-        if (_fileStorage != null && evidenceFilePaths.Any())
+        if (!group.IsWithinBudgetLimit(requestAmount, fiscalYear))
         {
-            foreach (var path in evidenceFilePaths)
-            {
-                if (string.IsNullOrWhiteSpace(path)) continue;
-                try
-                {
-                    await using var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
-                    var stored = await _fileStorage.SaveFileAsync(Path.GetFileName(path), fs);
-                    savedPaths.Add(stored);
-                }
-                catch
-                {
-                    // If saving a specific file fails, skip it but continue processing others
-                }
-            }
+            throw new BudgetLimitExceededException("現在の予算上限を超えています。申請は作成されませんでした。");
         }
 
-        // If we saved files from temporary local paths, attempt to delete the temp files
-        try
+        var finalEvidencePaths = new List<string>();
+
+        foreach (var evidence in evidenceFiles)
         {
-            foreach (var original in evidenceFilePaths)
+            if (evidence == null)
             {
-                try
-                {
-                    if (File.Exists(original)) File.Delete(original);
-                }
-                catch
-                {
-                    // ignore delete errors
-                }
+                continue;
+            }
+
+            try
+            {
+                using var stream = new MemoryStream(evidence.Content, writable: false);
+                var savedPath = await _fileStorage.SaveFileAsync(evidence.FileName, stream);
+                finalEvidencePaths.Add(savedPath);
+            }
+            catch
+            {
+                // skip failed evidence save
             }
         }
-        catch
-        {
-            // ignore
-        }
-
-        var finalEvidencePaths = savedPaths.Any() ? savedPaths : evidenceFilePaths;
 
         int requestId = group.CreateBudgetRequest(
             user,
@@ -100,11 +85,7 @@ public class SubmitBudgetRequestUseCase
             description,
             finalEvidencePaths);
 
-        if (!group.IsWithinBudgetLimit(requestAmount, fiscalYear))
-        {
-            group.UpdateBudgetRequestStatus(requestId, RequestStatus.Rejected);
-        }
-
         await _unitOfWork.SaveChangesAsync();
+        return finalEvidencePaths.Count;
     }
 }

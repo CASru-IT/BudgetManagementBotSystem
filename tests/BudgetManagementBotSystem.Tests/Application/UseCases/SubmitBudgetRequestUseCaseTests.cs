@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
+using BudgetManagementBotSystem.Application.DTOs;
 using BudgetManagementBotSystem.Application.Interface;
+using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 using BudgetManagementBotSystem.Domain.Entities;
 using BudgetManagementBotSystem.Domain.Enums;
 using BudgetManagementBotSystem.Domain.Repository;
@@ -37,16 +38,18 @@ namespace BudgetManagementBotSystem.Tests.Application.UseCases
             var mockGroupRepository = new Mock<IGroupRepository>();
             mockGroupRepository.Setup(r => r.GetByIdAsync(groupId)).ReturnsAsync(group);
             var mockUnitOfWork = new Mock<IUnitOfWork>();
+            var mockFileStorage = CreateFileStorageMock();
 
             var configuration = CreateConfiguration(4);
             var useCase = new SubmitBudgetRequestUseCase(
                 mockUserRepository.Object,
                 mockGroupRepository.Object,
                 configuration,
-                mockUnitOfWork.Object);
+                mockUnitOfWork.Object,
+                mockFileStorage.Object);
 
             // Act
-            await useCase.ExecuteAsync(userId, groupId, amount, description, Array.Empty<string>());
+            var savedCount = await useCase.ExecuteAsync(userId, groupId, amount, description, Array.Empty<UploadedEvidenceDto>());
 
             // Assert
             Assert.Single(group.Requests);
@@ -55,12 +58,13 @@ namespace BudgetManagementBotSystem.Tests.Application.UseCases
             Assert.Equal(description, request.Description);
             Assert.Empty(request.Evidences);
             Assert.Equal(RequestStatus.Pending, request.StatusHistory.Last().ChangedStatus);
+            Assert.Equal(0, savedCount);
 
             mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
         }
 
         [Fact]
-        public async Task ExecuteAsync_WhenBudgetIsInsufficient_RejectsRequestAndUpdatesGroup()
+        public async Task ExecuteAsync_WhenBudgetIsInsufficient_ThrowsBudgetLimitExceededException()
         {
             // Arrange
             const int userId = 1;
@@ -77,23 +81,26 @@ namespace BudgetManagementBotSystem.Tests.Application.UseCases
             var mockGroupRepository = new Mock<IGroupRepository>();
             mockGroupRepository.Setup(r => r.GetByIdAsync(groupId)).ReturnsAsync(group);
             var mockUnitOfWork = new Mock<IUnitOfWork>();
+            var mockFileStorage = CreateFileStorageMock();
 
             var configuration = CreateConfiguration(4);
             var useCase = new SubmitBudgetRequestUseCase(
                 mockUserRepository.Object,
                 mockGroupRepository.Object,
                 configuration,
-                mockUnitOfWork.Object);
+                mockUnitOfWork.Object,
+                mockFileStorage.Object);
 
             // Act
-            await useCase.ExecuteAsync(userId, groupId, amount, "予算超過テスト", Array.Empty<string>());
+            var ex = await Assert.ThrowsAsync<BudgetLimitExceededException>(
+                () => useCase.ExecuteAsync(userId, groupId, amount, "予算超過テスト", Array.Empty<UploadedEvidenceDto>()));
 
             // Assert
-            Assert.Single(group.Requests);
-            var request = group.Requests.Single();
-            Assert.Equal(RequestStatus.Rejected, request.StatusHistory.Last().ChangedStatus);
+            Assert.Equal("現在の予算上限を超えています。申請は作成されませんでした。", ex.Message);
+            Assert.Empty(group.Requests);
 
-            mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
+            mockFileStorage.Verify(r => r.SaveFileAsync(It.IsAny<string>(), It.IsAny<Stream>()), Times.Never);
+            mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Never);
         }
 
         [Fact]
@@ -108,16 +115,18 @@ namespace BudgetManagementBotSystem.Tests.Application.UseCases
 
             var mockGroupRepository = new Mock<IGroupRepository>();
             var mockUnitOfWork = new Mock<IUnitOfWork>();
+            var mockFileStorage = CreateFileStorageMock();
             var configuration = CreateConfiguration(4);
             var useCase = new SubmitBudgetRequestUseCase(
                 mockUserRepository.Object,
                 mockGroupRepository.Object,
                 configuration,
-                mockUnitOfWork.Object);
+                mockUnitOfWork.Object,
+                mockFileStorage.Object);
 
             // Act & Assert
             var ex = await Assert.ThrowsAsync<ArgumentNullException>(
-                () => useCase.ExecuteAsync(userId, groupId, 1_000m, "test", Array.Empty<string>()));
+                () => useCase.ExecuteAsync(userId, groupId, 1_000m, "test", Array.Empty<UploadedEvidenceDto>()));
 
             Assert.Equal("userId", ex.ParamName);
             mockGroupRepository.Verify(r => r.GetByIdAsync(It.IsAny<int>()), Times.Never);
@@ -139,16 +148,18 @@ namespace BudgetManagementBotSystem.Tests.Application.UseCases
             var mockGroupRepository = new Mock<IGroupRepository>();
             mockGroupRepository.Setup(r => r.GetByIdAsync(groupId)).ReturnsAsync((Group?)null);
             var mockUnitOfWork = new Mock<IUnitOfWork>();
+            var mockFileStorage = CreateFileStorageMock();
             var configuration = CreateConfiguration(4);
             var useCase = new SubmitBudgetRequestUseCase(
                 mockUserRepository.Object,
                 mockGroupRepository.Object,
                 configuration,
-                mockUnitOfWork.Object);
+                mockUnitOfWork.Object,
+                mockFileStorage.Object);
 
             // Act & Assert
             var ex = await Assert.ThrowsAsync<ArgumentNullException>(
-                () => useCase.ExecuteAsync(userId, groupId, 1_000m, "test", Array.Empty<string>()));
+                () => useCase.ExecuteAsync(userId, groupId, 1_000m, "test", Array.Empty<UploadedEvidenceDto>()));
 
             Assert.Equal("groupId", ex.ParamName);
             mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Never);
@@ -171,17 +182,19 @@ namespace BudgetManagementBotSystem.Tests.Application.UseCases
             var mockGroupRepository = new Mock<IGroupRepository>();
             mockGroupRepository.Setup(r => r.GetByIdAsync(groupId)).ReturnsAsync(group);
             var mockUnitOfWork = new Mock<IUnitOfWork>();
+            var mockFileStorage = CreateFileStorageMock();
 
             var configuration = CreateConfiguration(4);
             var useCase = new SubmitBudgetRequestUseCase(
                 mockUserRepository.Object,
                 mockGroupRepository.Object,
                 configuration,
-                mockUnitOfWork.Object);
+                mockUnitOfWork.Object,
+                mockFileStorage.Object);
 
             // Act & Assert
             var ex = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
-                () => useCase.ExecuteAsync(userId, groupId, -1m, "test", Array.Empty<string>()));
+                () => useCase.ExecuteAsync(userId, groupId, -1m, "test", Array.Empty<UploadedEvidenceDto>()));
 
             Assert.Equal("amount", ex.ParamName);
             mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Never);
@@ -206,21 +219,24 @@ namespace BudgetManagementBotSystem.Tests.Application.UseCases
             var mockGroupRepository = new Mock<IGroupRepository>();
             mockGroupRepository.Setup(r => r.GetByIdAsync(groupId)).ReturnsAsync(group);
             var mockUnitOfWork = new Mock<IUnitOfWork>();
+            var mockFileStorage = CreateFileStorageMock();
 
             var configuration = CreateConfiguration(fiscalYearStartMonth);
             var useCase = new SubmitBudgetRequestUseCase(
                 mockUserRepository.Object,
                 mockGroupRepository.Object,
                 configuration,
-                mockUnitOfWork.Object);
+                mockUnitOfWork.Object,
+                mockFileStorage.Object);
 
             // Act
-            await useCase.ExecuteAsync(userId, groupId, 10_000m, "fiscal year test", Array.Empty<string>());
+            var savedCount = await useCase.ExecuteAsync(userId, groupId, 10_000m, "fiscal year test", Array.Empty<UploadedEvidenceDto>());
 
             // Assert
             Assert.Single(group.Requests);
             var request = group.Requests.Single();
             Assert.Equal(fiscalYearStartMonth, request.FiscalYear.StartMonth);
+            Assert.Equal(0, savedCount);
             mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
         }
 
@@ -242,24 +258,46 @@ namespace BudgetManagementBotSystem.Tests.Application.UseCases
             var mockGroupRepository = new Mock<IGroupRepository>();
             mockGroupRepository.Setup(r => r.GetByIdAsync(groupId)).ReturnsAsync(group);
             var mockUnitOfWork = new Mock<IUnitOfWork>();
+            var mockFileStorage = CreateFileStorageMock();
 
             var configuration = CreateConfiguration(4);
             var useCase = new SubmitBudgetRequestUseCase(
                 mockUserRepository.Object,
                 mockGroupRepository.Object,
                 configuration,
-                mockUnitOfWork.Object);
+                mockUnitOfWork.Object,
+                mockFileStorage.Object);
 
-            var evidenceFilePaths = new[] { "evidences/quote.pdf", "evidences/spec.png" };
+            var evidenceFilePaths = new[]
+            {
+                new UploadedEvidenceDto("quote.pdf", new byte[] { 1, 2, 3 }),
+                new UploadedEvidenceDto("spec.png", new byte[] { 4, 5, 6 })
+            };
+
+            mockFileStorage.Setup(r => r.SaveFileAsync("quote.pdf", It.IsAny<Stream>())).ReturnsAsync("stored/quote.pdf");
+            mockFileStorage.Setup(r => r.SaveFileAsync("spec.png", It.IsAny<Stream>())).ReturnsAsync("stored/spec.png");
 
             // Act
-            await useCase.ExecuteAsync(userId, groupId, 10_000m, "evidence test", evidenceFilePaths);
+            var savedCount = await useCase.ExecuteAsync(userId, groupId, 10_000m, "evidence test", evidenceFilePaths);
 
             // Assert
             var request = group.Requests.Single();
             Assert.Equal(2, request.Evidences.Count);
-            Assert.Equal("evidences/quote.pdf", request.Evidences[0].FilePath);
-            Assert.Equal("evidences/spec.png", request.Evidences[1].FilePath);
+            Assert.Equal("stored/quote.pdf", request.Evidences[0].FilePath);
+            Assert.Equal("stored/spec.png", request.Evidences[1].FilePath);
+            Assert.Equal(2, savedCount);
+            mockFileStorage.Verify(r => r.SaveFileAsync("quote.pdf", It.IsAny<Stream>()), Times.Once);
+            mockFileStorage.Verify(r => r.SaveFileAsync("spec.png", It.IsAny<Stream>()), Times.Once);
+        }
+
+        private static Mock<IFileStorage> CreateFileStorageMock()
+        {
+            var mock = new Mock<IFileStorage>();
+            mock.Setup(r => r.SaveFileAsync(It.IsAny<string>(), It.IsAny<Stream>()))
+                .ReturnsAsync((string fileName, Stream _) => $"stored/{fileName}");
+            mock.Setup(r => r.GetFileAsync(It.IsAny<string>())).ReturnsAsync(Stream.Null);
+            mock.Setup(r => r.DeleteFileAsync(It.IsAny<string>())).Returns(Task.CompletedTask);
+            return mock;
         }
 
         private static IConfiguration CreateConfiguration(int fiscalYearStartMonth)
