@@ -156,6 +156,39 @@ public class IncreaseBudgetLimitUseCaseTests
         mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_WithSpecifiedFiscalYear_UsesSpecifiedYear()
+    {
+        // Arrange
+        var groupId = 1;
+        var amount = 50000m;
+        var specifiedFiscalYear = 2030;
+        var fiscalYearStartMonth = 7;
+        var group = new Group("Test Group");
+
+        var mockGroupRepository = new Mock<IGroupRepository>();
+        mockGroupRepository
+            .Setup(repo => repo.GetByIdAsync(groupId))
+            .ReturnsAsync(group);
+        var mockUnitOfWork = new Mock<IUnitOfWork>();
+
+        var configuration = CreateConfiguration(fiscalYearStartMonth);
+        var useCase = new IncreaseBudgetLimitUseCase(
+            mockGroupRepository.Object,
+            configuration,
+            mockUnitOfWork.Object);
+
+        // Act
+        await useCase.ExecuteAsync(groupId, amount, specifiedFiscalYear);
+
+        // Assert
+        Assert.Single(group.BudgetTransactions);
+        var transaction = group.BudgetTransactions.First();
+        Assert.Equal(specifiedFiscalYear, transaction.FiscalYear.Year);
+        Assert.Equal(fiscalYearStartMonth, transaction.FiscalYear.StartMonth);
+        mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
+    }
+
     private IConfiguration CreateConfiguration(int fiscalYearStartMonth)
     {
         var inMemorySettings = new Dictionary<string, string?>

@@ -43,6 +43,9 @@
 
 ---
 
-更新履歴:
+- 更新履歴:
 
 - 2026-05-26: 初回作成（リファクタ適用後の要約）
+- 2026-05-26: `UserManagementModule` のスラッシュ引数を文字列の Discord ID から `IUser` (user) へ変更。
+  - コマンド引数名: `discord-user-id` -> `user`
+  - 理由: Discord のスラッシュコマンド UI でユーザー選択を行い、`targetUser.Id` を利用するため。

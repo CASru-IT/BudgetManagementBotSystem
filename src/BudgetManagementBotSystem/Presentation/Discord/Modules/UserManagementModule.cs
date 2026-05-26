@@ -1,3 +1,4 @@
+using Discord;
 using Discord.Interactions;
 using BudgetManagementBotSystem.Application.UseCases;
 using BudgetManagementBotSystem.Application.UseCases.UserManagement;
@@ -25,14 +26,10 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         [SlashCommand("register-user", "システム利用ユーザーを登録する")]
         public async Task RegisterUser(
             [Summary("name")] string name,
-            [Summary("discord-user-id")] string discordUserIdStr,
+            [Summary("user")] IUser targetUser,
             [Summary("role")] AccountRole role)
         {
-            if (!ulong.TryParse(discordUserIdStr, out var discordUserId))
-            {
-                await RespondAsync("エラー: 無効な Discord ユーザー ID が指定されました。", ephemeral: true);
-                return;
-            }
+            var discordUserId = targetUser.Id;
 
             var caller = await GetCallerAsync();
             if (!await EnsureAdminAsync(caller))
@@ -53,14 +50,10 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
         [SlashCommand("set-user-role", "ユーザーの権限やロールを設定する")]
         public async Task SetUserRole(
-            [Summary("discord-user-id")] string discordUserIdStr,
+            [Summary("user")] IUser targetUser,
             [Summary("role")] AccountRole role)
         {
-            if (!ulong.TryParse(discordUserIdStr, out var discordUserId))
-            {
-                await RespondAsync("エラー: 無効な Discord ユーザー ID が指定されました。", ephemeral: true);
-                return;
-            }
+            var discordUserId = targetUser.Id;
 
             try
             {
@@ -74,13 +67,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("remove-user", "ユーザーを無効化または削除する")]
-        public async Task RemoveUser([Summary("discord-user-id")] string discordUserIdStr)
+        public async Task RemoveUser([Summary("user")] IUser targetUser)
         {
-            if (!ulong.TryParse(discordUserIdStr, out var discordUserId))
-            {
-                await RespondAsync("エラー: 無効な Discord ユーザー ID が指定されました。", ephemeral: true);
-                return;
-            }
+            var discordUserId = targetUser.Id;
 
             var caller = await GetCallerAsync();
             if (!await EnsureAdminAsync(caller))
@@ -127,13 +116,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("user-info", "ユーザーの所属・権限情報を表示する")]
-        public async Task UserInfo([Summary("discord-user-id")] string discordUserIdStr)
+        public async Task UserInfo([Summary("user")] IUser targetUser)
         {
-            if (!ulong.TryParse(discordUserIdStr, out var discordUserId))
-            {
-                await RespondAsync("エラー: 無効な Discord ユーザー ID が指定されました。", ephemeral: true);
-                return;
-            }
+            var discordUserId = targetUser.Id;
             {
                 try
                 {
@@ -163,14 +148,10 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
         [SlashCommand("grant-role", "ユーザーへ権限を付与する")]
         public async Task GrantRole(
-            [Summary("discord-user-id")] string discordUserIdStr,
+            [Summary("user")] IUser targetUser,
             [Summary("role")] AccountRole role)
         {
-            if (!ulong.TryParse(discordUserIdStr, out var discordUserId))
-            {
-                await RespondAsync("エラー: 無効な Discord ユーザー ID が指定されました。", ephemeral: true);
-                return;
-            }
+            var discordUserId = targetUser.Id;
 
             try
             {
@@ -184,13 +165,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("revoke-role", "ユーザーから権限を解除する")]
-        public async Task RevokeRole([Summary("discord-user-id")] string discordUserIdStr)
+        public async Task RevokeRole([Summary("user")] IUser targetUser)
         {
-            if (!ulong.TryParse(discordUserIdStr, out var discordUserId))
-            {
-                await RespondAsync("エラー: 無効な Discord ユーザー ID が指定されました。", ephemeral: true);
-                return;
-            }
+            var discordUserId = targetUser.Id;
 
             try
             {
@@ -205,14 +182,10 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
         [SlashCommand("assign-group", "ユーザーを班へ所属させる")]
         public async Task AssignGroup(
-            [Summary("discord-user-id")] string discordUserIdStr,
+            [Summary("user")] IUser targetUser,
             [Summary("group-id")] int groupId)
         {
-            if (!ulong.TryParse(discordUserIdStr, out var discordUserId))
-            {
-                await RespondAsync("エラー: 無効な Discord ユーザー ID が指定されました。", ephemeral: true);
-                return;
-            }
+            var discordUserId = targetUser.Id;
             try
             {
                 var caller = await GetCallerAsync();
@@ -238,13 +211,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("unassign-group", "ユーザーの班所属を解除する")]
-        public async Task UnassignGroup([Summary("discord-user-id")] string discordUserIdStr)
+        public async Task UnassignGroup([Summary("user")] IUser targetUser)
         {
-            if (!ulong.TryParse(discordUserIdStr, out var discordUserId))
-            {
-                await RespondAsync("エラー: 無効な Discord ユーザー ID が指定されました。", ephemeral: true);
-                return;
-            }
+            var discordUserId = targetUser.Id;
 
             try
             {

@@ -18,14 +18,17 @@ public class IncreaseBudgetLimitUseCase
         _unitOfWork = unitOfWork;
     }
 
-    public async Task ExecuteAsync(int groupId, decimal amount)
+    public async Task ExecuteAsync(int groupId, decimal amount, int? fiscalYear = null)
     {
         Group? group = await _groupRepository.GetByIdAsync(groupId);
         if (group == null) throw new ArgumentNullException(nameof(groupId), "Group not found");
 
         if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount), "Amount must be non-negative");
 
-        FiscalYear currentFiscalYear = new FiscalYear(_configuration.GetValue<int>("FiscalYearStartMonth:Month"));
+        int startMonth = _configuration.GetValue<int>("FiscalYearStartMonth:Month");
+        FiscalYear currentFiscalYear = fiscalYear.HasValue
+            ? new FiscalYear(fiscalYear.Value, startMonth)
+            : new FiscalYear(startMonth);
         BudgetTransaction transaction = new BudgetTransaction(true, amount, currentFiscalYear);
         group.AddBudgetTransaction(transaction);
 

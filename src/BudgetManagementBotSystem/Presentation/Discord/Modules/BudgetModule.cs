@@ -18,15 +18,15 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("remaining-budget", "現在の残予算を確認する")]
-        public async Task RemainingBudget(int? groupId = null)
+        public async Task RemainingBudget(int? groupId = null, [Summary("fiscal-year")] int? fiscalYear = null)
         {
             try
             {
                 var discordUserId = Context.User.Id;
                 try
                 {
-                    var dto = await _budgetQueryUseCase.GetRemainingBudgetAsync(discordUserId, groupId);
-                    await RespondAsync($"班:{dto.GroupName} 現在予算:{dto.TotalBudget:C} 未承認合計:{dto.PendingTotal:C} 利用可能:{dto.Available:C}");
+                    var dto = await _budgetQueryUseCase.GetRemainingBudgetAsync(discordUserId, groupId, fiscalYear);
+                    await RespondAsync($"班:{dto.GroupName} 現在予算:{dto.TotalBudget:C} 未承認合計:{dto.PendingTotal:C} 利用可能:{dto.Available:C} 会計年度:{fiscalYear?.ToString() ?? "自動"}");
                 }
                 catch (Exception ex)
                 {
@@ -40,7 +40,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("usage-history", "予算使用履歴を表示する")]
-        public async Task UsageHistory(int page = 1, int pageSize = 10, int? groupId = null)
+        public async Task UsageHistory(int page = 1, int pageSize = 10, int? groupId = null, [Summary("fiscal-year")] int? fiscalYear = null)
         {
             try
             {
@@ -49,7 +49,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 pageSize = Math.Min(pageSize, 50);
 
                 var discordUserId = Context.User.Id;
-                var result = await _budgetQueryUseCase.GetUsageHistoryAsync(discordUserId, page, pageSize, groupId);
+                var result = await _budgetQueryUseCase.GetUsageHistoryAsync(discordUserId, page, pageSize, groupId, fiscalYear);
 
                 if (result.Total == 0 || result.Items == null || !result.Items.Any())
                 {
@@ -58,7 +58,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 }
 
                 var lines = result.Items.Select(t => $"{(t.IsIncome?"収入":"支出")} {t.Amount:C} 日付:{t.TransactionDate:yyyy-MM-dd} 年度:{t.FiscalYear}");
-                var header = $"取引履歴 (ページ {result.Page}/{Math.Max(1, (int)Math.Ceiling(result.Total/(double)result.PageSize))}) 合計:{result.Total}";
+                var header = $"取引履歴 (ページ {result.Page}/{Math.Max(1, (int)Math.Ceiling(result.Total/(double)result.PageSize))}) 合計:{result.Total} 会計年度:{fiscalYear?.ToString() ?? "自動"}";
                 await RespondAsync($"{header}\n{string.Join("\n", lines)}");
             }
             catch (Exception ex)
@@ -68,7 +68,10 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("register-budget", "年度ごとの班予算を登録する")]
-        public async Task RegisterBudget([Summary("group-id")] int groupId, [Summary("amount")] double amount)
+        public async Task RegisterBudget(
+            [Summary("group-id")] int groupId,
+            [Summary("amount")] double amount,
+            [Summary("fiscal-year")] int? fiscalYear = null)
         {
             try
             {
@@ -94,7 +97,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 }
 
                 decimal decAmount = Convert.ToDecimal(amount);
-                await _increaseBudgetLimitUseCase.ExecuteAsync(groupId, decAmount);
+                await _increaseBudgetLimitUseCase.ExecuteAsync(groupId, decAmount, fiscalYear);
 
                 await RespondAsync($"班 {groupId} の年度予算を {decAmount:C} として登録しました。", ephemeral: true);
             }
@@ -105,7 +108,10 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("add-budget", "追加予算を付与する")]
-        public async Task AddBudget(int groupId, double amount)
+        public async Task AddBudget(
+            int groupId,
+            double amount,
+            [Summary("fiscal-year")] int? fiscalYear = null)
         {
             try
             {
@@ -132,7 +138,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
                 decimal decAmount = Convert.ToDecimal(amount);
 
-                await _increaseBudgetLimitUseCase.ExecuteAsync(groupId, decAmount);
+                await _increaseBudgetLimitUseCase.ExecuteAsync(groupId, decAmount, fiscalYear);
 
                 await RespondAsync($"班 {groupId} に {decAmount:C} の予算を追加しました。", ephemeral: true);
             }

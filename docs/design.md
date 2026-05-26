@@ -2,10 +2,7 @@
 
 このドキュメントは現行実装（2026-04 時点）の設計をまとめます。
 
-## 関連ドキュメント
-
-- [実装状況](implementation.md)
-- [コマンド実装計画](command-implementation-plan.md)
+実装の到達点は [実装状況](implementation.md) に、Discord コマンドの優先度は [コマンド実装計画](command-implementation-plan.md) に分けて整理しています。
 
 ## アーキテクチャ概要
 

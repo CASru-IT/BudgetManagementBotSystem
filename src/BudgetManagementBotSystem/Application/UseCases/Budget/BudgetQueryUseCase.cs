@@ -18,7 +18,7 @@ namespace BudgetManagementBotSystem.Application.UseCases.Budget
             _configuration = configuration;
         }
 
-        public async Task<RemainingBudgetDto> GetRemainingBudgetAsync(ulong discordUserId, int? targetGroupId)
+        public async Task<RemainingBudgetDto> GetRemainingBudgetAsync(ulong discordUserId, int? targetGroupId, int? fiscalYear = null)
         {
             var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
             if (user == null) throw new ArgumentException("Discord user not registered");
@@ -33,10 +33,12 @@ namespace BudgetManagementBotSystem.Application.UseCases.Budget
             if (group == null) throw new ArgumentException("Group not found");
 
             int startMonth = _configuration.GetValue<int>("FiscalYearStartMonth:Month");
-            var fiscalYear = new BudgetManagementBotSystem.Domain.ValueObjects.FiscalYear(startMonth);
+            var resolvedFiscalYear = fiscalYear.HasValue
+                ? new BudgetManagementBotSystem.Domain.ValueObjects.FiscalYear(fiscalYear.Value, startMonth)
+                : new BudgetManagementBotSystem.Domain.ValueObjects.FiscalYear(startMonth);
 
-            decimal totalBudget = group.GetTotalBudgetForFiscalYear(fiscalYear);
-            var pendingTotal = group.Requests.Where(r => r.StatusHistory.Last().ChangedStatus == BudgetManagementBotSystem.Domain.Enums.RequestStatus.Pending && r.FiscalYear == fiscalYear).Sum(r => r.Amount.Value);
+            decimal totalBudget = group.GetTotalBudgetForFiscalYear(resolvedFiscalYear);
+            var pendingTotal = group.Requests.Where(r => r.StatusHistory.Last().ChangedStatus == BudgetManagementBotSystem.Domain.Enums.RequestStatus.Pending && r.FiscalYear == resolvedFiscalYear).Sum(r => r.Amount.Value);
             var available = totalBudget - pendingTotal;
 
             return new RemainingBudgetDto
@@ -49,7 +51,7 @@ namespace BudgetManagementBotSystem.Application.UseCases.Budget
             };
         }
 
-        public async Task<PagedResult<TransactionDto>> GetUsageHistoryAsync(ulong discordUserId, int page = 1, int pageSize = 10, int? groupId = null)
+        public async Task<PagedResult<TransactionDto>> GetUsageHistoryAsync(ulong discordUserId, int page = 1, int pageSize = 10, int? groupId = null, int? fiscalYear = null)
         {
             if (page < 1) page = 1;
             if (pageSize < 1) pageSize = 10;
@@ -62,7 +64,14 @@ namespace BudgetManagementBotSystem.Application.UseCases.Budget
             var group = await _groupRepository.GetByIdAsync(targetGroupId);
             if (group == null) return new PagedResult<TransactionDto> { Total = 0, Page = page, PageSize = pageSize };
 
-            var txs = group.BudgetTransactions.OrderByDescending(t => t.TransactionDate).ToList();
+            int startMonth = _configuration.GetValue<int>("FiscalYearStartMonth:Month");
+            var resolvedFiscalYear = fiscalYear.HasValue
+                ? new BudgetManagementBotSystem.Domain.ValueObjects.FiscalYear(fiscalYear.Value, startMonth)
+                : new BudgetManagementBotSystem.Domain.ValueObjects.FiscalYear(startMonth);
+            var txs = group.BudgetTransactions
+                .Where(t => t.FiscalYear == resolvedFiscalYear)
+                .OrderByDescending(t => t.TransactionDate)
+                .ToList();
             var total = txs.Count;
             var items = txs.Skip((page - 1) * pageSize).Take(pageSize).Select(t => new TransactionDto
             {

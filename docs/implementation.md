@@ -2,10 +2,7 @@
 
 このドキュメントは現行実装（2026-04 時点）の状況をまとめます。
 
-## 関連ドキュメント
-
-- [設計資料](design.md)
-- [コマンド実装計画](command-implementation-plan.md)
+設計の前提や各ユースケースの処理フローは [設計資料](design.md) を、コマンドの優先度や実装順序は [コマンド実装計画](command-implementation-plan.md) を参照してください。
 
 ## 現在の実装状況（2026-04 時点）
 
@@ -39,6 +36,8 @@
 - `EfCoreUserRepository`（`IUserRepository` 実装）
 - `LocalFileStorage`（`IFileStorage` 実装）
   - `EvidenceStorage:BasePath`（既定: `data/evidences`）配下へ保存
+
+注: Presentation 層の一部コマンドについて、スラッシュコマンド引数の受け取り方を改善しました。管理系コマンド（`/register-user` 等）は文字列での Discord ID 受け取りから、Discord のユーザー選択 (`IUser` 相当の `user` パラメータ) に変更されています。これによりコマンド UI 上で直接ユーザーを選べるようになり、`targetUser.Id` から Discord ID を取得します。
 
 ### テスト実装済み
 

@@ -2,11 +2,13 @@
 
 このフォルダ配下の主要ドキュメント一覧です。内容の整合性や参照関係はこの目次から確認してください。
 
-- [設計資料](design.md) — アーキテクチャ、ユースケース、ドメイン設計を記載。
-- [レイヤー依存関係図](layer-dependencies.md) — 層単位の依存関係と現状の例外を記載。
-- [実装状況](implementation.md) — 現在の実装状況と未実装事項の一覧。
-- [コードリファクタ要約](code-refactor-summary.md) — 最近のリファクタと重要変更のまとめ。
-- [コマンド実装計画](command-implementation-plan.md) — Discord スラッシュコマンドの実装優先度と計画。
+## 使い分け
+
+- [設計資料](design.md) — 全体構造、ユースケース設計、ドメインルールを確認する。
+- [実装状況](implementation.md) — 現在の到達点と未実装項目を確認する。
+- [コマンド実装計画](command-implementation-plan.md) — Discord コマンドの優先度と実装順序を確認する。
+- [レイヤー依存関係図](layer-dependencies.md) — 層ごとの責務分離と例外を確認する。
+- [コードリファクタ要約](code-refactor-summary.md) — 最近の構造変更と背景を確認する。
 
 更新手順:
 
