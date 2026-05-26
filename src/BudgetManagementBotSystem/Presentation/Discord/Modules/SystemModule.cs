@@ -1,4 +1,5 @@
 using BudgetManagementBotSystem.Application.UseCases;
+using BudgetManagementBotSystem.Application.UseCases.UserManagement;
 using Discord.Interactions;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules

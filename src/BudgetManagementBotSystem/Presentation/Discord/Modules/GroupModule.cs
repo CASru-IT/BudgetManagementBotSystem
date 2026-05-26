@@ -1,9 +1,8 @@
 using Discord.Interactions;
 using BudgetManagementBotSystem.Application.UseCases;
+using BudgetManagementBotSystem.Application.UseCases.Groups;
 using BudgetManagementBotSystem.Domain.Enums;
 using BudgetManagementBotSystem.Domain.Repository;
-using BudgetManagementBotSystem.InfraStructure.Persistence;
-using Microsoft.EntityFrameworkCore;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {
@@ -12,18 +11,18 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         private readonly RegisterGroupUseCase _registerGroupUseCase;
         private readonly IGroupRepository _groupRepository;
         private readonly IUserRepository _userRepository;
-        private readonly BudgetManagementDbContext _dbContext;
+        private readonly DeleteGroupUseCase _deleteGroupUseCase;
 
         public GroupModule(
             RegisterGroupUseCase registerGroupUseCase,
             IGroupRepository groupRepository,
             IUserRepository userRepository,
-            BudgetManagementDbContext dbContext)
+            DeleteGroupUseCase deleteGroupUseCase)
         {
             _registerGroupUseCase = registerGroupUseCase;
             _groupRepository = groupRepository;
             _userRepository = userRepository;
-            _dbContext = dbContext;
+            _deleteGroupUseCase = deleteGroupUseCase;
         }
 
         [SlashCommand("register-group", "新しい班を登録する")]
@@ -70,42 +69,19 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             try
             {
                 var discordUserId = Context.User.Id;
-                var caller = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
-                if (caller == null)
+                try
                 {
-                    await RespondAsync("エラー: Discord ユーザーが登録されていません。", ephemeral: true);
-                    return;
+                    await _deleteGroupUseCase.ExecuteAsync(discordUserId, groupId);
+                    await RespondAsync($"班 {groupId} を削除（無効化）しました。", ephemeral: true);
                 }
-
-                if (caller.Role != AccountRole.Admin)
+                catch (UnauthorizedAccessException)
                 {
                     await RespondAsync("エラー: このコマンドは管理者のみ実行できます。", ephemeral: true);
-                    return;
                 }
-
-                var group = await _dbContext.Groups.FirstOrDefaultAsync(g => g.Id == groupId);
-                if (group == null)
+                catch (ArgumentException ex)
                 {
-                    await RespondAsync($"エラー: 指定された班が見つかりません: {groupId}", ephemeral: true);
-                    return;
+                    await RespondAsync($"エラー: {ex.Message}", ephemeral: true);
                 }
-
-                // 別テーブルの参照整合性を保つため、班に所属するユーザーの GroupId を null にする
-                var members = await _dbContext.Users.Where(u => u.GroupId == groupId).ToListAsync();
-                foreach (var m in members)
-                {
-                    m.ChangeGroupId(null);
-                }
-
-                // 名前に削除マークを付与して残す（物理削除は慎重に）
-                var oldName = group.Name;
-                var newName = $"{oldName} (deleted:{group.Id})";
-                // Reflection because Name has private setter; use EF entry to set property
-                _dbContext.Entry(group).Property(g => g.Name).CurrentValue = newName;
-
-                await _dbContext.SaveChangesAsync();
-
-                await RespondAsync($"班 {oldName} ({groupId}) を無効化しました。", ephemeral: true);
             }
             catch (Exception ex)
             {

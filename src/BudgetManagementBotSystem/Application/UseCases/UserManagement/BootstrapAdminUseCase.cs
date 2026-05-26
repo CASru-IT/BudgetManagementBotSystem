@@ -6,7 +6,7 @@ using BudgetManagementBotSystem.Domain.Enums;
 using BudgetManagementBotSystem.Domain.Repository;
 using Microsoft.Extensions.Options;
 
-namespace BudgetManagementBotSystem.Application.UseCases;
+namespace BudgetManagementBotSystem.Application.UseCases.UserManagement;
 
 public class BootstrapAdminUseCase
 {

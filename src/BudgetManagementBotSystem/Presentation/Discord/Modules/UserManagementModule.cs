@@ -1,5 +1,6 @@
 using Discord.Interactions;
 using BudgetManagementBotSystem.Application.UseCases;
+using BudgetManagementBotSystem.Application.UseCases.UserManagement;
 using BudgetManagementBotSystem.Domain.Entities;
 using BudgetManagementBotSystem.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -10,13 +11,15 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
     {
         private readonly RegisterUserUseCase _registerUserUseCase;
         private readonly Domain.Repository.IUserRepository _userRepository;
-        private readonly InfraStructure.Persistence.BudgetManagementDbContext _dbContext;
+        private readonly BudgetManagementBotSystem.Application.UseCases.UserManagement.UserQueryUseCase _userQuery;
+        private readonly BudgetManagementBotSystem.Application.UseCases.UserManagement.UserCommandUseCase _userCommand;
 
-        public UserManagementModule(RegisterUserUseCase registerUserUseCase, Domain.Repository.IUserRepository userRepository, BudgetManagementBotSystem.InfraStructure.Persistence.BudgetManagementDbContext dbContext)
+        public UserManagementModule(RegisterUserUseCase registerUserUseCase, Domain.Repository.IUserRepository userRepository, BudgetManagementBotSystem.Application.UseCases.UserManagement.UserQueryUseCase userQuery, BudgetManagementBotSystem.Application.UseCases.UserManagement.UserCommandUseCase userCommand)
         {
             _registerUserUseCase = registerUserUseCase;
             _userRepository = userRepository;
-            _dbContext = dbContext;
+            _userQuery = userQuery;
+            _userCommand = userCommand;
         }
 
         [SlashCommand("register-user", "システム利用ユーザーを登録する")]
@@ -59,7 +62,15 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 return;
             }
 
-            await UpdateUserRoleAsync(discordUserId, role, "ユーザー権限を更新しました。");
+            try
+            {
+                await _userCommand.UpdateUserRoleByDiscordIdAsync(discordUserId, role);
+                await RespondAsync("ユーザー権限を更新しました。", ephemeral: true);
+            }
+            catch (ArgumentException ex)
+            {
+                await RespondAsync($"エラー: {ex.Message}", ephemeral: true);
+            }
         }
 
         [SlashCommand("remove-user", "ユーザーを無効化または削除する")]
@@ -77,22 +88,15 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 return;
             }
 
-            var targetUser = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
-            if (targetUser == null)
+            try
             {
-                await RespondAsync("エラー: 指定されたユーザーが見つかりません。", ephemeral: true);
-                return;
+                await _userCommand.DeactivateUserByDiscordIdAsync(discordUserId);
+                await RespondAsync($"ユーザーを無効化しました: {discordUserId}", ephemeral: true);
             }
-
-            if (!targetUser.IsActive)
+            catch (ArgumentException ex)
             {
-                await RespondAsync("対象ユーザーは既に無効化されています。", ephemeral: true);
-                return;
+                await RespondAsync($"エラー: {ex.Message}", ephemeral: true);
             }
-
-            targetUser.Deactivate();
-            await _dbContext.SaveChangesAsync();
-            await RespondAsync($"ユーザーを無効化しました: {targetUser.Name} ({targetUser.DiscordUserId})", ephemeral: true);
         }
 
         [SlashCommand("list-users", "登録済みユーザーを表示する")]
@@ -106,7 +110,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
-                var users = await _dbContext.Users.OrderBy(u => u.Id).ToListAsync();
+                var users = await _userQuery.ListUsersAsync();
                 if (!users.Any())
                 {
                     await RespondAsync("登録ユーザーは存在しません。", ephemeral: true);
@@ -139,20 +143,14 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                         return;
                     }
 
-                    var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.DiscordUserId == discordUserId);
+                    var user = await _userQuery.GetByDiscordIdAsync(discordUserId);
                     if (user == null)
                     {
                         await RespondAsync("エラー: 指定されたユーザーが見つかりません。", ephemeral: true);
                         return;
                     }
 
-                    var groupName = user.GroupId.HasValue
-                        ? await _dbContext.Groups.Where(g => g.Id == user.GroupId.Value).Select(g => g.Name).FirstOrDefaultAsync()
-                        : null;
-
-                    var groupText = user.GroupId.HasValue
-                        ? $"班ID:{user.GroupId.Value} 班名:{groupName ?? "不明"}"
-                        : "班:未所属";
+                    var groupText = user.GroupId.HasValue ? $"班ID:{user.GroupId.Value}" : "班:未所属";
 
                     await RespondAsync($"ユーザー情報\nID:{user.Id}\n名前:{user.Name}\nDiscordUserId:{user.DiscordUserId}\nRole:{user.Role}\n{groupText}\n有効:{user.IsActive}", ephemeral: true);
                 }
@@ -174,7 +172,15 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 return;
             }
 
-            await UpdateUserRoleAsync(discordUserId, role, "権限を付与しました。");
+            try
+            {
+                await _userCommand.UpdateUserRoleByDiscordIdAsync(discordUserId, role);
+                await RespondAsync("権限を付与しました。", ephemeral: true);
+            }
+            catch (ArgumentException ex)
+            {
+                await RespondAsync($"エラー: {ex.Message}", ephemeral: true);
+            }
         }
 
         [SlashCommand("revoke-role", "ユーザーから権限を解除する")]
@@ -186,7 +192,15 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 return;
             }
 
-            await UpdateUserRoleAsync(discordUserId, AccountRole.GroupLeader, "権限を解除しました。", "ユーザーの権限を GroupLeader に戻しました。");
+            try
+            {
+                await _userCommand.UpdateUserRoleByDiscordIdAsync(discordUserId, AccountRole.GroupLeader);
+                await RespondAsync("権限を解除しました。", ephemeral: true);
+            }
+            catch (ArgumentException ex)
+            {
+                await RespondAsync($"エラー: {ex.Message}", ephemeral: true);
+            }
         }
 
         [SlashCommand("assign-group", "ユーザーを班へ所属させる")]
@@ -207,23 +221,15 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
-                var targetUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.DiscordUserId == discordUserId);
-                if (targetUser == null)
+                try
                 {
-                    await RespondAsync("エラー: 指定されたユーザーが見つかりません。", ephemeral: true);
-                    return;
+                    await _userCommand.AssignGroupByDiscordIdAsync(discordUserId, groupId);
+                    await RespondAsync($"ユーザーを班 {groupId} に所属させました。", ephemeral: true);
                 }
-
-                var group = await _dbContext.Groups.FirstOrDefaultAsync(g => g.Id == groupId);
-                if (group == null)
+                catch (ArgumentException ex)
                 {
-                    await RespondAsync($"エラー: 指定された班が見つかりません: {groupId}", ephemeral: true);
-                    return;
+                    await RespondAsync($"エラー: {ex.Message}", ephemeral: true);
                 }
-
-                targetUser.ChangeGroupId(groupId);
-                await _dbContext.SaveChangesAsync();
-                await RespondAsync($"ユーザー {targetUser.Name} を班 {group.Name} に所属させました。", ephemeral: true);
             }
             catch (Exception ex)
             {
@@ -248,22 +254,15 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
-                var targetUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.DiscordUserId == discordUserId);
-                if (targetUser == null)
+                try
                 {
-                    await RespondAsync("エラー: 指定されたユーザーが見つかりません。", ephemeral: true);
-                    return;
+                    await _userCommand.UnassignGroupByDiscordIdAsync(discordUserId);
+                    await RespondAsync($"ユーザーの班所属を解除しました。", ephemeral: true);
                 }
-
-                if (!targetUser.GroupId.HasValue)
+                catch (ArgumentException ex)
                 {
-                    await RespondAsync("対象ユーザーは既に未所属です。", ephemeral: true);
-                    return;
+                    await RespondAsync($"エラー: {ex.Message}", ephemeral: true);
                 }
-
-                targetUser.ChangeGroupId(null);
-                await _dbContext.SaveChangesAsync();
-                await RespondAsync($"ユーザー {targetUser.Name} の班所属を解除しました。", ephemeral: true);
             }
             catch (Exception ex)
             {
@@ -292,7 +291,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
-                var members = await _dbContext.Users.Where(u => u.GroupId == groupId).OrderBy(u => u.Id).ToListAsync();
+                var members = await _userQuery.GetMembersByGroupIdAsync(groupId);
                 if (!members.Any())
                 {
                     await RespondAsync("指定班のメンバーは見つかりませんでした。", ephemeral: true);
@@ -330,43 +329,6 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             return true;
         }
 
-        private async Task UpdateUserRoleAsync(ulong discordUserId, AccountRole role, string successMessage, string? differentMessage = null)
-        {
-            try
-            {
-                var caller = await GetCallerAsync();
-                if (!await EnsureAdminAsync(caller))
-                {
-                    return;
-                }
-
-                var targetUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.DiscordUserId == discordUserId);
-                if (targetUser == null)
-                {
-                    await RespondAsync("エラー: 指定されたユーザーが見つかりません。", ephemeral: true);
-                    return;
-                }
-
-                if (targetUser.Role == role && string.IsNullOrWhiteSpace(differentMessage))
-                {
-                    await RespondAsync("対象ユーザーは既に指定された権限です。", ephemeral: true);
-                    return;
-                }
-
-                if (targetUser.Role == role && !string.IsNullOrWhiteSpace(differentMessage))
-                {
-                    await RespondAsync(differentMessage, ephemeral: true);
-                    return;
-                }
-
-                targetUser.ChangeRole(role);
-                await _dbContext.SaveChangesAsync();
-                await RespondAsync($"{targetUser.Name} に対して {successMessage}", ephemeral: true);
-            }
-            catch (Exception ex)
-            {
-                await RespondAsync($"権限更新中にエラーが発生しました: {ex.Message}", ephemeral: true);
-            }
-        }
+        
     }
 }

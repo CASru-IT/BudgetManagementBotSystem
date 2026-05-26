@@ -2,7 +2,7 @@ using BudgetManagementBotSystem.Application.Interface;
 using BudgetManagementBotSystem.Domain.Entities;
 using BudgetManagementBotSystem.Domain.Repository;
 
-namespace BudgetManagementBotSystem.Application.UseCases;
+namespace BudgetManagementBotSystem.Application.UseCases.Groups;
 
 public class RegisterGroupUseCase
 {

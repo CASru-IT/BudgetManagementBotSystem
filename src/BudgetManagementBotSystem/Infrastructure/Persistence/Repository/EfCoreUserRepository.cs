@@ -26,6 +26,11 @@ public class EfCoreUserRepository : IUserRepository
 			.FirstOrDefaultAsync(u => u.DiscordUserId == discordUserId);
 	}
 
+	public async Task<List<User>?> GetAllAsync()
+	{
+		return await _context.Users.ToListAsync();
+	}
+
 	public async Task<bool> IsUserExistsAsync(int userId)
 	{
 		return await _context.Users

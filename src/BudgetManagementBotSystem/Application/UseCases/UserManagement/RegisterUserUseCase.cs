@@ -3,7 +3,7 @@ using BudgetManagementBotSystem.Domain.Entities;
 using BudgetManagementBotSystem.Domain.Enums;
 using BudgetManagementBotSystem.Domain.Repository;
 
-namespace BudgetManagementBotSystem.Application.UseCases;
+namespace BudgetManagementBotSystem.Application.UseCases.UserManagement;
 
 public class RegisterUserUseCase
 {

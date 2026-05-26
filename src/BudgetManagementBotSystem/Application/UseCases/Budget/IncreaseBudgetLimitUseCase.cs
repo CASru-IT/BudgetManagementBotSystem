@@ -3,7 +3,7 @@ using BudgetManagementBotSystem.Domain.Entities;
 using BudgetManagementBotSystem.Domain.ValueObjects;
 using BudgetManagementBotSystem.Application.Interface;
 
-namespace BudgetManagementBotSystem.Application.UseCases;
+namespace BudgetManagementBotSystem.Application.UseCases.Budget;
 
 public class IncreaseBudgetLimitUseCase
 {

@@ -9,7 +9,7 @@ public class Group
     private readonly List<BudgetRequest> _requests = new List<BudgetRequest>();
 
     public int Id { get; private set; }
-    public string Name { get; private set; }
+    public string Name { get; private set; } = string.Empty;
     public IReadOnlyCollection<BudgetTransaction> BudgetTransactions => _budgetTransactions;
     public IReadOnlyCollection<BudgetRequest> Requests => _requests;
 

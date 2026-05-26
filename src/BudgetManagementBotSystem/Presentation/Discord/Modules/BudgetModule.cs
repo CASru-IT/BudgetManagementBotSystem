@@ -1,23 +1,22 @@
 using Discord.Interactions;
 using BudgetManagementBotSystem.Domain.Repository;
-using BudgetManagementBotSystem.InfraStructure.Persistence;
-using Microsoft.EntityFrameworkCore;
 using BudgetManagementBotSystem.Domain.Enums;
+using BudgetManagementBotSystem.Application.UseCases.Budget;
+using BudgetManagementBotSystem.Application.UseCases;
+using Microsoft.Extensions.Configuration;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {
     public class BudgetModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly IUserRepository _userRepository;
-        private readonly BudgetManagementDbContext _dbContext;
-        private readonly IConfiguration _configuration;
-        private readonly BudgetManagementBotSystem.Application.UseCases.IncreaseBudgetLimitUseCase _increaseBudgetLimitUseCase;
+        private readonly BudgetQueryUseCase _budgetQueryUseCase;
+        private readonly IncreaseBudgetLimitUseCase _increaseBudgetLimitUseCase;
 
-        public BudgetModule(IUserRepository userRepository, BudgetManagementDbContext dbContext, IConfiguration configuration, BudgetManagementBotSystem.Application.UseCases.IncreaseBudgetLimitUseCase increaseBudgetLimitUseCase)
+        public BudgetModule(IUserRepository userRepository, BudgetQueryUseCase budgetQueryUseCase, IncreaseBudgetLimitUseCase increaseBudgetLimitUseCase)
         {
             _userRepository = userRepository;
-            _dbContext = dbContext;
-            _configuration = configuration;
+            _budgetQueryUseCase = budgetQueryUseCase;
             _increaseBudgetLimitUseCase = increaseBudgetLimitUseCase;
         }
 
@@ -27,51 +26,15 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             try
             {
                 var discordUserId = Context.User.Id;
-                var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
-                if (user == null)
+                try
                 {
-                    await RespondAsync("エラー: Discord ユーザーが登録されていません。", ephemeral: true);
-                    return;
+                    var dto = await _budgetQueryUseCase.GetRemainingBudgetAsync(discordUserId, groupId);
+                    await RespondAsync($"班:{dto.GroupName} 現在予算:{dto.TotalBudget:C} 未承認合計:{dto.PendingTotal:C} 利用可能:{dto.Available:C}");
                 }
-
-                if (!user.GroupId.HasValue && !groupId.HasValue)
+                catch (Exception ex)
                 {
-                    await RespondAsync("エラー: 班が未設定のため、残予算を表示できません。", ephemeral: true);
-                    return;
+                    await RespondAsync($"残予算取得中にエラーが発生しました: {ex.Message}", ephemeral: true);
                 }
-
-                int targetGroupId = groupId ?? user.GroupId!.Value;
-                var isPrivileged = await BudgetManagementBotSystem.Presentation.Discord.Helpers.AuthorizationHelper.IsPrivilegedAsync(_userRepository, discordUserId);
-                if (!isPrivileged && groupId.HasValue && (!user.GroupId.HasValue || groupId.Value != user.GroupId.Value))
-                {
-                    await RespondAsync("エラー: 指定した班の情報を参照する権限がありません。", ephemeral: true);
-                    return;
-                }
-
-                var group = await _dbContext.Groups
-                    .Include(g => g.BudgetTransactions)
-                    .Include(g => g.Requests)
-                        .ThenInclude(r => r.StatusHistory)
-                    .FirstOrDefaultAsync(g => g.Id == targetGroupId);
-
-                if (group == null)
-                {
-                    await RespondAsync($"班が見つかりません: {targetGroupId}", ephemeral: true);
-                    return;
-                }
-
-                int startMonth = _configuration.GetValue<int>("FiscalYearStartMonth:Month");
-                var fiscalYear = new BudgetManagementBotSystem.Domain.ValueObjects.FiscalYear(startMonth);
-
-                decimal totalBudget = group.GetTotalBudgetForFiscalYear(fiscalYear);
-                // 未承認の申請合計
-                var pendingTotal = group.Requests
-                    .Where(r => r.StatusHistory.Last().ChangedStatus == RequestStatus.Pending && r.FiscalYear == fiscalYear)
-                    .Sum(r => r.Amount.Value);
-
-                decimal available = totalBudget - pendingTotal;
-
-                await RespondAsync($"班:{group.Name} 現在予算:{totalBudget:C} 未承認合計:{pendingTotal:C} 利用可能:{available:C}");
             }
             catch (Exception ex)
             {
@@ -89,43 +52,16 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 pageSize = Math.Min(pageSize, 50);
 
                 var discordUserId = Context.User.Id;
-                var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
-                if (user == null)
-                {
-                    await RespondAsync("エラー: Discord ユーザーが登録されていません。", ephemeral: true);
-                    return;
-                }
+                var result = await _budgetQueryUseCase.GetUsageHistoryAsync(discordUserId, page, pageSize, groupId);
 
-                if (!user.GroupId.HasValue && !groupId.HasValue)
-                {
-                    await RespondAsync("エラー: 班が未設定のため、使用履歴を表示できません。", ephemeral: true);
-                    return;
-                }
-
-                int targetGroupId = groupId ?? user.GroupId!.Value;
-                var isPrivileged2 = await BudgetManagementBotSystem.Presentation.Discord.Helpers.AuthorizationHelper.IsPrivilegedAsync(_userRepository, discordUserId);
-                if (!isPrivileged2 && groupId.HasValue && (!user.GroupId.HasValue || groupId.Value != user.GroupId.Value))
-                {
-                    await RespondAsync("エラー: 指定した班の情報を参照する権限がありません。", ephemeral: true);
-                    return;
-                }
-
-                var query = _dbContext.BudgetTransactions
-                    .Where(t => EF.Property<int>(t, "GroupId") == targetGroupId)
-                    .OrderByDescending(t => t.TransactionDate)
-                    .AsQueryable();
-
-                var total = await query.CountAsync();
-                var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
-
-                if (!items.Any())
+                if (result.Total == 0 || result.Items == null || !result.Items.Any())
                 {
                     await RespondAsync("予算取引の履歴は見つかりませんでした。", ephemeral: true);
                     return;
                 }
 
-                var lines = items.Select(t => $"{(t.IsIncome?"収入":"支出")} {t.Amount.Value:C} 日付:{t.TransactionDate:yyyy-MM-dd} 年度:{t.FiscalYear.Year}");
-                var header = $"取引履歴 (ページ {page}/{Math.Max(1, (int)Math.Ceiling(total/(double)pageSize))}) 合計:{total}";
+                var lines = result.Items.Select(t => $"{(t.IsIncome?"収入":"支出")} {t.Amount:C} 日付:{t.TransactionDate:yyyy-MM-dd} 年度:{t.FiscalYear}");
+                var header = $"取引履歴 (ページ {result.Page}/{Math.Max(1, (int)Math.Ceiling(result.Total/(double)result.PageSize))}) 合計:{result.Total}";
                 await RespondAsync($"{header}\n{string.Join("\n", lines)}");
             }
             catch (Exception ex)
@@ -140,8 +76,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             try
             {
                 var discordUserId = Context.User.Id;
-                var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
-                if (user == null)
+                var caller = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
+                if (caller == null)
                 {
                     await RespondAsync("エラー: Discord ユーザーが登録されていません。", ephemeral: true);
                     return;
@@ -160,23 +96,10 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
-                var group = await _dbContext.Groups.FirstOrDefaultAsync(g => g.Id == groupId);
-                if (group == null)
-                {
-                    await RespondAsync($"班が見つかりません: {groupId}", ephemeral: true);
-                    return;
-                }
-
-                int startMonth = _configuration.GetValue<int>("FiscalYearStartMonth:Month");
-                var fiscalYear = new BudgetManagementBotSystem.Domain.ValueObjects.FiscalYear(startMonth);
-
                 decimal decAmount = Convert.ToDecimal(amount);
-                var tx = new BudgetManagementBotSystem.Domain.Entities.BudgetTransaction(true, decAmount, fiscalYear);
-                group.AddBudgetTransaction(tx);
+                await _increaseBudgetLimitUseCase.ExecuteAsync(groupId, decAmount);
 
-                await _dbContext.SaveChangesAsync();
-
-                await RespondAsync($"班 {group.Name} の年度予算を {decAmount:C} として登録しました。", ephemeral: true);
+                await RespondAsync($"班 {groupId} の年度予算を {decAmount:C} として登録しました。", ephemeral: true);
             }
             catch (Exception ex)
             {
@@ -190,14 +113,13 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             try
             {
                 var discordUserId = Context.User.Id;
-                var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
-                if (user == null)
+                var caller = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
+                if (caller == null)
                 {
                     await RespondAsync("エラー: Discord ユーザーが登録されていません。", ephemeral: true);
                     return;
                 }
 
-                // Only Admins and Accountants are allowed to add budget
                 var canAddBudget = await BudgetManagementBotSystem.Presentation.Discord.Helpers.AuthorizationHelper.IsPrivilegedAsync(_userRepository, discordUserId);
                 if (!canAddBudget)
                 {
@@ -236,14 +158,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         {
             try
             {
-                var groups = await _dbContext.Groups
-                    .Include(g => g.BudgetTransactions)
-                    .ToListAsync();
-
-                var allTx = groups.SelectMany(g => g.BudgetTransactions.Select(t => new { GroupName = g.Name, Tx = t }))
-                    .OrderByDescending(x => x.Tx.TransactionDate)
-                    .Take(Math.Max(1, take))
-                    .ToList();
+                var allTx = await _budgetQueryUseCase.GetAllHistoryAsync(take);
 
                 if (!allTx.Any())
                 {
@@ -251,7 +166,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
-                var lines = allTx.Select(x => $"班:{x.GroupName} {(x.Tx.IsIncome?"収入":"支出")} {x.Tx.Amount.Value:C} 日付:{x.Tx.TransactionDate:yyyy-MM-dd} 年度:{x.Tx.FiscalYear.Year}");
+                var lines = allTx.Select(x => $"班:{x.GroupName} {(x.IsIncome?"収入":"支出")} {x.Amount:C} 日付:{x.TransactionDate:yyyy-MM-dd} 年度:{x.FiscalYear}");
                 await RespondAsync(string.Join("\n", lines));
             }
             catch (Exception ex)

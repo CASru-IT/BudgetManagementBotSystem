@@ -7,10 +7,10 @@ public class BudgetRequest
 {
     public int Id { get; private set; }
     public int UserId { get; private set; }
-    public Money Amount { get; private set; }
-    public FiscalYear FiscalYear { get; private set; }
+    public Money Amount { get; private set; } = null!;
+    public FiscalYear FiscalYear { get; private set; } = null!;
     public DateTime RequestDate { get; private set; }
-    public string Description { get; private set; }
+    public string Description { get; private set; } = string.Empty;
     public List<RequestEvidence> Evidences { get; private set; } = new List<RequestEvidence>();
     public List<RequestStatusChange> StatusHistory { get; private set; } = new List<RequestStatusChange>();
 

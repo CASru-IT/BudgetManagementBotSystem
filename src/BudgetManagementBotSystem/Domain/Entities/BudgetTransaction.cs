@@ -6,8 +6,8 @@ public class BudgetTransaction
 {
     public int Id { get; private set; }
     public bool IsIncome { get; private set; }
-    public Money Amount { get; private set; }
-    public FiscalYear FiscalYear { get; private set; }
+    public Money Amount { get; private set; } = null!;
+    public FiscalYear FiscalYear { get; private set; } = null!;
     public DateTime TransactionDate { get; private set; }
 
     private BudgetTransaction()

@@ -14,17 +14,21 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         private readonly CancelBudgetRequestUseCase _cancelBudgetRequestUseCase;
         private readonly UserCancelBudgetRequestUseCase _userCancelRequestUseCase;
         private readonly IUserRepository _userRepository;
-        private readonly BudgetManagementDbContext _dbContext;
         private readonly InfraStructure.Discord.DiscordBotService _discordBotService;
+        private readonly RequestListUseCase _requestListUseCase;
+        private readonly RequestDetailUseCase _requestDetailUseCase;
+        private readonly RequestQueryUseCase _requestQueryUseCase;
 
-        public RequestModule(SubmitBudgetRequestUseCase submitBudgetRequestUseCase, CancelBudgetRequestUseCase cancelBudgetRequestUseCase, UserCancelBudgetRequestUseCase userCancelRequestUseCase, IUserRepository userRepository, BudgetManagementDbContext dbContext, BudgetManagementBotSystem.InfraStructure.Discord.DiscordBotService discordBotService)
+        public RequestModule(SubmitBudgetRequestUseCase submitBudgetRequestUseCase, CancelBudgetRequestUseCase cancelBudgetRequestUseCase, UserCancelBudgetRequestUseCase userCancelRequestUseCase, IUserRepository userRepository, BudgetManagementBotSystem.InfraStructure.Discord.DiscordBotService discordBotService, RequestListUseCase requestListUseCase, RequestDetailUseCase requestDetailUseCase, RequestQueryUseCase requestQueryUseCase)
         {
             _submitBudgetRequestUseCase = submitBudgetRequestUseCase;
             _cancelBudgetRequestUseCase = cancelBudgetRequestUseCase;
             _userCancelRequestUseCase = userCancelRequestUseCase;
             _userRepository = userRepository;
-            _dbContext = dbContext;
             _discordBotService = discordBotService;
+            _requestListUseCase = requestListUseCase;
+            _requestDetailUseCase = requestDetailUseCase;
+            _requestQueryUseCase = requestQueryUseCase;
         }
 
         [SlashCommand("create-request", "予算使用申請を作成する")]
@@ -90,75 +94,17 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 pageSize = Math.Min(pageSize, 50);
 
                 var discordUserId = Context.User.Id;
-                var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
-                if (user == null)
-                {
-                    await RespondAsync("エラー: Discord ユーザーがシステムに登録されていません。", ephemeral: true);
-                    return;
-                }
+                var result = await _requestListUseCase.ExecuteAsync(discordUserId, status, page, pageSize, groupId);
 
-                var isPrivileged = await BudgetManagementBotSystem.Presentation.Discord.Helpers.AuthorizationHelper.IsPrivilegedAsync(_userRepository, discordUserId);
-                if (!user.GroupId.HasValue && !isPrivileged)
-                {
-                    await RespondAsync("エラー: 班が未設定のため、申請一覧を表示できません。", ephemeral: true);
-                    return;
-                }
-
-                var query = _dbContext.BudgetRequests
-                    .Include(r => r.StatusHistory)
-                    .Include(r => r.Evidences)
-                    .AsQueryable();
-
-                // 権限に応じた範囲制限（DB の Role を参照）
-                if (isPrivileged)
-                {
-                    if (groupId.HasValue)
-                    {
-                        query = query.Where(r => EF.Property<int>(r, "GroupId") == groupId.Value);
-                    }
-                }
-                else
-                {
-                    query = query.Where(r => EF.Property<int>(r, "GroupId") == user.GroupId!.Value);
-                }
-
-                query = query.OrderByDescending(r => r.RequestDate);
-
-                var all = await query.ToListAsync();
-
-                // 状態フィルタ（取得後に評価）
-                if (!string.IsNullOrWhiteSpace(status))
-                {
-                    if (Enum.TryParse<RequestStatus>(status, true, out var parsed))
-                    {
-                        all = all.Where(r => r.StatusHistory.Last().ChangedStatus == parsed).ToList();
-                    }
-                    else
-                    {
-                        await RespondAsync($"不正な状態フィルタです: {status}", ephemeral: true);
-                        return;
-                    }
-                }
-
-                var total = all.Count;
-                var items = all.Skip((page - 1) * pageSize).Take(pageSize).ToList();
-
-                if (!items.Any())
+                if (result.Total == 0 || !result.Items.Any())
                 {
                     await RespondAsync("該当する申請は見つかりませんでした。", ephemeral: true);
                     return;
                 }
 
-                var lines = items.Select(r =>
-                {
-                    var currentStatus = r.StatusHistory.Last().ChangedStatus;
-                    return $"ID:{r.Id} 金額:{r.Amount.Value:C} 状態:{currentStatus} 日付:{r.RequestDate:yyyy-MM-dd} 説明:{(r.Description.Length>80? r.Description.Substring(0,80)+"...": r.Description)}";
-                });
-
-                var header = $"申請一覧 (ページ {page}/{Math.Max(1, (int)Math.Ceiling(total/(double)pageSize))}) 合計:{total}";
-                var body = string.Join("\n", lines);
-
-                await RespondAsync($"{header}\n{body}");
+                var lines = result.Items.Select(r => $"ID:{r.Id} 金額:{r.Amount:C} 日付:{r.RequestDate:yyyy-MM-dd} 説明:{(r.Description.Length>80? r.Description.Substring(0,80)+"...": r.Description)}");
+                var header = $"申請一覧 (ページ {result.Page}/{Math.Max(1, (int)Math.Ceiling(result.Total/(double)result.PageSize))}) 合計:{result.Total}";
+                await RespondAsync($"{header}\n{string.Join("\n", lines)}");
             }
             catch (Exception ex)
             {
@@ -177,11 +123,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
-                var req = await _dbContext.BudgetRequests
-                    .Include(r => r.Evidences)
-                    .Include(r => r.StatusHistory)
-                    .FirstOrDefaultAsync(r => r.Id == reqId);
-
+                var (req, gid) = await _requestDetailUseCase.GetByIdAsync(reqId);
                 if (req == null)
                 {
                     await RespondAsync($"申請が見つかりません: {reqId}", ephemeral: true);
@@ -223,21 +165,19 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
-                var req = await _dbContext.BudgetRequests.FirstOrDefaultAsync(r => r.Id == reqId);
-                if (req == null)
+                var (req, groupId) = await _requestDetailUseCase.GetByIdAsync(reqId);
+                if (req == null || groupId == null)
                 {
                     await RespondAsync($"申請が見つかりません: {reqId}", ephemeral: true);
                     return;
                 }
-
-                int groupId = _dbContext.Entry(req).Property<int>("GroupId").CurrentValue;
 
                 // If the request owner wants to cancel a Pending request, allow it
                 var isRequestOwner = req.UserId == user.Id;
                 var currentStatus = req.StatusHistory.Last().ChangedStatus;
                 if (isRequestOwner && currentStatus == BudgetManagementBotSystem.Domain.Enums.RequestStatus.Pending)
                 {
-                    await _userCancelRequestUseCase.ExecuteAsync(groupId, reqId, user.Id);
+                    await _userCancelRequestUseCase.ExecuteAsync(groupId.Value, reqId, user.Id);
                     await RespondAsync($"申請 {reqId} を申請者が取消しました。", ephemeral: true);
                     return;
                 }
@@ -250,7 +190,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
-                await _cancelBudgetRequestUseCase.ExecuteAsync(groupId, reqId, user.Id);
+                await _cancelBudgetRequestUseCase.ExecuteAsync(groupId.Value, reqId, user.Id);
 
                 await RespondAsync($"申請 {reqId} を取消しました。", ephemeral: true);
             }
