@@ -55,4 +55,5 @@ nunit-*.xml
 
 appsettings*.json
 
-/data
+# Ignore evidence uploads stored by the app
+ /src/BudgetManagementBotSystem/data
