@@ -13,20 +13,17 @@ public class RejectBudgetRequestUseCaseTests
     [Fact]
     public async Task ExecuteAsync_WithValidInputs_UpdatesRequestStatusToRejected()
     {
-        // Arrange
         const int groupId = 1;
         const int requestId = 1;
         const int changedByUserId = 2;
 
-        var changedByUser = new User("Approver", 11111UL, AccountRole.Admin);
+        var changedByUser = new User("Approver", 11111UL, AccountRole.Accountant);
         var requester = new User("Requester", 22222UL, AccountRole.Accountant);
         requester.ChangeGroupId(0);
         var group = new Group("Test Group");
 
-        // リクエストをグループに追加
         _ = group.CreateBudgetRequest(requester, new Money(50_000m), new FiscalYear(4), "備品購入", Array.Empty<string>());
         var request = group.Requests.Single();
-        // ID をリフレクションで設定
         typeof(BudgetRequest).GetProperty("Id")!.SetValue(request, requestId);
 
         var mockGroupRepository = new Mock<IGroupRepository>();
@@ -41,10 +38,8 @@ public class RejectBudgetRequestUseCaseTests
             mockUserRepository.Object,
             mockUnitOfWork.Object);
 
-        // Act
         await useCase.ExecuteAsync(groupId, requestId, changedByUserId);
 
-        // Assert
         Assert.Equal(RequestStatus.Rejected, request.StatusHistory.Last().ChangedStatus);
         mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
     }
@@ -52,7 +47,6 @@ public class RejectBudgetRequestUseCaseTests
     [Fact]
     public async Task ExecuteAsync_WhenGroupNotFound_ThrowsArgumentNullException()
     {
-        // Arrange
         const int groupId = 999;
         const int requestId = 1;
         const int changedByUserId = 2;
@@ -68,7 +62,6 @@ public class RejectBudgetRequestUseCaseTests
             mockUserRepository.Object,
             mockUnitOfWork.Object);
 
-        // Act & Assert
         var ex = await Assert.ThrowsAsync<ArgumentNullException>(
             () => useCase.ExecuteAsync(groupId, requestId, changedByUserId)
         );
@@ -80,7 +73,6 @@ public class RejectBudgetRequestUseCaseTests
     [Fact]
     public async Task ExecuteAsync_WhenApproverUserNotFound_ThrowsArgumentNullException()
     {
-        // Arrange
         const int groupId = 1;
         const int requestId = 1;
         const int changedByUserId = 999;
@@ -102,7 +94,6 @@ public class RejectBudgetRequestUseCaseTests
             mockUserRepository.Object,
             mockUnitOfWork.Object);
 
-        // Act & Assert
         var ex = await Assert.ThrowsAsync<ArgumentNullException>(
             () => useCase.ExecuteAsync(groupId, requestId, changedByUserId)
         );
@@ -114,13 +105,12 @@ public class RejectBudgetRequestUseCaseTests
     [Fact]
     public async Task ExecuteAsync_WhenRequestNotFound_ThrowsArgumentNullException()
     {
-        // Arrange
         const int groupId = 1;
         const int requestId = 999;
         const int changedByUserId = 2;
 
-        var changedByUser = new User("Approver", 11111UL, AccountRole.Admin);
-        var group = new Group("Test Group"); // リクエストなし
+        var changedByUser = new User("Approver", 11111UL, AccountRole.Accountant);
+        var group = new Group("Test Group");
 
         var mockGroupRepository = new Mock<IGroupRepository>();
         mockGroupRepository.Setup(r => r.GetByIdAsync(groupId)).ReturnsAsync(group);
@@ -134,7 +124,6 @@ public class RejectBudgetRequestUseCaseTests
             mockUserRepository.Object,
             mockUnitOfWork.Object);
 
-        // Act & Assert
         var ex = await Assert.ThrowsAsync<ArgumentNullException>(
             () => useCase.ExecuteAsync(groupId, requestId, changedByUserId)
         );
@@ -146,25 +135,22 @@ public class RejectBudgetRequestUseCaseTests
     [Fact]
     public async Task ExecuteAsync_WithMultipleRequests_UpdatesOnlyTargetRequest()
     {
-        // Arrange
         const int groupId = 1;
         const int targetRequestId = 2;
         const int changedByUserId = 3;
 
-        var changedByUser = new User("Approver", 11111UL, AccountRole.Admin);
+        var changedByUser = new User("Approver", 11111UL, AccountRole.Accountant);
         var requester1 = new User("Requester1", 22222UL, AccountRole.Accountant);
         var requester2 = new User("Requester2", 33333UL, AccountRole.Accountant);
         requester1.ChangeGroupId(0);
         requester2.ChangeGroupId(0);
         var group = new Group("Test Group");
 
-        // 複数のリクエストを追加
         _ = group.CreateBudgetRequest(requester1, new Money(30_000m), new FiscalYear(4), "PC購入", Array.Empty<string>());
         _ = group.CreateBudgetRequest(requester2, new Money(50_000m), new FiscalYear(4), "モニター購入", Array.Empty<string>());
         var request1 = group.Requests.First(r => r.Description == "PC購入");
         var request2 = group.Requests.First(r => r.Description == "モニター購入");
 
-        // ID をリフレクションで設定
         typeof(BudgetRequest).GetProperty("Id")!.SetValue(request1, 1);
         typeof(BudgetRequest).GetProperty("Id")!.SetValue(request2, 2);
 
@@ -180,12 +166,44 @@ public class RejectBudgetRequestUseCaseTests
             mockUserRepository.Object,
             mockUnitOfWork.Object);
 
-        // Act
         await useCase.ExecuteAsync(groupId, targetRequestId, changedByUserId);
 
-        // Assert
         Assert.Equal(RequestStatus.Rejected, request2.StatusHistory.Last().ChangedStatus);
-        Assert.Equal(RequestStatus.Pending, request1.StatusHistory.Last().ChangedStatus); // 他のリクエストは変わらない
+        Assert.Equal(RequestStatus.Pending, request1.StatusHistory.Last().ChangedStatus);
         mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenApproverIsNotAccountant_ThrowsUnauthorizedAccessException()
+    {
+        const int groupId = 1;
+        const int requestId = 1;
+        const int changedByUserId = 2;
+
+        var changedByUser = new User("Approver", 11111UL, AccountRole.Admin);
+        var requester = new User("Requester", 22222UL, AccountRole.Accountant);
+        requester.ChangeGroupId(0);
+        var group = new Group("Test Group");
+
+        _ = group.CreateBudgetRequest(requester, new Money(50_000m), new FiscalYear(4), "備品購入", Array.Empty<string>());
+        var request = group.Requests.Single();
+        typeof(BudgetRequest).GetProperty("Id")!.SetValue(request, requestId);
+
+        var mockGroupRepository = new Mock<IGroupRepository>();
+        mockGroupRepository.Setup(r => r.GetByIdAsync(groupId)).ReturnsAsync(group);
+
+        var mockUserRepository = new Mock<IUserRepository>();
+        mockUserRepository.Setup(r => r.GetByIdAsync(changedByUserId)).ReturnsAsync(changedByUser);
+        var mockUnitOfWork = new Mock<IUnitOfWork>();
+
+        var useCase = new RejectBudgetRequestUseCase(
+            mockGroupRepository.Object,
+            mockUserRepository.Object,
+            mockUnitOfWork.Object);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => useCase.ExecuteAsync(groupId, requestId, changedByUserId));
+
+        mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Never);
     }
 }

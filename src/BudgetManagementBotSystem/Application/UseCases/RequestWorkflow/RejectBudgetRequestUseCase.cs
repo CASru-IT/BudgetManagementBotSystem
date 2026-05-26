@@ -28,6 +28,11 @@ public class RejectBudgetRequestUseCase
         User? changedByUser = await _userRepository.GetByIdAsync(changedByUserId);
         if (changedByUser == null) throw new ArgumentNullException(nameof(changedByUserId), "User not found");
 
+        if (changedByUser.Role != AccountRole.Accountant)
+        {
+            throw new UnauthorizedAccessException("This action requires accountant privileges");
+        }
+
         group.UpdateBudgetRequestStatus(requestId, RequestStatus.Rejected, changedByUser);
 
         await _unitOfWork.SaveChangesAsync();

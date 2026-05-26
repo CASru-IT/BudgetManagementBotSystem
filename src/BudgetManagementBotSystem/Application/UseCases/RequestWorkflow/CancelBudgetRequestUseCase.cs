@@ -1,4 +1,5 @@
 using BudgetManagementBotSystem.Domain.Entities;
+using BudgetManagementBotSystem.Domain.Enums;
 using BudgetManagementBotSystem.Domain.Repository;
 using BudgetManagementBotSystem.Application.Interface;
 
@@ -27,6 +28,11 @@ public class CancelBudgetRequestUseCase
 
         User? changedByUser = await _userRepository.GetByIdAsync(changedByUserId);
         if (changedByUser == null) throw new ArgumentNullException(nameof(changedByUserId), "User not found");
+
+        if (changedByUser.Role != AccountRole.Accountant)
+        {
+            throw new UnauthorizedAccessException("This action requires accountant privileges");
+        }
 
         group.UpdateBudgetRequestStatus(requestId, Domain.Enums.RequestStatus.ApprovalCancelled, changedByUser);
 
