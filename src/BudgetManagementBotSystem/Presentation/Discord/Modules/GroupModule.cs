@@ -1,5 +1,4 @@
 using Discord.Interactions;
-using BudgetManagementBotSystem.Application.UseCases;
 using BudgetManagementBotSystem.Application.UseCases.Groups;
 using BudgetManagementBotSystem.Domain.Enums;
 using BudgetManagementBotSystem.Domain.Repository;

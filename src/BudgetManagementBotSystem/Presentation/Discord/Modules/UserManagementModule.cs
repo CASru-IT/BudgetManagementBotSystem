@@ -1,10 +1,8 @@
 using Discord;
 using Discord.Interactions;
-using BudgetManagementBotSystem.Application.UseCases;
 using BudgetManagementBotSystem.Application.UseCases.UserManagement;
 using BudgetManagementBotSystem.Domain.Entities;
 using BudgetManagementBotSystem.Domain.Enums;
-using Microsoft.EntityFrameworkCore;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {

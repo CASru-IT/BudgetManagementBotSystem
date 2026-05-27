@@ -2,10 +2,6 @@ using Discord.Interactions;
 using BudgetManagementBotSystem.Application.DTOs;
 using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 using BudgetManagementBotSystem.Domain.Repository;
-using BudgetManagementBotSystem.Domain.Enums;
-using BudgetManagementBotSystem.InfraStructure.Persistence;
-using Microsoft.EntityFrameworkCore;
-using System.Linq;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {
