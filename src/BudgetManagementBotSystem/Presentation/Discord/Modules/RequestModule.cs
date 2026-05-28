@@ -38,11 +38,13 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         {
             try
             {
+                await DeferAsync(ephemeral: true);
+
                 var discordUserId = Context.User.Id;
                 var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
                 if (user == null)
                 {
-                    await RespondAsync("エラー: Discord ユーザーがシステムに登録されていません。管理者に登録を依頼してください。", ephemeral: true);
+                    await FollowupAsync("エラー: Discord ユーザーがシステムに登録されていません。管理者に登録を依頼してください。", ephemeral: true);
                     return;
                 }
 
@@ -51,45 +53,45 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 var evidenceFiles = new List<UploadedEvidenceDto>();
                 if (attachCount < 1)
                 {
-                    await RespondAsync("添付ファイル数は1以上で指定してください。", ephemeral: true);
+                    await FollowupAsync("添付ファイル数は1以上で指定してください。", ephemeral: true);
                     return;
                 }
 
-                await RespondAsync($"証跡ファイルをこのチャンネルに {attachCount} 件添付してください。30秒以内にアップロードしてください。", ephemeral: true);
+                await FollowupAsync($"証跡ファイルをこのチャンネルに {attachCount} 件添付してください。30秒以内にアップロードしてください。", ephemeral: true);
                 var uploaded = await _discordBotService.WaitForAttachmentUploadAsync(Context.User.Id, TimeSpan.FromSeconds(30), attachCount, Context.Channel);
                 // 指定数の証跡を受け取れなかった場合は申請を中止する
                 if (uploaded == null || !uploaded.Any() || uploaded.Count < attachCount)
                 {
-                    await RespondAsync("証跡ファイルの受け取りに失敗しました。申請を中止します。", ephemeral: true);
+                    await FollowupAsync("証跡ファイルの受け取りに失敗しました。申請を中止します。", ephemeral: true);
                     return;
                 }
 
                 evidenceFiles.AddRange(uploaded);
-                await RespondAsync("証跡ファイルを受け取りました。保存を開始します。", ephemeral: true);
+                await FollowupAsync("証跡ファイルを受け取りました。保存を開始します。", ephemeral: true);
 
                 var savedEvidenceCount = await _submitBudgetRequestUseCase.ExecuteAsync(user.Id, groupId, amountDec, description, evidenceFiles);
 
-                await RespondAsync($"申請を作成しました: 班 {groupId} 金額 {amountDec:C}");
+                await FollowupAsync($"申請を作成しました: 班 {groupId} 金額 {amountDec:C}", ephemeral: true);
                 if (savedEvidenceCount > 0)
                 {
-                    await RespondAsync($"証跡ファイルの保存に成功しました: {savedEvidenceCount}件", ephemeral: true);
+                    await FollowupAsync($"証跡ファイルの保存に成功しました: {savedEvidenceCount}件", ephemeral: true);
                 }
             }
             catch (ArgumentNullException ex)
             {
-                await RespondAsync($"入力エラー: {ex.ParamName} - {ex.Message}", ephemeral: true);
+                await FollowupAsync($"入力エラー: {ex.ParamName} - {ex.Message}", ephemeral: true);
             }
             catch (ArgumentOutOfRangeException ex)
             {
-                await RespondAsync($"入力エラー: {ex.Message}", ephemeral: true);
+                await FollowupAsync($"入力エラー: {ex.Message}", ephemeral: true);
             }
             catch (BudgetLimitExceededException ex)
             {
-                await RespondAsync(ex.Message, ephemeral: true);
+                await FollowupAsync(ex.Message, ephemeral: true);
             }
             catch (Exception ex)
             {
-                await RespondAsync($"予期せぬエラーが発生しました: {ex.Message}", ephemeral: true);
+                await FollowupAsync($"予期せぬエラーが発生しました: {ex.Message}", ephemeral: true);
             }
         }
 
