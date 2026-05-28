@@ -9,5 +9,6 @@ namespace BudgetManagementBotSystem.Application.DTOs
         public DateTime RequestDate { get; set; }
         public string Description { get; set; } = string.Empty;
         public int GroupId { get; set; }
+        public string GroupName { get; set; } = string.Empty;
     }
 }

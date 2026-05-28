@@ -39,7 +39,8 @@ namespace BudgetManagementBotSystem.Application.UseCases.RequestWorkflow
                 Amount = r.Amount.Value,
                 RequestDate = r.RequestDate,
                 Description = r.Description,
-                GroupId = g.Id
+                GroupId = g.Id,
+                GroupName = g.Name
             }));
 
             if (isPrivileged)

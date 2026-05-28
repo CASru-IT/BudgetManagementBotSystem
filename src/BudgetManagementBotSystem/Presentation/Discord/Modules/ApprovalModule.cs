@@ -40,7 +40,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 }
 
                 var lines = result.Items.Select(r =>
-                    $"ID:{r.Id} 金額:{r.Amount:C} 日付:{r.RequestDate:yyyy-MM-dd} 説明:{(r.Description.Length>80? r.Description.Substring(0,80)+"...": r.Description)}");
+                    $"ID:{r.Id} 班名:{r.GroupName} 金額:{r.Amount:C} 日付:{r.RequestDate:yyyy-MM-dd} 説明:{(r.Description.Length>80? r.Description.Substring(0,80)+"...": r.Description)}");
 
                 var header = $"未承認申請一覧 (ページ {result.Page}/{Math.Max(1, (int)Math.Ceiling(result.Total/(double)result.PageSize))}) 合計:{result.Total}";
                 await RespondAsync($"{header}\n{string.Join("\n", lines)}");
