@@ -50,6 +50,8 @@ namespace BudgetManagementBotSystem.Application.UseCases.Budget
                 PendingTotal = pendingTotal,
                 ApprovedTotal = approvedTotal,
                 Available = available
+                ,
+                FiscalYear = resolvedFiscalYear.Year
             };
         }
 
@@ -91,6 +93,8 @@ namespace BudgetManagementBotSystem.Application.UseCases.Budget
                 Page = page,
                 PageSize = pageSize,
                 Items = items
+                ,
+                ResolvedFiscalYear = resolvedFiscalYear.Year
             };
         }
 

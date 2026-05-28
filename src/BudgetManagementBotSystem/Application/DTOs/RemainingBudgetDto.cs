@@ -8,5 +8,6 @@ namespace BudgetManagementBotSystem.Application.DTOs
         public decimal PendingTotal { get; set; }
         public decimal ApprovedTotal { get; set; }
         public decimal Available { get; set; }
+        public int FiscalYear { get; set; }
     }
 }

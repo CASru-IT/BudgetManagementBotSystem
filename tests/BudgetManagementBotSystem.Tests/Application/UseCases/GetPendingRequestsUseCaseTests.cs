@@ -49,4 +49,35 @@ public class GetPendingRequestsUseCaseTests
         Assert.Equal("Pending request", result.Items[0].Description);
         Assert.DoesNotContain(result.Items, item => item.Id == approvedRequestId);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_ReturnsAllPendingRequests_WhenPageSizeIsZero()
+    {
+        const ulong discordUserId = 11111UL;
+
+        var user = new User("Admin", discordUserId, AccountRole.Admin);
+        var requester = new User("Requester", 22222UL, AccountRole.Accountant);
+        requester.ChangeGroupId(0);
+        var group = new Group("Test Group");
+
+        _ = group.CreateBudgetRequest(requester, new Money(10_000m), new FiscalYear(4), "Pending request 1", Array.Empty<string>());
+        _ = group.CreateBudgetRequest(requester, new Money(20_000m), new FiscalYear(4), "Pending request 2", Array.Empty<string>());
+
+        var mockGroupRepository = new Mock<IGroupRepository>();
+        mockGroupRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([group]);
+
+        var mockUserRepository = new Mock<IUserRepository>();
+        mockUserRepository.Setup(r => r.GetByDiscordUserIdAsync(discordUserId)).ReturnsAsync(user);
+
+        var useCase = new GetPendingRequestsUseCase(
+            mockGroupRepository.Object,
+            mockUserRepository.Object);
+
+        var result = await useCase.ExecuteAsync(discordUserId, page: 2, pageSize: 0);
+
+        Assert.Equal(2, result.Total);
+        Assert.Equal(1, result.Page);
+        Assert.Equal(2, result.PageSize);
+        Assert.Equal(2, result.Items.Count);
+    }
 }

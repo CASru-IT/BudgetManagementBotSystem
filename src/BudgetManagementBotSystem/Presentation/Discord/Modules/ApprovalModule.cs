@@ -26,12 +26,12 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("pending-list", "未承認の申請一覧を表示する")]
-        public async Task PendingList(int page = 1, int pageSize = 10)
+        public async Task PendingList(int page = 1, [Summary("page-size")] int? pageSize = null)
         {
             try
             {
                 var discordUserId = Context.User.Id;
-                var result = await _getPendingUseCase.ExecuteAsync(discordUserId, page, pageSize);
+            var result = await _getPendingUseCase.ExecuteAsync(discordUserId, page, pageSize ?? 0);
 
                 if (result.Total == 0 || !result.Items.Any())
                 {

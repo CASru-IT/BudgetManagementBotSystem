@@ -19,8 +19,11 @@ namespace BudgetManagementBotSystem.Application.UseCases.RequestWorkflow
         public async Task<PagedResult<PendingRequestDto>> ExecuteAsync(ulong discordUserId, int page = 1, int pageSize = 10)
         {
             if (page < 1) page = 1;
-            if (pageSize < 1) pageSize = 10;
-            pageSize = Math.Min(pageSize, 50);
+            var showAll = pageSize < 1;
+            if (!showAll)
+            {
+                pageSize = Math.Min(pageSize, 50);
+            }
 
             var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
             if (user == null) throw new ArgumentException("Discord user not registered");
@@ -31,7 +34,7 @@ namespace BudgetManagementBotSystem.Application.UseCases.RequestWorkflow
                 || user.Role == BudgetManagementBotSystem.Domain.Enums.AccountRole.GroupLeader;
 
             var groups = await _groupRepository.GetAllAsync();
-            if (groups == null) return new PagedResult<PendingRequestDto> { Total = 0, Page = page, PageSize = pageSize };
+            if (groups == null) return new PagedResult<PendingRequestDto> { Total = 0, Page = page, PageSize = showAll ? 0 : pageSize };
 
             var allRequests = groups
                 .SelectMany(g => g.GetRequestsByStatus(RequestStatus.Pending)
@@ -46,19 +49,21 @@ namespace BudgetManagementBotSystem.Application.UseCases.RequestWorkflow
 
             if (!isPrivileged)
             {
-                if (!user.GroupId.HasValue) return new PagedResult<PendingRequestDto> { Total = 0, Page = page, PageSize = pageSize };
+                if (!user.GroupId.HasValue) return new PagedResult<PendingRequestDto> { Total = 0, Page = page, PageSize = showAll ? 0 : pageSize };
                 allRequests = allRequests.Where(r => r.GroupId == user.GroupId.Value);
             }
 
             var ordered = allRequests.OrderByDescending(r => r.RequestDate);
             var total = ordered.Count();
-            var items = ordered.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            var items = showAll
+                ? ordered.ToList()
+                : ordered.Skip((page - 1) * pageSize).Take(pageSize).ToList();
 
             return new PagedResult<PendingRequestDto>
             {
                 Total = total,
-                Page = page,
-                PageSize = pageSize,
+                Page = showAll ? 1 : page,
+                PageSize = showAll ? total : pageSize,
                 Items = items
             };
         }

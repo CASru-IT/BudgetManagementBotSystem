@@ -26,7 +26,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 try
                 {
                     var dto = await _budgetQueryUseCase.GetRemainingBudgetAsync(discordUserId, groupId, fiscalYear);
-                    await RespondAsync($"班:{dto.GroupName} 現在予算:{dto.TotalBudget:C} 承認済合計:{dto.ApprovedTotal:C} 未承認合計:{dto.PendingTotal:C} 利用可能:{dto.Available:C} 会計年度:{fiscalYear?.ToString() ?? "自動"}");
+                    await RespondAsync($"班:{dto.GroupName} 現在予算:{dto.TotalBudget:C} 承認済合計:{dto.ApprovedTotal:C} 未承認合計:{dto.PendingTotal:C} 利用可能:{dto.Available:C} 会計年度:{(fiscalYear?.ToString() ?? dto.FiscalYear.ToString())}");
                 }
                 catch (Exception ex)
                 {
@@ -58,7 +58,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 }
 
                 var lines = result.Items.Select(t => $"{(t.IsIncome?"収入":"支出")} {t.Amount:C} 日付:{t.TransactionDate:yyyy-MM-dd} 年度:{t.FiscalYear}");
-                var header = $"取引履歴 (ページ {result.Page}/{Math.Max(1, (int)Math.Ceiling(result.Total/(double)result.PageSize))}) 合計:{result.Total} 会計年度:{fiscalYear?.ToString() ?? "自動"}";
+                var header = $"取引履歴 (ページ {result.Page}/{Math.Max(1, (int)Math.Ceiling(result.Total/(double)result.PageSize))}) 合計:{result.Total} 会計年度:{(fiscalYear?.ToString() ?? result.ResolvedFiscalYear.ToString())}";
                 await RespondAsync($"{header}\n{string.Join("\n", lines)}");
             }
             catch (Exception ex)
