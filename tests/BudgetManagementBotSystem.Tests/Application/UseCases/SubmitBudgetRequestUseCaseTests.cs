@@ -49,7 +49,7 @@ namespace BudgetManagementBotSystem.Tests.Application.UseCases
                 mockFileStorage.Object);
 
             // Act
-            var savedCount = await useCase.ExecuteAsync(userId, groupId, amount, description, Array.Empty<UploadedEvidenceDto>());
+            var result = await useCase.ExecuteAsync(userId, groupId, amount, description, Array.Empty<UploadedEvidenceDto>());
 
             // Assert
             Assert.Single(group.Requests);
@@ -58,7 +58,7 @@ namespace BudgetManagementBotSystem.Tests.Application.UseCases
             Assert.Equal(description, request.Description);
             Assert.Empty(request.Evidences);
             Assert.Equal(RequestStatus.Pending, request.StatusHistory.Last().ChangedStatus);
-            Assert.Equal(0, savedCount);
+            Assert.Equal(0, result.SavedEvidenceCount);
 
             mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
         }
@@ -230,13 +230,13 @@ namespace BudgetManagementBotSystem.Tests.Application.UseCases
                 mockFileStorage.Object);
 
             // Act
-            var savedCount = await useCase.ExecuteAsync(userId, groupId, 10_000m, "fiscal year test", Array.Empty<UploadedEvidenceDto>());
+            var result = await useCase.ExecuteAsync(userId, groupId, 10_000m, "fiscal year test", Array.Empty<UploadedEvidenceDto>());
 
             // Assert
             Assert.Single(group.Requests);
             var request = group.Requests.Single();
             Assert.Equal(fiscalYearStartMonth, request.FiscalYear.StartMonth);
-            Assert.Equal(0, savedCount);
+            Assert.Equal(0, result.SavedEvidenceCount);
             mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
         }
 
@@ -278,14 +278,14 @@ namespace BudgetManagementBotSystem.Tests.Application.UseCases
             mockFileStorage.Setup(r => r.SaveFileAsync("spec.png", It.IsAny<Stream>())).ReturnsAsync("stored/spec.png");
 
             // Act
-            var savedCount = await useCase.ExecuteAsync(userId, groupId, 10_000m, "evidence test", evidenceFilePaths);
+            var result = await useCase.ExecuteAsync(userId, groupId, 10_000m, "evidence test", evidenceFilePaths);
 
             // Assert
             var request = group.Requests.Single();
             Assert.Equal(2, request.Evidences.Count);
             Assert.Equal("stored/quote.pdf", request.Evidences[0].FilePath);
             Assert.Equal("stored/spec.png", request.Evidences[1].FilePath);
-            Assert.Equal(2, savedCount);
+            Assert.Equal(2, result.SavedEvidenceCount);
             mockFileStorage.Verify(r => r.SaveFileAsync("quote.pdf", It.IsAny<Stream>()), Times.Once);
             mockFileStorage.Verify(r => r.SaveFileAsync("spec.png", It.IsAny<Stream>()), Times.Once);
         }

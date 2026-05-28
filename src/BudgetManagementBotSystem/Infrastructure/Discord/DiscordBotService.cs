@@ -181,4 +181,24 @@ public class DiscordBotService
             _client.MessageReceived -= Handler;
         }
     }
+
+    public async Task<bool> SendDirectMessageAsync(ulong userId, string message)
+    {
+        try
+        {
+            var user = _client.GetUser(userId);
+            if (user == null)
+            {
+                return false;
+            }
+
+            var dmChannel = await user.CreateDMChannelAsync();
+            await dmChannel.SendMessageAsync(message);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }

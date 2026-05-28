@@ -70,12 +70,22 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 evidenceFiles.AddRange(uploaded);
                 await FollowupAsync("証跡ファイルを受け取りました。保存を開始します。", ephemeral: true);
 
-                var savedEvidenceCount = await _submitBudgetRequestUseCase.ExecuteAsync(user.Id, groupId, amountDec, description, evidenceFiles);
+                var (requestId, savedEvidenceCount) = await _submitBudgetRequestUseCase.ExecuteAsync(user.Id, groupId, amountDec, description, evidenceFiles);
 
                 await FollowupAsync($"申請を作成しました: 班 {groupId} 金額 {amountDec:C}", ephemeral: true);
                 if (savedEvidenceCount > 0)
                 {
                     await FollowupAsync($"証跡ファイルの保存に成功しました: {savedEvidenceCount}件", ephemeral: true);
+                }
+
+                var notifiedCount = await NotifyAccountantsAsync(requestId, groupId, amountDec, description);
+                if (notifiedCount > 0)
+                {
+                    await FollowupAsync($"会計担当者 {notifiedCount} 名に DM で通知しました。", ephemeral: true);
+                }
+                else
+                {
+                    await FollowupAsync("会計担当者が見つからなかったため、DM 通知は送信されませんでした。", ephemeral: true);
                 }
             }
             catch (ArgumentNullException ex)
@@ -94,6 +104,34 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             {
                 await FollowupAsync($"予期せぬエラーが発生しました: {ex.Message}", ephemeral: true);
             }
+        }
+
+        private async Task<int> NotifyAccountantsAsync(int requestId, int groupId, decimal amount, string description)
+        {
+            var users = await _userRepository.GetAllAsync();
+            if (users == null)
+            {
+                return 0;
+            }
+
+            var accountantUsers = users
+                .Where(user => user.IsActive && user.Role == BudgetManagementBotSystem.Domain.Enums.AccountRole.Accountant)
+                .ToList();
+
+            if (accountantUsers.Count == 0)
+            {
+                return 0;
+            }
+
+            var message = $"新しい予算使用申請が作成されました。\n申請ID: {requestId}\n班ID: {groupId}\n金額: {amount:C}\n説明: {description}\n確認するには /request-detail request-id:{requestId} を実行してください。";
+
+            var sendTasks = accountantUsers.Select(async accountant =>
+            {
+                return await _discordBotService.SendDirectMessageAsync(accountant.DiscordUserId, message);
+            });
+
+            var results = await Task.WhenAll(sendTasks);
+            return results.Count(result => result);
         }
 
         [SlashCommand("list-requests", "自分の班または役員会の申請一覧を表示する")]

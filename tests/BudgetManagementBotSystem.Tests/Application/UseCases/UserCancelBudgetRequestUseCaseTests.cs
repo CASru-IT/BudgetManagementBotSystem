@@ -28,7 +28,8 @@ namespace BudgetManagementBotSystem.Tests.Application.UseCases
 
             var money = new BudgetManagementBotSystem.Domain.ValueObjects.Money(100);
             var fy = new BudgetManagementBotSystem.Domain.ValueObjects.FiscalYear(4);
-            int reqId = group.CreateBudgetRequest(user, money, fy, "desc", Enumerable.Empty<string>());
+            var request = group.CreateBudgetRequest(user, money, fy, "desc", Enumerable.Empty<string>());
+            int reqId = request.Id;
 
             var groupRepoMock = new Mock<IGroupRepository>();
             var userRepoMock = new Mock<IUserRepository>();

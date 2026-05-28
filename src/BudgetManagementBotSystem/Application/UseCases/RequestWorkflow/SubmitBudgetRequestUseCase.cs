@@ -32,7 +32,7 @@ public class SubmitBudgetRequestUseCase
         _fileStorage = fileStorage;
     }
 
-    public async Task<int> ExecuteAsync(
+    public async Task<(int RequestId, int SavedEvidenceCount)> ExecuteAsync(
         int userId,
         int groupId,
         decimal amount,
@@ -78,7 +78,7 @@ public class SubmitBudgetRequestUseCase
             }
         }
 
-        int requestId = group.CreateBudgetRequest(
+        var request = group.CreateBudgetRequest(
             user,
             requestAmount,
             fiscalYear,
@@ -86,6 +86,6 @@ public class SubmitBudgetRequestUseCase
             finalEvidencePaths);
 
         await _unitOfWork.SaveChangesAsync();
-        return finalEvidencePaths.Count;
+        return (request.Id, finalEvidencePaths.Count);
     }
 }
