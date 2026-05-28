@@ -77,7 +77,12 @@ public class Group
     public bool IsWithinBudgetLimit(Money amount, FiscalYear fiscalYear)
     {
         decimal currentBudget = GetTotalBudgetForFiscalYear(fiscalYear);
-        return currentBudget - amount.Value >= 0;
+        // 未承認（Pending）の申請合計を予約済みとして扱う
+        var pendingTotal = _requests
+            .Where(r => r.FiscalYear == fiscalYear && r.StatusHistory.Last().ChangedStatus == RequestStatus.Pending)
+            .Sum(r => r.Amount.Value);
+
+        return currentBudget - pendingTotal - amount.Value >= 0;
     }
 
     public IReadOnlyCollection<BudgetRequest> GetRequestsByStatus(RequestStatus status)

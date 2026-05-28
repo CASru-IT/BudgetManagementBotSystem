@@ -1,3 +1,4 @@
+using Discord;
 using Discord.Interactions;
 using BudgetManagementBotSystem.Application.DTOs;
 using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
@@ -138,7 +139,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
-                var (req, gid) = await _requestDetailUseCase.GetByIdAsync(reqId);
+                var detail = await _requestDetailUseCase.GetByIdAsync(reqId);
+                var req = detail.Request;
                 if (req == null)
                 {
                     await RespondAsync($"申請が見つかりません: {reqId}", ephemeral: true);
@@ -146,14 +148,32 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 }
 
                 var currentStatus = req.StatusHistory.Last().ChangedStatus;
-                var evidences = req.Evidences.Select(e => e.FilePath).ToList();
+                var evidences = detail.Evidences;
                 var historyLines = req.StatusHistory.Select(s => $"{s.ChangedStatus} @ {s.ChangedAt:yyyy-MM-dd}");
 
                 var body = $"ID:{req.Id} ユーザー:{req.UserId} 金額:{req.Amount.Value:C} 状態:{currentStatus} 日付:{req.RequestDate:yyyy-MM-dd}\n説明:{req.Description}\n" +
-                           (evidences.Any() ? "証跡:\n" + string.Join("\n", evidences) + "\n" : "") +
+                           (evidences.Any() ? "証跡:\n" + string.Join("\n", evidences.Select(e => e.FileName)) + "\n" : "") +
                            "履歴:\n" + string.Join("\n", historyLines);
 
-                await RespondAsync(body);
+                if (!evidences.Any())
+                {
+                    await RespondAsync(body);
+                    return;
+                }
+
+                var files = new List<FileAttachment>();
+                foreach (var evidence in evidences)
+                {
+                    files.Add(new FileAttachment(new MemoryStream(evidence.Content, writable: false), evidence.FileName));
+                }
+
+                var responseText = body;
+                if (detail.MissingEvidencePaths.Any())
+                {
+                    responseText += "\n添付できない証跡がありました:\n" + string.Join("\n", detail.MissingEvidencePaths);
+                }
+
+                await RespondWithFilesAsync(files, text: responseText);
             }
             catch (Exception ex)
             {
@@ -180,7 +200,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
-                var (req, groupId) = await _requestDetailUseCase.GetByIdAsync(reqId);
+                var detail = await _requestDetailUseCase.GetByIdAsync(reqId);
+                var req = detail.Request;
+                var groupId = detail.GroupId;
                 if (req == null || groupId == null)
                 {
                     await RespondAsync($"申請が見つかりません: {reqId}", ephemeral: true);
