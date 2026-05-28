@@ -19,7 +19,7 @@ namespace BudgetManagementBotSystem.Application.UseCases.RequestWorkflow
         public async Task<RequestDetailDto> GetByIdAsync(int requestId)
         {
             var groups = await _groupRepository.GetAllAsync();
-            if (groups == null) return new RequestDetailDto(null, null, Array.Empty<UploadedEvidenceDto>(), Array.Empty<string>());
+            if (groups == null) return new RequestDetailDto(null, null, null, Array.Empty<UploadedEvidenceDto>(), Array.Empty<string>());
 
             foreach (var g in groups)
             {
@@ -44,11 +44,11 @@ namespace BudgetManagementBotSystem.Application.UseCases.RequestWorkflow
                         }
                     }
 
-                    return new RequestDetailDto(r, g.Id, evidences, missingEvidencePaths);
+                    return new RequestDetailDto(r, g.Id, g.Name, evidences, missingEvidencePaths);
                 }
             }
 
-            return new RequestDetailDto(null, null, Array.Empty<UploadedEvidenceDto>(), Array.Empty<string>());
+            return new RequestDetailDto(null, null, null, Array.Empty<UploadedEvidenceDto>(), Array.Empty<string>());
         }
     }
 }

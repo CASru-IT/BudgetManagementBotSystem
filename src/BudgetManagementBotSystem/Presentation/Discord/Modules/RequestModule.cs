@@ -189,7 +189,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 var evidences = detail.Evidences;
                 var historyLines = req.StatusHistory.Select(s => $"{s.ChangedStatus} @ {s.ChangedAt:yyyy-MM-dd}");
 
-                var body = $"ID:{req.Id} ユーザー:{req.UserId} 金額:{req.Amount.Value:C} 状態:{currentStatus} 日付:{req.RequestDate:yyyy-MM-dd}\n説明:{req.Description}\n" +
+                var groupLabel = detail.GroupName ?? (detail.GroupId.HasValue ? detail.GroupId.Value.ToString() : "不明");
+
+                var body = $"ID:{req.Id} 班:{groupLabel} ユーザー:{req.UserId} 金額:{req.Amount.Value:C} 状態:{currentStatus} 日付:{req.RequestDate:yyyy-MM-dd}\n説明:{req.Description}\n" +
                            (evidences.Any() ? "証跡:\n" + string.Join("\n", evidences.Select(e => e.FileName)) + "\n" : "") +
                            "履歴:\n" + string.Join("\n", historyLines);
 
