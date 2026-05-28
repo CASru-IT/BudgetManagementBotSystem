@@ -25,7 +25,7 @@ public class DiscordBotService
         //インテントの管理
         var config = new DiscordSocketConfig
         {
-            GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.MessageContent
+            GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.DirectMessages | GatewayIntents.MessageContent
         };
 
         _client = new DiscordSocketClient(config);

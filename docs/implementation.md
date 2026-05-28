@@ -59,6 +59,37 @@
 - ファイル保存のクラウド実装（現状はローカル保存のみ）
 - 監査観点での申請ステータス変更者の永続化（`RequestStatusChange` への保持）
 
+### DM 対応状況
+
+現状の実装では、Bot は DM でも動作するように `DirectMessages` intent を有効化しています。
+
+- DM で利用可能
+  - `/create-request`  
+    添付待ちを含むため `DirectMessages` intent が必要です。
+  - `/list-requests`
+  - `/request-detail`
+  - `/cancel-request`
+  - `/pending-list`
+  - `/approve`
+  - `/reject`
+  - `/revoke-approval`
+  - `/remaining-budget`
+  - `/usage-history`
+  - `/add-budget`
+  - `/all-history`
+  - `/become-admin`
+
+- DM でもコード上は利用可能だが、Discord 側の UI 表示やユーザー選択の可否はクライアント仕様に依存する
+  - `/register-user`
+  - `/set-user-role`
+  - `/remove-user`
+  - `/user-info`
+  - `/assign-group`
+  - `/unassign-group`
+  - `/group-members`
+
+補足: DM では「班」の概念は維持されますが、チャンネルコンテキストがないため、添付ファイルの案内文や運用フローはサーバー内利用と比べてやや分かりにくくなります。
+
 ## プロジェクト構成
 
 ```text
