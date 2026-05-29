@@ -96,6 +96,64 @@ CREATE DATABASE budget;
 dotnet run --project src/BudgetManagementBotSystem/BudgetManagementBotSystem.csproj
 ```
 
+## Docker Compose でのデプロイ
+
+GitHub からクローンして Docker Compose で起動する場合は、次の手順でデプロイできます。
+
+### 1. リポジトリ取得
+
+```bash
+git clone https://github.com/CASru-IT/BudgetManagementBotSystem.git
+cd BudgetManagementBotSystem
+```
+
+### 2. 環境変数ファイルを作成
+
+`.env.example` を `.env` にコピーして、必要な値を設定します。
+
+```powershell
+Copy-Item .env.example .env
+```
+
+設定する主な項目は次のとおりです。
+
+- `Discord__Token`: Discord Bot のトークン
+- `DB_USER`, `DB_PASSWORD`, `DB_NAME`: PostgreSQL の接続情報
+- `AdminBootstrap__Password`: 初期管理者パスワード
+- `EvidenceStorage__BasePath`: 証跡保存先パス
+
+### 3. コンテナを起動
+
+```bash
+docker compose up -d --build
+```
+
+PostgreSQL と Bot が同時に起動します。`docker-compose.yml` では Bot コンテナが `postgres` に接続する構成になっています。
+
+### 4. デプロイ後の確認
+
+```bash
+docker compose ps
+docker compose logs -f app
+```
+
+正常に起動していれば、`app` コンテナのログに Bot の起動メッセージが出力されます。
+
+### 5. 更新手順
+
+リポジトリを更新したあと、再ビルドして再起動します。
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+停止する場合は次を実行します。
+
+```bash
+docker compose down
+```
+
 ## テスト
 
 ```bash

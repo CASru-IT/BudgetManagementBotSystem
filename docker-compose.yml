@@ -9,7 +9,6 @@ services:
       - .env
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      # Build connection string from DB_* variables if ConnectionStrings__Db is not provided
       - ConnectionStrings__Db=${ConnectionStrings__Db:-Host=postgres;Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}}
       - Discord__Token=${Discord__Token}
       - AdminBootstrap__Password=${AdminBootstrap__Password}
