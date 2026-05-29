@@ -56,4 +56,12 @@ builder.Services.AddSingleton<DiscordBotService>();
 builder.Services.AddHostedService<Worker>();
 
 var bot = builder.Build();
+
+if (!useInMemoryDatabase)
+{
+    using var scope = bot.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<BudgetManagementDbContext>();
+    await dbContext.Database.EnsureCreatedAsync();
+}
+
 bot.Run();

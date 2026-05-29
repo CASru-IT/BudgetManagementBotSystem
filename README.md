@@ -130,26 +130,22 @@ docker run --rm -v CasruBudgetDB:/data alpine ls -la /data
 - PostgreSQL コンテナに接続して psql を使う
 
 ```bash
-docker compose exec -it postgres psql -U "${DB_USER}" -d "${DB_NAME}"
+docker compose exec -it postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}"
 ```
 
-- データベース全体をホストへダンプする（`pg_dump`）
+- データベース全体をホストへダンプする（`pg_dump` / `pg_restore` 向けの custom format）
 
 ```bash
-docker compose exec -T postgres pg_dump -U "${DB_USER}" "${DB_NAME}" > ./budget.sql
+mkdir -p ./readonly
+docker compose --profile tools run --rm postgres-tools sh -c 'pg_dump -Fc -U "$POSTGRES_USER" -d "$POSTGRES_DB"' > ./readonly/budget.dump
 ```
 
-- ダンプをコンテナ内で取得してホストへコピーする代替手順
+- 補足: `postgres-tools` はバックアップ専用の補助コンテナです。`postgres` 本体のイメージは `postgres:15` のまま維持しています。
+
+- custom format のダンプをコンテナへリストアする
 
 ```bash
-docker compose exec postgres sh -c 'pg_dump -U "${DB_USER}" "${DB_NAME}" -F c -f /tmp/budget.dump'
-docker compose cp postgres:/tmp/budget.dump ./budget.dump
-```
-
-- ホスト上のダンプをコンテナへリストアする
-
-```bash
-cat ./budget.sql | docker compose exec -T postgres psql -U "${DB_USER}" -d "${DB_NAME}"
+docker compose exec -T postgres sh -c 'cat > /tmp/budget.dump && pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" /tmp/budget.dump' < ./readonly/budget.dump
 ```
 
 注意:

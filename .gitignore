@@ -56,5 +56,6 @@ nunit-*.xml
 appsettings*.json
 
 /src/BudgetManagementBotSystem/data
+/readonly/
 
 .env
