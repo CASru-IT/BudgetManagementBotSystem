@@ -74,7 +74,6 @@ public class SubmitBudgetRequestUseCase
             }
             catch
             {
-                // skip failed evidence save
             }
         }
 

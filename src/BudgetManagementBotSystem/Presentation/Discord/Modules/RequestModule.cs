@@ -60,7 +60,6 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
                 await FollowupAsync($"証跡ファイルをこのチャンネルに {attachCount} 件添付してください。30秒以内にアップロードしてください。", ephemeral: true);
                 var uploaded = await _discordBotService.WaitForAttachmentUploadAsync(Context.User.Id, TimeSpan.FromSeconds(30), attachCount, Context.Channel);
-                // 指定数の証跡を受け取れなかった場合は申請を中止する
                 if (uploaded == null || !uploaded.Any() || uploaded.Count < attachCount)
                 {
                     await FollowupAsync("証跡ファイルの受け取りに失敗しました。申請を中止します。", ephemeral: true);
@@ -249,7 +248,6 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
-                // If the request owner wants to cancel a Pending request, allow it
                 var isRequestOwner = req.UserId == user.Id;
                 var currentStatus = req.StatusHistory.Last().ChangedStatus;
                 if (isRequestOwner && currentStatus == BudgetManagementBotSystem.Domain.Enums.RequestStatus.Pending)
@@ -259,7 +257,6 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
-                // Otherwise, require privileged role to cancel (admin/accountant/etc.)
                 var isPrivilegedCancel = await BudgetManagementBotSystem.Presentation.Discord.Helpers.AuthorizationHelper.IsPrivilegedAsync(_userRepository, discordUserId);
                 if (!isPrivilegedCancel)
                 {

@@ -150,9 +150,6 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             }
         }
 
-        // `grant-role` と `revoke-role` は `set-user-role` に統合しました。
-        // 管理者は `set-user-role` を使用して任意のロールを設定してください。
-
         [SlashCommand("assign-group", "ユーザーを班へ所属させる")]
         public async Task AssignGroup(
             [Summary("user")] IUser targetUser,
@@ -225,7 +222,6 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
-                // 管理者または会長は任意の班を参照可能、それ以外は自班のみ
                 var isPrivileged = caller.Role == AccountRole.Admin || caller.Role == AccountRole.President;
                 if (!isPrivileged && (!caller.GroupId.HasValue || caller.GroupId.Value != groupId))
                 {
