@@ -1,6 +1,7 @@
 using Discord.Interactions;
 using BudgetManagementBotSystem.Domain.Repository;
 using BudgetManagementBotSystem.Application.UseCases.Budget;
+using BudgetManagementBotSystem.Domain.Enums;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {
@@ -83,7 +84,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
-                var canAddBudget = await BudgetManagementBotSystem.Presentation.Discord.Helpers.AuthorizationHelper.IsPrivilegedAsync(_userRepository, discordUserId);
+                var canAddBudget = await Helpers.AuthorizationHelper.IsPrivilegedAsync(_userRepository, discordUserId, BudgetManagementBotSystem.Domain.Enums.AccountRole.Admin, BudgetManagementBotSystem.Domain.Enums.AccountRole.President);
                 if (!canAddBudget)
                 {
                     await RespondAsync("エラー: 追加予算の付与を行う権限がありません。", ephemeral: true);

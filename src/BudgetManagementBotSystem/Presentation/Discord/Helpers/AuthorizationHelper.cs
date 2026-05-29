@@ -1,26 +1,25 @@
 using BudgetManagementBotSystem.Domain.Repository;
 using System.Threading.Tasks;
+using System.Linq;
+using BudgetManagementBotSystem.Domain.Enums;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Helpers
 {
     public static class AuthorizationHelper
     {
         /// <summary>
-        /// DB 側の User.Role を参照してオフィサーまたは管理者かを判定します。
-        /// Presentation 層からは IUserRepository を注入して呼び出してください。
+        /// 指定したロールのいずれかに該当するかを判定します。
         /// </summary>
-        public static async Task<bool> IsPrivilegedAsync(IUserRepository userRepository, ulong discordUserId)
+        public static async Task<bool> IsPrivilegedAsync(IUserRepository userRepository, ulong discordUserId, params AccountRole[] allowedRoles)
         {
             if (userRepository == null) return false;
 
             var user = await userRepository.GetByDiscordUserIdAsync(discordUserId);
             if (user == null) return false;
 
-            var role = user.Role;
-            return role == BudgetManagementBotSystem.Domain.Enums.AccountRole.Admin
-                || role == BudgetManagementBotSystem.Domain.Enums.AccountRole.Accountant
-                || role == BudgetManagementBotSystem.Domain.Enums.AccountRole.President
-                || role == BudgetManagementBotSystem.Domain.Enums.AccountRole.GroupLeader;
+            if (allowedRoles == null || allowedRoles.Length == 0) return false;
+
+            return allowedRoles.Contains(user.Role);
         }
     }
 }

@@ -4,6 +4,33 @@
 
 開発・ローカル実行手順は [docs/development.md](docs/development.md) を参照してください。実装・設計の詳細は `docs/` 配下の各資料を参照してください。
 
+## 軽いコマンド一覧
+
+以下は実装済みの主要な Discord スラッシュコマンドの軽い一覧です。運用上の詳細や権限、使い方は [運用資料](docs/operations.md) を参照してください。
+
+- システム
+  - `/become-admin` — 初期管理者化（ブートストラップ用パスワード）
+- 申請ワークフロー
+  - `/create-request` — 予算使用申請の作成（証跡添付あり）
+  - `/list-requests` — 自分の申請一覧表示
+  - `/request-detail` — 指定申請の詳細表示（証跡添付を含む）
+  - `/cancel-request` — 申請の取消
+- 承認関連
+  - `/pending-list` — 未承認申請一覧の表示
+  - `/approve` — 申請の承認
+  - `/reject` — 申請の却下
+  - `/revoke-approval` — 承認の取り消し
+- 予算関連
+  - `/remaining-budget` — 班の残予算確認
+  - `/usage-history` — 取引履歴表示
+  - `/add-budget` — 追加予算の付与（管理者権限）
+- 班・ユーザー管理
+  - `/register-group`, `/delete-group`, `/list-groups`
+  - `/register-user`, `/set-user-role`, `/remove-user`
+  - `/assign-group`, `/unassign-group`, `/group-members`, `/list-users`, `/user-info`
+
+詳しい実装状況は [実装状況](docs/implementation.md) を参照してください。
+
 ## 本番デプロイ（Ubuntu + Docker Compose）
 
 Ubuntu 環境で Docker Compose を使って本番稼働させる手順を示します。
@@ -80,6 +107,50 @@ docker compose up -d --build
 docker compose down
 ```
 
----
+## CasruBudgetDB ボリュームの中身を読み出す方法
 
-本 README にはデプロイ手順のみを残しました。開発とローカル実行については [docs/development.md](docs/development.md) を確認してください。
+`docker-compose.yml` では PostgreSQL のデータボリューム名を `CasruBudgetDB` として定義しています。ボリュームの中身を確認したり、データベースのダンプを取得する代表的な手順を示します（Ubuntu 上での実行を想定）。
+
+- ボリュームの情報を確認する
+
+```bash
+docker volume inspect CasruBudgetDB
+```
+
+- ボリューム内のファイル一覧を取得する（読み取り専用で Alpine コンテナを使う）
+
+```bash
+docker run --rm -v CasruBudgetDB:/data alpine ls -la /data
+```
+
+- PostgreSQL コンテナに接続して psql を使う
+
+```bash
+docker compose exec -it postgres psql -U "${DB_USER}" -d "${DB_NAME}"
+```
+
+- データベース全体をホストへダンプする（`pg_dump`）
+
+```bash
+docker compose exec -T postgres pg_dump -U "${DB_USER}" "${DB_NAME}" > ./budget.sql
+```
+
+- ダンプをコンテナ内で取得してホストへコピーする代替手順
+
+```bash
+docker compose exec postgres sh -c 'pg_dump -U "${DB_USER}" "${DB_NAME}" -F c -f /tmp/budget.dump'
+docker compose cp postgres:/tmp/budget.dump ./budget.dump
+```
+
+- ホスト上のダンプをコンテナへリストアする
+
+```bash
+cat ./budget.sql | docker compose exec -T postgres psql -U "${DB_USER}" -d "${DB_NAME}"
+```
+
+注意:
+
+- 本番環境でのダンプ/リストアは運用停止時間や WAL の扱いに注意してください。大きなデータを扱う場合は pg_basebackup やスナップショット方式を検討してください。
+- ボリュームの直接操作（ファイルの削除や改変）はデータベースの整合性を損なうため避けてください。ファイル系の操作は必ず DB を停止してから行うか、読み取り専用で行ってください。
+
+---

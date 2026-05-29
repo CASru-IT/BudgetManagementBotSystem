@@ -257,7 +257,10 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
-                var isPrivilegedCancel = await BudgetManagementBotSystem.Presentation.Discord.Helpers.AuthorizationHelper.IsPrivilegedAsync(_userRepository, discordUserId);
+                var isPrivilegedCancel = await BudgetManagementBotSystem.Presentation.Discord.Helpers.AuthorizationHelper.IsPrivilegedAsync(
+                    _userRepository,
+                    discordUserId,
+                    BudgetManagementBotSystem.Domain.Enums.AccountRole.Admin);
                 if (!isPrivilegedCancel)
                 {
                     await RespondAsync("エラー: 申請取消の権限がありません。", ephemeral: true);
