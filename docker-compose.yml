@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ./src/BudgetManagementBotSystem
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      # Build connection string from DB_* variables if ConnectionStrings__Db is not provided
+      - ConnectionStrings__Db=${ConnectionStrings__Db:-Host=postgres;Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}}
+      - Discord__Token=${Discord__Token}
+      - AdminBootstrap__Password=${AdminBootstrap__Password}
+      - EvidenceStorage__BasePath=${EvidenceStorage__BasePath}
+      - UseInMemoryDatabase=${UseInMemoryDatabase}
+    volumes:
+      - ./src/BudgetManagementBotSystem/data/evidences:/app/data/evidences
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - CasruBudgetDB:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  CasruBudgetDB:
+    name: CasruBudgetDB
+    driver: local

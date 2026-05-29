@@ -1,6 +1,5 @@
 using BudgetManagementBotSystem.Application.Interface;
 using BudgetManagementBotSystem.Application.Options;
-using BudgetManagementBotSystem.Application.UseCases;
 using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 using BudgetManagementBotSystem.Application.UseCases.UserManagement;
 using BudgetManagementBotSystem.Application.UseCases.Groups;
@@ -45,11 +44,11 @@ builder.Services.AddScoped<RejectBudgetRequestUseCase>();
 builder.Services.AddScoped<GetPendingRequestsUseCase>();
 builder.Services.AddScoped<RequestQueryUseCase>();
 builder.Services.AddScoped<RevokeApprovalUseCase>();
-builder.Services.AddScoped<BudgetManagementBotSystem.Application.UseCases.UserManagement.UserQueryUseCase>();
-builder.Services.AddScoped<BudgetManagementBotSystem.Application.UseCases.UserManagement.UserCommandUseCase>();
+builder.Services.AddScoped<UserQueryUseCase>();
+builder.Services.AddScoped<UserCommandUseCase>();
 builder.Services.AddScoped<RequestListUseCase>();
 builder.Services.AddScoped<RequestDetailUseCase>();
-builder.Services.AddScoped<BudgetManagementBotSystem.Application.UseCases.Budget.BudgetQueryUseCase>();
+builder.Services.AddScoped<BudgetQueryUseCase>();
 builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
 builder.Services.Configure<AdminBootstrapOptions>(builder.Configuration.GetSection("AdminBootstrap"));
 

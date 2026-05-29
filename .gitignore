@@ -56,3 +56,5 @@ nunit-*.xml
 appsettings*.json
 
 /src/BudgetManagementBotSystem/data
+
+.env
