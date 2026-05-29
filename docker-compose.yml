@@ -13,6 +13,7 @@ services:
       - Discord__Token=${Discord__Token}
       - AdminBootstrap__Password=${AdminBootstrap__Password}
       - EvidenceStorage__BasePath=${EvidenceStorage__BasePath}
+      - FiscalYearStartMonth__Month=${FiscalYearStartMonth__Month}
       - UseInMemoryDatabase=${UseInMemoryDatabase}
     volumes:
       - ./src/BudgetManagementBotSystem/data/evidences:/app/data/evidences

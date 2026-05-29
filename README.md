@@ -78,6 +78,10 @@ cp .env.example .env
   - コンテナ内の証跡ファイル保存先パス。デフォルトは `/app/data/evidences`。
   - `docker-compose.yml` ではホストの `./src/BudgetManagementBotSystem/data/evidences` をマウントしています。ホスト側のディレクトリに書き込み権限が必要です。
 
+- `FiscalYearStartMonth__Month` (推奨)
+  - 会計年度の開始月です。`1` から `12` の範囲で指定します。
+  - 例: `FiscalYearStartMonth__Month=4`
+
 - `UseInMemoryDatabase` (true|false)
   - 開発時に `true` にすると InMemory DB を使用して PostgreSQL を不要にします。本番では必ず `false` にしてください。
 
