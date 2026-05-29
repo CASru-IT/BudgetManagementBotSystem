@@ -130,27 +130,32 @@ docker run --rm -v CasruBudgetDB:/data alpine ls -la /data
 - PostgreSQL コンテナに接続して psql を使う
 
 ```bash
-docker compose exec -it postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}"
+docker compose exec -it postgres sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
 ```
 
-- データベース全体をホストへダンプする（`pg_dump` / `pg_restore` 向けの custom format）
+- テーブル一覧を確認する
+
+```bash
+docker compose exec -it postgres sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\dt"'
+```
+
+- 1 テーブルの定義を確認する
+
+```bash
+docker compose exec -it postgres sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\d \"Users\""'
+```
+
+- 1 テーブルの中身を確認する
+
+```bash
+docker compose exec -it postgres sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT * FROM \"Users\" LIMIT 20;"'
+```
+
+- CSV として外へ出す
 
 ```bash
 mkdir -p ./readonly
-docker compose --profile tools run --rm postgres-tools sh -c 'pg_dump -Fc -U "$POSTGRES_USER" -d "$POSTGRES_DB"' > ./readonly/budget.dump
+docker compose exec -T postgres sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\copy (SELECT * FROM \"Users\") TO STDOUT WITH CSV HEADER"' > ./readonly/users.csv
 ```
-
-- 補足: `postgres-tools` はバックアップ専用の補助コンテナです。`postgres` 本体のイメージは `postgres:15` のまま維持しています。
-
-- custom format のダンプをコンテナへリストアする
-
-```bash
-docker compose exec -T postgres sh -c 'cat > /tmp/budget.dump && pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" /tmp/budget.dump' < ./readonly/budget.dump
-```
-
-注意:
-
-- 本番環境でのダンプ/リストアは運用停止時間や WAL の扱いに注意してください。大きなデータを扱う場合は pg_basebackup やスナップショット方式を検討してください。
-- ボリュームの直接操作（ファイルの削除や改変）はデータベースの整合性を損なうため避けてください。ファイル系の操作は必ず DB を停止してから行うか、読み取り専用で行ってください。
 
 ---

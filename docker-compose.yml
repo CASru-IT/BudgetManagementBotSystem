@@ -29,22 +29,6 @@ services:
       - CasruBudgetDB:/var/lib/postgresql/data
     restart: unless-stopped
 
-  postgres-tools:
-    build:
-      context: .
-      dockerfile: docker/postgres/Dockerfile
-    profiles:
-      - tools
-    environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
-      PGHOST: postgres
-      PGPORT: 5432
-      PGUSER: ${DB_USER}
-      PGPASSWORD: ${DB_PASSWORD}
-      PGDATABASE: ${DB_NAME}
-
 volumes:
   CasruBudgetDB:
     name: CasruBudgetDB
