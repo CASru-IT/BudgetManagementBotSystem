@@ -7,6 +7,7 @@
 - [設計資料](design.md) — 全体構造、ユースケース設計、ドメインルールを確認する。
 - [実装状況](implementation.md) — 現在の到達点と未実装項目を確認する。
 - [運用資料](operations.md) — 実装済み Discord コマンドの運用手順と使い分けを確認する。
+- [開発手順](development.md) — ローカル開発・テスト用のセットアップ手順を確認する。
 - [コマンド実装計画](command-implementation-plan.md) — Discord コマンドの優先度と実装順序を確認する。
 - [レイヤー依存関係図](layer-dependencies.md) — 層ごとの責務分離と例外を確認する。
 - [コードリファクタ要約](code-refactor-summary.md) — 最近の構造変更と背景を確認する。
