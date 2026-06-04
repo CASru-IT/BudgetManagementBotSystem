@@ -17,7 +17,7 @@ public class DeleteGroupUseCase
         _unitOfWork = unitOfWork;
     }
 
-    public async Task ExecuteAsync(ulong callerDiscordId, int groupId)
+    public async Task<string> ExecuteAsync(ulong callerDiscordId, int groupId)
     {
         var caller = await _userRepository.GetByDiscordUserIdAsync(callerDiscordId);
         if (caller == null) throw new ArgumentException("Discord user not registered");
@@ -25,6 +25,7 @@ public class DeleteGroupUseCase
 
         var group = await _groupRepository.GetByIdAsync(groupId);
         if (group == null) throw new ArgumentException("Group not found");
+        var groupName = group.Name;
 
         var users = await _userRepository.GetAllAsync();
         if (users != null)
@@ -37,5 +38,7 @@ public class DeleteGroupUseCase
 
         await _groupRepository.DeleteAsync(groupId);
         await _unitOfWork.SaveChangesAsync();
+
+        return groupName;
     }
 }

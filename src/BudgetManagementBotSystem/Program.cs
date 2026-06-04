@@ -48,6 +48,7 @@ builder.Services.AddScoped<UserQueryUseCase>();
 builder.Services.AddScoped<UserCommandUseCase>();
 builder.Services.AddScoped<RequestListUseCase>();
 builder.Services.AddScoped<RequestDetailUseCase>();
+builder.Services.AddScoped<NotifyApprovedRequestUseCase>();
 builder.Services.AddScoped<BudgetQueryUseCase>();
 builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
 builder.Services.Configure<AdminBootstrapOptions>(builder.Configuration.GetSection("AdminBootstrap"));

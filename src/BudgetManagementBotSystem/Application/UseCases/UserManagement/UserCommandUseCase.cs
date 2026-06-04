@@ -32,14 +32,17 @@ namespace BudgetManagementBotSystem.Application.UseCases.UserManagement
             await _unitOfWork.SaveChangesAsync();
         }
 
-        public async Task AssignGroupByDiscordIdAsync(ulong discordUserId, int groupId)
+        public async Task<string> AssignGroupByDiscordIdAsync(ulong discordUserId, int groupId)
         {
             var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
             if (user == null) throw new ArgumentException("User not found");
             var group = await _groupRepository.GetByIdAsync(groupId);
             if (group == null) throw new ArgumentException("Group not found");
+            var groupName = group.Name;
             user.ChangeGroupId(groupId);
             await _unitOfWork.SaveChangesAsync();
+
+            return groupName;
         }
 
         public async Task UnassignGroupByDiscordIdAsync(ulong discordUserId)

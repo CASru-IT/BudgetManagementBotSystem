@@ -70,8 +70,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 var discordUserId = Context.User.Id;
                 try
                 {
-                    await _deleteGroupUseCase.ExecuteAsync(discordUserId, groupId);
-                    await RespondAsync($"班 {groupId} を削除（無効化）しました。", ephemeral: true);
+                    var groupName = await _deleteGroupUseCase.ExecuteAsync(discordUserId, groupId);
+                    await RespondAsync($"班 {groupName}（ID: {groupId}）を削除（無効化）しました。", ephemeral: true);
                 }
                 catch (UnauthorizedAccessException)
                 {

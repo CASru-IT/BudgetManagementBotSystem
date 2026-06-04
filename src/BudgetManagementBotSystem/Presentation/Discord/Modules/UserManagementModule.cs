@@ -166,8 +166,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
                 try
                 {
-                    await _userCommand.AssignGroupByDiscordIdAsync(discordUserId, groupId);
-                    await RespondAsync($"ユーザーを班 {groupId} に所属させました。", ephemeral: true);
+                    var groupName = await _userCommand.AssignGroupByDiscordIdAsync(discordUserId, groupId);
+                    await RespondAsync($"ユーザーを班 {groupName}（ID: {groupId}）に所属させました。", ephemeral: true);
                 }
                 catch (ArgumentException ex)
                 {
@@ -266,7 +266,5 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
             return true;
         }
-
-        
     }
 }
