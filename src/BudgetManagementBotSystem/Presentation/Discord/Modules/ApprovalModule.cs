@@ -1,6 +1,5 @@
 using Discord;
 using Discord.Interactions;
-using BudgetManagementBotSystem.Application.DTOs;
 using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 using BudgetManagementBotSystem.InfraStructure.Discord;
 using BudgetManagementBotSystem.Presentation.Discord.Helpers;
