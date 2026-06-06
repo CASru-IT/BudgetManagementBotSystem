@@ -98,7 +98,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("reject", "指定した申請を却下する")]
-        public async Task Reject(int requestId, [Summary("reason")] string reason = "")
+        public async Task Reject(int requestId, string reason)
         {
             try
             {

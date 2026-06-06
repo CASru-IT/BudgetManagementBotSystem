@@ -69,7 +69,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Helpers
                 .AddField("金額", notification.Amount.ToString("C"), true)
                 .AddField("説明", description)
                 .AddField("承認者", notification.ApproverName, true)
-                .AddField("承認者 Discord", notification.ApproverDiscordUserId.ToString(), true)
+                .AddField("承認者 DiscordID", notification.ApproverDiscordUserId.ToString(), true)
                 .WithFooter("会計担当と受け取り日時を調整してください。")
                 .Build();
 
@@ -105,7 +105,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Helpers
                 .AddField("金額", notification.Amount.ToString("C"), true)
                 .AddField("説明", description)
                 .AddField("却下者", notification.RejecterName, true)
-                .AddField("却下者 Discord", notification.RejecterDiscordUserId.ToString(), true);
+                .AddField("却下者 DiscordID", notification.RejecterDiscordUserId.ToString(), true);
 
             if (!string.IsNullOrWhiteSpace(notification.Reason))
             {
