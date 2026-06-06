@@ -148,10 +148,5 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 await RespondAsync($"承認取消中にエラーが発生しました: {ex.Message}", ephemeral: true);
             }
         }
-
-        private static string BuildApprovedRequestMessage(ApprovedRequestNotificationDto notification)
-        {
-            return $"申請 {notification.RequestId} が承認されました。";
-        }
     }
 }
