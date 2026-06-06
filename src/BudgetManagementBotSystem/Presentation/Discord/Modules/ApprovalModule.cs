@@ -77,14 +77,17 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 await _approveUseCase.ExecuteAsync(groupId, requestId, userId);
 
                 var notification = await _notifyApprovedRequestUseCase.ExecuteAsync(requestId, userId);
-                var notificationSent = notification != null && await _discordBotService.SendDirectMessageAsync(
-                    notification.RequesterDiscordUserId,
-                    BuildApprovedRequestMessage(notification));
-                var responseMessage = notificationSent
-                    ? $"申請 {requestId} を承認しました。申請者へDM通知を送信しました。"
-                    : $"申請 {requestId} を承認しました。申請者へのDM通知は送信できませんでした。";
+                var notificationSent = false;
 
-                await RespondAsync(responseMessage);
+                if (notification != null)
+                {
+                    notificationSent = await _discordBotService.SendDirectMessageAsync(
+                        notification.RequesterDiscordUserId,
+                        DiscordEmbedFactory.BuildApprovedRequestDmEmbed(notification));
+                }
+
+                var resultEmbed = DiscordEmbedFactory.BuildApprovalResultEmbed(requestId, notificationSent);
+                await RespondAsync(embed: resultEmbed);
             }
             catch (Exception ex)
             {
@@ -133,14 +136,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
         private static string BuildApprovedRequestMessage(ApprovedRequestNotificationDto notification)
         {
-            return
-                $"あなたの申請が承認されました。\n" +
-                $"申請ID: {notification.RequestId}\n" +
-                $"班名: {notification.GroupName}\n" +
-                $"金額: {notification.Amount:C}\n" +
-                $"説明: {notification.Description}\n\n" +
-                $"会計担当: {notification.ApproverName} (DiscordID: {notification.ApproverDiscordUserId})\n" +
-                "申請者ご自身で会計担当にアポを取り、お金の受け取り日時を調整してください。";
+            return $"申請 {notification.RequestId} が承認されました。";
         }
     }
 }

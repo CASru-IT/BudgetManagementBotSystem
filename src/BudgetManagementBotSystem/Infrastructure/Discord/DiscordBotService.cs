@@ -197,4 +197,24 @@ public class DiscordBotService
             return false;
         }
     }
+
+    public async Task<bool> SendDirectMessageAsync(ulong userId, Embed embed)
+    {
+        try
+        {
+            var user = _client.GetUser(userId);
+            if (user == null)
+            {
+                return false;
+            }
+
+            var dmChannel = await user.CreateDMChannelAsync();
+            await dmChannel.SendMessageAsync(embed: embed);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }
