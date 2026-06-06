@@ -1,7 +1,9 @@
+using Discord;
 using Discord.Interactions;
 using BudgetManagementBotSystem.Application.DTOs;
 using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 using BudgetManagementBotSystem.InfraStructure.Discord;
+using BudgetManagementBotSystem.Presentation.Discord.Helpers;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {
@@ -43,15 +45,19 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
                 if (result.Total == 0 || !result.Items.Any())
                 {
-                    await RespondAsync("未承認の申請は見つかりませんでした。", ephemeral: true);
+                    var emptyEmbed = new EmbedBuilder()
+                        .WithTitle("未承認申請一覧")
+                        .WithColor(Color.Blue)
+                        .WithDescription("未承認の申請は見つかりませんでした。")
+                        .WithFooter("承認/却下は /approve /reject コマンドを使ってください")
+                        .Build();
+
+                    await RespondAsync(embed: emptyEmbed, ephemeral: true);
                     return;
                 }
 
-                var lines = result.Items.Select(r =>
-                    $"ID:{r.Id} 班名:{r.GroupName} 金額:{r.Amount:C} 日付:{r.RequestDate:yyyy-MM-dd} 説明:{(r.Description.Length>80? r.Description.Substring(0,80)+"...": r.Description)}");
-
-                var header = $"未承認申請一覧 (ページ {result.Page}/{Math.Max(1, (int)Math.Ceiling(result.Total/(double)result.PageSize))}) 合計:{result.Total}";
-                await RespondAsync($"{header}\n{string.Join("\n", lines)}");
+                var embed = DiscordEmbedFactory.BuildPendingRequestsEmbed(result);
+                await RespondAsync(embed: embed);
             }
             catch (Exception ex)
             {
