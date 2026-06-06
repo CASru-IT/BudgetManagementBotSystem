@@ -99,7 +99,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("reject", "指定した申請を却下する")]
-        public async Task Reject(int requestId)
+        public async Task Reject(int requestId, [Summary("reason")] string reason = "")
         {
             try
             {
@@ -109,7 +109,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
                 await _rejectUseCase.ExecuteAsync(groupId, requestId, userId);
 
-                var notification = await _notifyRejectedRequestUseCase.ExecuteAsync(requestId, userId);
+                var notification = await _notifyRejectedRequestUseCase.ExecuteAsync(requestId, userId, reason);
                 var notificationSent = false;
 
                 if (notification != null)

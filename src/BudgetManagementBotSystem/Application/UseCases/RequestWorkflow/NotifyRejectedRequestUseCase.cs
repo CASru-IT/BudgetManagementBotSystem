@@ -18,7 +18,7 @@ public class NotifyRejectedRequestUseCase
         _userRepository = userRepository;
     }
 
-    public async Task<RejectedRequestNotificationDto?> ExecuteAsync(int requestId, int rejecterUserId)
+    public async Task<RejectedRequestNotificationDto?> ExecuteAsync(int requestId, int rejecterUserId, string reason = "")
     {
         var rejecter = await _userRepository.GetByIdAsync(rejecterUserId);
         if (rejecter == null)
@@ -47,6 +47,7 @@ public class NotifyRejectedRequestUseCase
             request.Amount.Value,
             request.Description,
             rejecter.Name,
-            rejecter.DiscordUserId);
+            rejecter.DiscordUserId,
+            reason);
     }
 }

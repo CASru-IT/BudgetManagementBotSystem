@@ -9,6 +9,7 @@ public sealed class RejectedRequestNotificationDto
     public string Description { get; }
     public string RejecterName { get; }
     public ulong RejecterDiscordUserId { get; }
+    public string Reason { get; }
 
     public RejectedRequestNotificationDto(
         ulong requesterDiscordUserId,
@@ -17,7 +18,8 @@ public sealed class RejectedRequestNotificationDto
         decimal amount,
         string description,
         string rejecterName,
-        ulong rejecterDiscordUserId)
+        ulong rejecterDiscordUserId,
+        string reason = "")
     {
         RequesterDiscordUserId = requesterDiscordUserId;
         RequestId = requestId;
@@ -26,5 +28,6 @@ public sealed class RejectedRequestNotificationDto
         Description = description;
         RejecterName = rejecterName;
         RejecterDiscordUserId = rejecterDiscordUserId;
+        Reason = reason;
     }
 }

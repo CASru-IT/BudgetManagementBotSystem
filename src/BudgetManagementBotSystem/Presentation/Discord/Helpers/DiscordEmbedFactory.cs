@@ -105,11 +105,15 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Helpers
                 .AddField("金額", notification.Amount.ToString("C"), true)
                 .AddField("説明", description)
                 .AddField("却下者", notification.RejecterName, true)
-                .AddField("却下者 Discord", notification.RejecterDiscordUserId.ToString(), true)
-                .WithFooter("ご不明な点は却下者にお問い合わせください。")
-                .Build();
+                .AddField("却下者 Discord", notification.RejecterDiscordUserId.ToString(), true);
 
-            return embed;
+            if (!string.IsNullOrWhiteSpace(notification.Reason))
+            {
+                embed.AddField("却下理由", notification.Reason);
+            }
+
+            embed.WithFooter("ご不明な点は却下者にお問い合わせください。");
+            return embed.Build();
         }
     }
 }
