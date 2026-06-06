@@ -75,5 +75,41 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Helpers
 
             return embed;
         }
+
+        public static Embed BuildRejectionResultEmbed(int requestId, bool notificationSent)
+        {
+            var embed = new EmbedBuilder()
+                .WithTitle("申請の却下が完了しました")
+                .WithColor(Color.Red)
+                .WithDescription($"申請 ID {requestId} の却下が正常に完了しました。")
+                .AddField("申請ID", requestId, true)
+                .AddField("通知", notificationSent ? "申請者へDMを送信しました" : "DM送信に失敗しました", true)
+                .WithFooter("申請者へ却下通知が送信されます。")
+                .Build();
+
+            return embed;
+        }
+
+        public static Embed BuildRejectedRequestDmEmbed(RejectedRequestNotificationDto notification)
+        {
+            var description = notification.Description.Length > 80
+                ? notification.Description.Substring(0, 80) + "..."
+                : notification.Description;
+
+            var embed = new EmbedBuilder()
+                .WithTitle("申請が却下されました")
+                .WithColor(Color.Red)
+                .WithDescription("申し訳ございません。あなたの申請は却下されました。下記の内容を確認してください。")
+                .AddField("申請ID", notification.RequestId, true)
+                .AddField("班名", notification.GroupName, true)
+                .AddField("金額", notification.Amount.ToString("C"), true)
+                .AddField("説明", description)
+                .AddField("却下者", notification.RejecterName, true)
+                .AddField("却下者 Discord", notification.RejecterDiscordUserId.ToString(), true)
+                .WithFooter("ご不明な点は却下者にお問い合わせください。")
+                .Build();
+
+            return embed;
+        }
     }
 }

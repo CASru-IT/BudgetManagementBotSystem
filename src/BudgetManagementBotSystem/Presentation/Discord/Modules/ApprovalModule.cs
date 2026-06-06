@@ -14,6 +14,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         private readonly GetPendingRequestsUseCase _getPendingUseCase;
         private readonly RequestQueryUseCase _requestQueryUseCase;
         private readonly NotifyApprovedRequestUseCase _notifyApprovedRequestUseCase;
+        private readonly NotifyRejectedRequestUseCase _notifyRejectedRequestUseCase;
         private readonly RevokeApprovalUseCase _revokeUseCase;
         private readonly DiscordBotService _discordBotService;
 
@@ -23,6 +24,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             GetPendingRequestsUseCase getPendingUseCase,
             RequestQueryUseCase requestQueryUseCase,
             NotifyApprovedRequestUseCase notifyApprovedRequestUseCase,
+            NotifyRejectedRequestUseCase notifyRejectedRequestUseCase,
             RevokeApprovalUseCase revokeUseCase,
             DiscordBotService discordBotService)
         {
@@ -31,6 +33,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             _getPendingUseCase = getPendingUseCase;
             _requestQueryUseCase = requestQueryUseCase;
             _notifyApprovedRequestUseCase = notifyApprovedRequestUseCase;
+            _notifyRejectedRequestUseCase = notifyRejectedRequestUseCase;
             _revokeUseCase = revokeUseCase;
             _discordBotService = discordBotService;
         }
@@ -105,7 +108,19 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 var groupId = await _requestQueryUseCase.GetGroupIdByRequestIdAsync(requestId);
 
                 await _rejectUseCase.ExecuteAsync(groupId, requestId, userId);
-                await RespondAsync($"申請 {requestId} を却下しました。");
+
+                var notification = await _notifyRejectedRequestUseCase.ExecuteAsync(requestId, userId);
+                var notificationSent = false;
+
+                if (notification != null)
+                {
+                    notificationSent = await _discordBotService.SendDirectMessageAsync(
+                        notification.RequesterDiscordUserId,
+                        DiscordEmbedFactory.BuildRejectedRequestDmEmbed(notification));
+                }
+
+                var resultEmbed = DiscordEmbedFactory.BuildRejectionResultEmbed(requestId, notificationSent);
+                await RespondAsync(embed: resultEmbed);
             }
             catch (Exception ex)
             {
