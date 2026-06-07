@@ -1,6 +1,6 @@
 # BudgetManagementBotSystem
 
-軽量な説明: Discord 上で動作する予算管理 Bot システムです。
+Discord 上で動作する予算管理 Bot システムです。
 
 開発・ローカル実行手順は [docs/development.md](docs/development.md) を参照してください。実装・設計の詳細は `docs/` 配下の各資料を参照してください。
 

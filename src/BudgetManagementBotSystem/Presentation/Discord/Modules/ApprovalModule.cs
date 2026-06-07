@@ -1,7 +1,8 @@
+using Discord;
 using Discord.Interactions;
-using BudgetManagementBotSystem.Application.DTOs;
 using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 using BudgetManagementBotSystem.InfraStructure.Discord;
+using BudgetManagementBotSystem.Presentation.Discord.Helpers;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {
@@ -12,6 +13,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         private readonly GetPendingRequestsUseCase _getPendingUseCase;
         private readonly RequestQueryUseCase _requestQueryUseCase;
         private readonly NotifyApprovedRequestUseCase _notifyApprovedRequestUseCase;
+        private readonly NotifyRejectedRequestUseCase _notifyRejectedRequestUseCase;
         private readonly RevokeApprovalUseCase _revokeUseCase;
         private readonly DiscordBotService _discordBotService;
 
@@ -21,6 +23,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             GetPendingRequestsUseCase getPendingUseCase,
             RequestQueryUseCase requestQueryUseCase,
             NotifyApprovedRequestUseCase notifyApprovedRequestUseCase,
+            NotifyRejectedRequestUseCase notifyRejectedRequestUseCase,
             RevokeApprovalUseCase revokeUseCase,
             DiscordBotService discordBotService)
         {
@@ -29,6 +32,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             _getPendingUseCase = getPendingUseCase;
             _requestQueryUseCase = requestQueryUseCase;
             _notifyApprovedRequestUseCase = notifyApprovedRequestUseCase;
+            _notifyRejectedRequestUseCase = notifyRejectedRequestUseCase;
             _revokeUseCase = revokeUseCase;
             _discordBotService = discordBotService;
         }
@@ -43,15 +47,19 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
                 if (result.Total == 0 || !result.Items.Any())
                 {
-                    await RespondAsync("未承認の申請は見つかりませんでした。", ephemeral: true);
+                    var emptyEmbed = new EmbedBuilder()
+                        .WithTitle("未承認申請一覧")
+                        .WithColor(Color.Blue)
+                        .WithDescription("未承認の申請は見つかりませんでした。")
+                        .WithFooter("承認/却下は /approve /reject コマンドを使ってください")
+                        .Build();
+
+                    await RespondAsync(embed: emptyEmbed, ephemeral: true);
                     return;
                 }
 
-                var lines = result.Items.Select(r =>
-                    $"ID:{r.Id} 班名:{r.GroupName} 金額:{r.Amount:C} 日付:{r.RequestDate:yyyy-MM-dd} 説明:{(r.Description.Length>80? r.Description.Substring(0,80)+"...": r.Description)}");
-
-                var header = $"未承認申請一覧 (ページ {result.Page}/{Math.Max(1, (int)Math.Ceiling(result.Total/(double)result.PageSize))}) 合計:{result.Total}";
-                await RespondAsync($"{header}\n{string.Join("\n", lines)}");
+                var embed = DiscordEmbedFactory.BuildPendingRequestsEmbed(result);
+                await RespondAsync(embed: embed);
             }
             catch (Exception ex)
             {
@@ -71,14 +79,17 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 await _approveUseCase.ExecuteAsync(groupId, requestId, userId);
 
                 var notification = await _notifyApprovedRequestUseCase.ExecuteAsync(requestId, userId);
-                var notificationSent = notification != null && await _discordBotService.SendDirectMessageAsync(
-                    notification.RequesterDiscordUserId,
-                    BuildApprovedRequestMessage(notification));
-                var responseMessage = notificationSent
-                    ? $"申請 {requestId} を承認しました。申請者へDM通知を送信しました。"
-                    : $"申請 {requestId} を承認しました。申請者へのDM通知は送信できませんでした。";
+                var notificationSent = false;
 
-                await RespondAsync(responseMessage);
+                if (notification != null)
+                {
+                    notificationSent = await _discordBotService.SendDirectMessageAsync(
+                        notification.RequesterDiscordUserId,
+                        DiscordEmbedFactory.BuildApprovedRequestDmEmbed(notification));
+                }
+
+                var resultEmbed = DiscordEmbedFactory.BuildApprovalResultEmbed(requestId, notificationSent);
+                await RespondAsync(embed: resultEmbed);
             }
             catch (Exception ex)
             {
@@ -87,7 +98,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("reject", "指定した申請を却下する")]
-        public async Task Reject(int requestId)
+        public async Task Reject(int requestId, string reason)
         {
             try
             {
@@ -96,7 +107,19 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 var groupId = await _requestQueryUseCase.GetGroupIdByRequestIdAsync(requestId);
 
                 await _rejectUseCase.ExecuteAsync(groupId, requestId, userId);
-                await RespondAsync($"申請 {requestId} を却下しました。");
+
+                var notification = await _notifyRejectedRequestUseCase.ExecuteAsync(requestId, userId, reason);
+                var notificationSent = false;
+
+                if (notification != null)
+                {
+                    notificationSent = await _discordBotService.SendDirectMessageAsync(
+                        notification.RequesterDiscordUserId,
+                        DiscordEmbedFactory.BuildRejectedRequestDmEmbed(notification));
+                }
+
+                var resultEmbed = DiscordEmbedFactory.BuildRejectionResultEmbed(requestId, notificationSent);
+                await RespondAsync(embed: resultEmbed);
             }
             catch (Exception ex)
             {
@@ -123,18 +146,6 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             {
                 await RespondAsync($"承認取消中にエラーが発生しました: {ex.Message}", ephemeral: true);
             }
-        }
-
-        private static string BuildApprovedRequestMessage(ApprovedRequestNotificationDto notification)
-        {
-            return
-                $"あなたの申請が承認されました。\n" +
-                $"申請ID: {notification.RequestId}\n" +
-                $"班名: {notification.GroupName}\n" +
-                $"金額: {notification.Amount:C}\n" +
-                $"説明: {notification.Description}\n\n" +
-                $"会計担当: {notification.ApproverName} (DiscordID: {notification.ApproverDiscordUserId})\n" +
-                "申請者ご自身で会計担当にアポを取り、お金の受け取り日時を調整してください。";
         }
     }
 }
