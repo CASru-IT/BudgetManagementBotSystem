@@ -42,12 +42,6 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 return;
             }
 
-            if (user.Role != AccountRole.Admin)
-            {
-                await RespondAsync("エラー: このコマンドは管理者のみ実行できます。", ephemeral: true);
-                return;
-            }
-
             var groups = await _groupRepository.GetAllAsync();
             if (groups == null || groups.Count == 0)
             {

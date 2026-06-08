@@ -10,8 +10,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
     {
         private readonly RegisterUserUseCase _registerUserUseCase;
         private readonly Domain.Repository.IUserRepository _userRepository;
-        private readonly BudgetManagementBotSystem.Application.UseCases.UserManagement.UserQueryUseCase _userQuery;
-        private readonly BudgetManagementBotSystem.Application.UseCases.UserManagement.UserCommandUseCase _userCommand;
+        private readonly UserQueryUseCase _userQuery;
+        private readonly UserCommandUseCase _userCommand;
 
         public UserManagementModule(RegisterUserUseCase registerUserUseCase, Domain.Repository.IUserRepository userRepository, BudgetManagementBotSystem.Application.UseCases.UserManagement.UserQueryUseCase userQuery, BudgetManagementBotSystem.Application.UseCases.UserManagement.UserCommandUseCase userCommand)
         {
@@ -23,11 +23,11 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
         [SlashCommand("register-user", "システム利用ユーザーを登録する")]
         public async Task RegisterUser(
-            [Summary("name")] string name,
             [Summary("user")] IUser targetUser,
             [Summary("role")] AccountRole role)
         {
             var discordUserId = targetUser.Id;
+            var discordUserName = targetUser.Username;
 
             var caller = await GetCallerAsync();
             if (!await EnsureAdminAsync(caller))
@@ -42,8 +42,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 return;
             }
 
-            await _registerUserUseCase.ExecuteAsync(name, discordUserId, role);
-            await RespondAsync($"ユーザーを登録しました: {name} ({role})", ephemeral: true);
+            await _registerUserUseCase.ExecuteAsync(discordUserName, discordUserId, role);
+            await RespondAsync($"ユーザーを登録しました: {discordUserName} ({role})", ephemeral: true);
         }
 
         [SlashCommand("set-user-role", "ユーザーの権限やロールを設定する")]
