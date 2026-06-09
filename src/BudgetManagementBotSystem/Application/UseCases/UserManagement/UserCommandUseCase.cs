@@ -24,6 +24,22 @@ namespace BudgetManagementBotSystem.Application.UseCases.UserManagement
             await _unitOfWork.SaveChangesAsync();
         }
 
+        public async Task ActivateUserByDiscordIdAsync(ulong discordUserId)
+        {
+            var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
+            if (user == null) throw new ArgumentException("User not found");
+            user.Activate();
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task UpdateUserNameByDiscordIdAsync(ulong discordUserId, string name)
+        {
+            var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
+            if (user == null) throw new ArgumentException("User not found");
+            user.ChangeName(name);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
         public async Task UpdateUserRoleByDiscordIdAsync(ulong discordUserId, BudgetManagementBotSystem.Domain.Enums.AccountRole role)
         {
             var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);

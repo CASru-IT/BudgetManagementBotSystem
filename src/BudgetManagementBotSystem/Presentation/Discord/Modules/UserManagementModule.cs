@@ -27,7 +27,10 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             [Summary("role")] AccountRole role)
         {
             var discordUserId = targetUser.Id;
-            var discordUserName = targetUser.Username;
+            var discordUserName =
+            (targetUser as IGuildUser)?.Nickname
+            ?? targetUser.GlobalName
+            ?? targetUser.Username;
 
             var caller = await GetCallerAsync();
             if (!await EnsureAdminAsync(caller))
@@ -44,6 +47,30 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
             await _registerUserUseCase.ExecuteAsync(discordUserName, discordUserId, role);
             await RespondAsync($"ユーザーを登録しました: {discordUserName} ({role})", ephemeral: true);
+        }
+
+        [SlashCommand("set-user-name", "ユーザーの表示名を変更する")]
+        public async Task SetUserName(
+            [Summary("user")] IUser targetUser,
+            [Summary("name")] string name)
+        {
+            var discordUserId = targetUser.Id;
+
+            var caller = await GetCallerAsync();
+            if (!await EnsureAdminAsync(caller))
+            {
+                return;
+            }
+
+            try
+            {
+                await _userCommand.UpdateUserNameByDiscordIdAsync(discordUserId, name);
+                await RespondAsync("ユーザー名を更新しました。", ephemeral: true);
+            }
+            catch (ArgumentException ex)
+            {
+                await RespondAsync($"エラー: {ex.Message}", ephemeral: true);
+            }
         }
 
         [SlashCommand("set-user-role", "ユーザーの権限やロールを設定する")]
@@ -70,7 +97,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             }
         }
 
-        [SlashCommand("remove-user", "ユーザーを無効化または削除する")]
+        [SlashCommand("remove-user", "ユーザーを無効化する")]
         public async Task RemoveUser([Summary("user")] IUser targetUser)
         {
             var discordUserId = targetUser.Id;
@@ -85,6 +112,28 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             {
                 await _userCommand.DeactivateUserByDiscordIdAsync(discordUserId);
                 await RespondAsync($"ユーザーを無効化しました: {discordUserId}", ephemeral: true);
+            }
+            catch (ArgumentException ex)
+            {
+                await RespondAsync($"エラー: {ex.Message}", ephemeral: true);
+            }
+        }
+
+        [SlashCommand("activate-user", "ユーザーを有効化する")]
+        public async Task ActivateUser([Summary("user")] IUser targetUser)
+        {
+            var discordUserId = targetUser.Id;
+
+            var caller = await GetCallerAsync();
+            if (!await EnsureAdminAsync(caller))
+            {
+                return;
+            }
+
+            try
+            {
+                await _userCommand.ActivateUserByDiscordIdAsync(discordUserId);
+                await RespondAsync($"ユーザーを有効化しました: {discordUserId}", ephemeral: true);
             }
             catch (ArgumentException ex)
             {
