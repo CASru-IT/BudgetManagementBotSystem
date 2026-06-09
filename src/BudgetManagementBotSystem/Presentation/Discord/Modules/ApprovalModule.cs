@@ -67,36 +67,6 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             }
         }
 
-        [SlashCommand("approve", "指定した申請を承認する")]
-        public async Task Approve(int requestId)
-        {
-            try
-            {
-                var discordUserId = Context.User.Id;
-                var userId = await _requestQueryUseCase.GetLocalUserIdByDiscordIdAsync(discordUserId);
-                var groupId = await _requestQueryUseCase.GetGroupIdByRequestIdAsync(requestId);
-
-                await _approveUseCase.ExecuteAsync(groupId, requestId, userId);
-
-                var notification = await _notifyApprovedRequestUseCase.ExecuteAsync(requestId, userId);
-                var notificationSent = false;
-
-                if (notification != null)
-                {
-                    notificationSent = await _discordBotService.SendDirectMessageAsync(
-                        notification.RequesterDiscordUserId,
-                        DiscordEmbedFactory.BuildApprovedRequestDmEmbed(notification));
-                }
-
-                var resultEmbed = DiscordEmbedFactory.BuildApprovalResultEmbed(requestId, notificationSent);
-                await RespondAsync(embed: resultEmbed);
-            }
-            catch (Exception ex)
-            {
-                await RespondAsync($"承認処理中にエラーが発生しました: {ex.Message}", ephemeral: true);
-            }
-        }
-
         [SlashCommand("reject", "指定した申請を却下する")]
         public async Task Reject(int requestId, string reason)
         {
