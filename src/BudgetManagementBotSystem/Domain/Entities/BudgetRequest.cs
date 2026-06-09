@@ -26,25 +26,25 @@ public class BudgetRequest
         Amount = amount;
         FiscalYear = fiscalYear;
         Description = description;
-        RequestDate = DateTime.Now;
+        RequestDate = DateTime.UtcNow;
         Evidences = evidenceFilePaths
             .Select(filePath => new RequestEvidence(filePath))
             .ToList();
         if (StatusHistory.Count == 0)
         {
-            StatusHistory.Add(new RequestStatusChange(RequestStatus.Pending, DateTime.Now));
+            StatusHistory.Add(new RequestStatusChange(RequestStatus.Pending, DateTime.UtcNow));
         }
     }
 
     public void UpdateStatus(RequestStatus newStatus)
     {
         CheckStatusTransition(newStatus);
-        StatusHistory.Add(new RequestStatusChange(newStatus, DateTime.Now));
+        StatusHistory.Add(new RequestStatusChange(newStatus, DateTime.UtcNow));
     }
     public void UpdateStatus(RequestStatus newStatus, User changedBy)
     {
         CheckStatusTransition(newStatus, changedBy);
-        StatusHistory.Add(new RequestStatusChange(newStatus, DateTime.Now));
+        StatusHistory.Add(new RequestStatusChange(newStatus, DateTime.UtcNow));
     }
 
     private void CheckStatusTransition(RequestStatus newStatus)

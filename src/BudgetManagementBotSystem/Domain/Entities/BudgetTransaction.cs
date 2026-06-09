@@ -19,6 +19,6 @@ public class BudgetTransaction
         IsIncome = isIncome;
         Amount = new Money(amount);
         FiscalYear = fiscalYear;
-        TransactionDate = DateTime.Now;
+        TransactionDate = DateTime.UtcNow;
     }
 }
