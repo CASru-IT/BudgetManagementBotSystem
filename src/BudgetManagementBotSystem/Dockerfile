@@ -13,6 +13,9 @@ COPY --from=build /app/publish ./
 
 ENV ASPNETCORE_ENVIRONMENT=Production
 
+ENV LANG=ja_JP.UTF-8
+ENV LC_ALL=ja_JP.UTF-8
+
 VOLUME ["/app/data/evidences"]
 
 ENTRYPOINT ["dotnet", "BudgetManagementBotSystem.dll"]

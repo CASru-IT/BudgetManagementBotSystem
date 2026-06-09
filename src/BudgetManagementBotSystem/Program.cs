@@ -11,8 +11,12 @@ using BudgetManagementBotSystem.Infrastructure.FileStorage;
 using BudgetManagementBotSystem.Infrastructure.Persistence;
 using BudgetManagementBotSystem.Infrastructure.Persistence.Repository;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 var builder = Host.CreateApplicationBuilder(args);
+
+CultureInfo.DefaultThreadCurrentCulture = CultureInfo.GetCultureInfo("ja-JP");
+CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo("ja-JP");
 
 var connectionString = builder.Configuration.GetConnectionString("Db");
 var useInMemoryDatabase = builder.Configuration.GetValue<bool>("UseInMemoryDatabase");
