@@ -19,7 +19,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
         [SlashCommand("test-dm", "指定ユーザーへテスト DM を送信し、送信可否と失敗理由を確認します")]
         public async Task TestDm(
-            [Summary("user")] IUser targetUser,
+            [Summary("user-id")] int userId,
             [Summary("message")] string? message = null)
         {
             var caller = await _userRepository.GetByDiscordUserIdAsync(Context.User.Id);
@@ -35,10 +35,16 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 return;
             }
 
-            var targetName = GetDisplayName(targetUser);
-            var dmEmbed = BuildTestDmEmbed(Context.User, targetUser, message);
-            var result = await _discordBotService.TestDirectMessageAsync(targetUser.Id, dmEmbed);
-            var resultEmbed = BuildTestDmResultEmbed(targetUser, targetName, result);
+            var targetUser = await _userRepository.GetByIdAsync(userId);
+            if (targetUser == null)
+            {
+                await RespondAsync(embed: BuildAuthorizationErrorEmbed($"User ID {userId} のユーザーが見つかりません。"), ephemeral: true);
+                return;
+            }
+
+            var dmEmbed = BuildTestDmEmbed(Context.User, targetUser.Id, targetUser.Name, targetUser.DiscordUserId, message);
+            var result = await _discordBotService.TestDirectMessageAsync(targetUser.DiscordUserId, dmEmbed);
+            var resultEmbed = BuildTestDmResultEmbed(targetUser.Id, targetUser.Name, targetUser.DiscordUserId, result);
 
             await RespondAsync(embed: resultEmbed, ephemeral: true);
         }
@@ -50,10 +56,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 ?? user.Username;
         }
 
-        private static Embed BuildTestDmEmbed(IUser sender, IUser targetUser, string? message)
+        private static Embed BuildTestDmEmbed(IUser sender, int userId, string targetName, ulong targetDiscordUserId, string? message)
         {
             var senderName = GetDisplayName(sender);
-            var targetName = GetDisplayName(targetUser);
             var description = string.IsNullOrWhiteSpace(message)
                 ? "これは Bot からの DM 送信確認メッセージです。"
                 : message;
@@ -62,20 +67,20 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 .WithTitle("DM 送信テスト")
                 .WithColor(Color.Blue)
                 .WithDescription(description)
-                .AddField("対象ユーザー", $"{targetName} ({targetUser.Id})", false)
+                .AddField("対象ユーザー", $"{targetName} (User ID: {userId}, Discord ID: {targetDiscordUserId})", false)
                 .AddField("実行者", $"{senderName} ({sender.Id})", false)
                 .WithFooter("このメッセージは管理者のテストコマンドにより送信されました。")
                 .WithCurrentTimestamp()
                 .Build();
         }
 
-        private static Embed BuildTestDmResultEmbed(IUser targetUser, string targetName, DirectMessageSendResult result)
+        private static Embed BuildTestDmResultEmbed(int userId, string targetName, ulong targetDiscordUserId, DirectMessageSendResult result)
         {
             var builder = new EmbedBuilder()
                 .WithTitle(result.IsSuccess ? "DM 送信テスト成功" : "DM 送信テスト失敗")
                 .WithColor(result.IsSuccess ? Color.Green : Color.Red)
                 .WithDescription(result.Summary)
-                .AddField("対象ユーザー", $"{targetName} ({targetUser.Id})", false)
+                .AddField("対象ユーザー", $"{targetName} (User ID: {userId}, Discord ID: {targetDiscordUserId})", false)
                 .AddField("結果", result.IsSuccess ? "成功" : "失敗", true)
                 .AddField("詳細", result.Detail, false)
                 .WithCurrentTimestamp();

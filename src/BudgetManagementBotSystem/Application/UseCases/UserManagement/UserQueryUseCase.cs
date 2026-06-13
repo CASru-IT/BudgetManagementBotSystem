@@ -26,6 +26,11 @@ namespace BudgetManagementBotSystem.Application.UseCases.UserManagement
             return await _userRepository.GetByDiscordUserIdAsync(discordUserId);
         }
 
+        public async Task<User?> GetByIdAsync(int userId)
+        {
+            return await _userRepository.GetByIdAsync(userId);
+        }
+
         public async Task<List<User>> GetMembersByGroupIdAsync(int groupId)
         {
             var users = await _userRepository.GetAllAsync();

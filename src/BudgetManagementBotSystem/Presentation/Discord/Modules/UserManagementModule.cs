@@ -51,11 +51,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
         [SlashCommand("set-user-name", "ユーザーの表示名を変更する")]
         public async Task SetUserName(
-            [Summary("user")] IUser targetUser,
+            [Summary("user-id")] int userId,
             [Summary("name")] string name)
         {
-            var discordUserId = targetUser.Id;
-
             var caller = await GetCallerAsync();
             if (!await EnsureAdminAsync(caller))
             {
@@ -64,7 +62,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
             try
             {
-                await _userCommand.UpdateUserNameByDiscordIdAsync(discordUserId, name);
+                await _userCommand.UpdateUserNameByIdAsync(userId, name);
                 await RespondAsync("ユーザー名を更新しました。", ephemeral: true);
             }
             catch (ArgumentException ex)
@@ -75,11 +73,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
         [SlashCommand("set-user-role", "ユーザーの権限やロールを設定する")]
         public async Task SetUserRole(
-            [Summary("user")] IUser targetUser,
+            [Summary("user-id")] int userId,
             [Summary("role")] AccountRole role)
         {
-            var discordUserId = targetUser.Id;
-
             var caller = await GetCallerAsync();
             if (!await EnsureAdminAsync(caller))
             {
@@ -88,7 +84,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
             try
             {
-                await _userCommand.UpdateUserRoleByDiscordIdAsync(discordUserId, role);
+                await _userCommand.UpdateUserRoleByIdAsync(userId, role);
                 await RespondAsync("ユーザー権限を更新しました。", ephemeral: true);
             }
             catch (ArgumentException ex)
@@ -98,10 +94,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("remove-user", "ユーザーを無効化する")]
-        public async Task RemoveUser([Summary("user")] IUser targetUser)
+        public async Task RemoveUser([Summary("user-id")] int userId)
         {
-            var discordUserId = targetUser.Id;
-
             var caller = await GetCallerAsync();
             if (!await EnsureAdminAsync(caller))
             {
@@ -110,8 +104,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
             try
             {
-                await _userCommand.DeactivateUserByDiscordIdAsync(discordUserId);
-                await RespondAsync($"ユーザーを無効化しました: {discordUserId}", ephemeral: true);
+                await _userCommand.DeactivateUserByIdAsync(userId);
+                await RespondAsync($"ユーザーを無効化しました: {userId}", ephemeral: true);
             }
             catch (ArgumentException ex)
             {
@@ -120,10 +114,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("activate-user", "ユーザーを有効化する")]
-        public async Task ActivateUser([Summary("user")] IUser targetUser)
+        public async Task ActivateUser([Summary("user-id")] int userId)
         {
-            var discordUserId = targetUser.Id;
-
             var caller = await GetCallerAsync();
             if (!await EnsureAdminAsync(caller))
             {
@@ -132,8 +124,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
             try
             {
-                await _userCommand.ActivateUserByDiscordIdAsync(discordUserId);
-                await RespondAsync($"ユーザーを有効化しました: {discordUserId}", ephemeral: true);
+                await _userCommand.ActivateUserByIdAsync(userId);
+                await RespondAsync($"ユーザーを有効化しました: {userId}", ephemeral: true);
             }
             catch (ArgumentException ex)
             {
@@ -169,9 +161,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("user-info", "ユーザーの所属・権限情報を表示する")]
-        public async Task UserInfo([Summary("user")] IUser targetUser)
+        public async Task UserInfo([Summary("user-id")] int userId)
         {
-            var discordUserId = targetUser.Id;
             {
                 try
                 {
@@ -181,7 +172,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                         return;
                     }
 
-                    var user = await _userQuery.GetByDiscordIdAsync(discordUserId);
+                    var user = await _userQuery.GetByIdAsync(userId);
                     if (user == null)
                     {
                         await RespondAsync("エラー: 指定されたユーザーが見つかりません。", ephemeral: true);
@@ -201,10 +192,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
         [SlashCommand("assign-group", "ユーザーを班へ所属させる")]
         public async Task AssignGroup(
-            [Summary("user")] IUser targetUser,
+            [Summary("user-id")] int userId,
             [Summary("group-id")] int groupId)
         {
-            var discordUserId = targetUser.Id;
             try
             {
                 var caller = await GetCallerAsync();
@@ -215,7 +205,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
                 try
                 {
-                    var groupName = await _userCommand.AssignGroupByDiscordIdAsync(discordUserId, groupId);
+                    var groupName = await _userCommand.AssignGroupByUserIdAsync(userId, groupId);
                     await RespondAsync($"ユーザーを班 {groupName}（ID: {groupId}）に所属させました。", ephemeral: true);
                 }
                 catch (ArgumentException ex)
@@ -230,10 +220,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("unassign-group", "ユーザーの班所属を解除する")]
-        public async Task UnassignGroup([Summary("user")] IUser targetUser)
+        public async Task UnassignGroup([Summary("user-id")] int userId)
         {
-            var discordUserId = targetUser.Id;
-
             try
             {
                 var caller = await GetCallerAsync();
@@ -244,7 +232,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
                 try
                 {
-                    await _userCommand.UnassignGroupByDiscordIdAsync(discordUserId);
+                    await _userCommand.UnassignGroupByUserIdAsync(userId);
                     await RespondAsync($"ユーザーの班所属を解除しました。", ephemeral: true);
                 }
                 catch (ArgumentException ex)
