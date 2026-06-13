@@ -24,7 +24,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("remaining-budget", "現在の残予算を確認する")]
-        public async Task RemainingBudget(int? groupId = null, [Summary("fiscal-year")] int? fiscalYear = null)
+        public async Task RemainingBudget(int groupId, [Summary("fiscal-year")] int? fiscalYear = null)
         {
             try
             {
@@ -46,7 +46,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("usage-history", "予算使用履歴を表示する")]
-        public async Task UsageHistory(int page = 1, int pageSize = 10, int? groupId = null, [Summary("fiscal-year")] int? fiscalYear = null)
+        public async Task UsageHistory( int groupId, int page = 1, int pageSize = 10, [Summary("fiscal-year")] int? fiscalYear = null)
         {
             try
             {
@@ -149,7 +149,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         [SlashCommand("admin-add-transaction", "管理者用: 予算取引を直接追加する")]
         public async Task AdminAddTransaction(
             [Summary("group-id")] int groupId,
-            [Summary("type")] string transactionType,
+            [Summary("type"), Choice("収入", "income"), Choice("支出", "expense")] string transactionType,
             [Summary("amount")] double amount,
             [Summary("fiscal-year")] int? fiscalYear = null)
         {
