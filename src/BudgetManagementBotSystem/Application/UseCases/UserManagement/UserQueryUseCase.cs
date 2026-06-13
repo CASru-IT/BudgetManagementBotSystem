@@ -1,18 +1,15 @@
 using BudgetManagementBotSystem.Domain.Entities;
 using BudgetManagementBotSystem.Domain.Repository;
-using Microsoft.EntityFrameworkCore;
 
 namespace BudgetManagementBotSystem.Application.UseCases.UserManagement
 {
     public class UserQueryUseCase
     {
         private readonly IUserRepository _userRepository;
-        private readonly IGroupRepository _groupRepository;
 
-        public UserQueryUseCase(IUserRepository userRepository, IGroupRepository groupRepository)
+        public UserQueryUseCase(IUserRepository userRepository)
         {
             _userRepository = userRepository;
-            _groupRepository = groupRepository;
         }
 
         public async Task<List<User>> ListUsersAsync()

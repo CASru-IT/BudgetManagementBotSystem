@@ -9,14 +9,15 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
     public class UserManagementModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly RegisterUserUseCase _registerUserUseCase;
-        private readonly Domain.Repository.IUserRepository _userRepository;
         private readonly UserQueryUseCase _userQuery;
         private readonly UserCommandUseCase _userCommand;
 
-        public UserManagementModule(RegisterUserUseCase registerUserUseCase, Domain.Repository.IUserRepository userRepository, BudgetManagementBotSystem.Application.UseCases.UserManagement.UserQueryUseCase userQuery, BudgetManagementBotSystem.Application.UseCases.UserManagement.UserCommandUseCase userCommand)
+        public UserManagementModule(
+            RegisterUserUseCase registerUserUseCase,
+            UserQueryUseCase userQuery,
+            UserCommandUseCase userCommand)
         {
             _registerUserUseCase = registerUserUseCase;
-            _userRepository = userRepository;
             _userQuery = userQuery;
             _userCommand = userCommand;
         }
@@ -38,7 +39,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 return;
             }
 
-            var existingUser = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
+            var existingUser = await _userQuery.GetByDiscordIdAsync(discordUserId);
             if (existingUser != null)
             {
                 await RespondAsync("エラー: この Discord ユーザーは既に登録されています。", ephemeral: true);
@@ -252,7 +253,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             try
             {
                 var discordUserId = Context.User.Id;
-                var caller = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
+                var caller = await _userQuery.GetByDiscordIdAsync(discordUserId);
                 if (caller == null)
                 {
                     await RespondAsync("エラー: Discord ユーザーが登録されていません。", ephemeral: true);
@@ -284,7 +285,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
         private async Task<User?> GetCallerAsync()
         {
-            return await _userRepository.GetByDiscordUserIdAsync(Context.User.Id);
+            return await _userQuery.GetByDiscordIdAsync(Context.User.Id);
         }
 
         private async Task<bool> EnsureAdminAsync(User? caller)

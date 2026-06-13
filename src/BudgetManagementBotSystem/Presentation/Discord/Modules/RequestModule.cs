@@ -15,7 +15,6 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         private readonly InfraStructure.Discord.DiscordBotService _discordBotService;
         private readonly RequestListUseCase _requestListUseCase;
         private readonly RequestDetailUseCase _requestDetailUseCase;
-        private readonly RequestQueryUseCase _requestQueryUseCase;
 
         public RequestModule(SubmitBudgetRequestUseCase submitBudgetRequestUseCase, CancelBudgetRequestUseCase cancelBudgetRequestUseCase, UserCancelBudgetRequestUseCase userCancelRequestUseCase, IUserRepository userRepository, BudgetManagementBotSystem.InfraStructure.Discord.DiscordBotService discordBotService, RequestListUseCase requestListUseCase, RequestDetailUseCase requestDetailUseCase, RequestQueryUseCase requestQueryUseCase)
         {
@@ -26,7 +25,6 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             _discordBotService = discordBotService;
             _requestListUseCase = requestListUseCase;
             _requestDetailUseCase = requestDetailUseCase;
-            _requestQueryUseCase = requestQueryUseCase;
         }
 
         [SlashCommand("create-request", "予算使用申請を作成する")]
