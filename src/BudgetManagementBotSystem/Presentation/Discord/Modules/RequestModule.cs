@@ -184,9 +184,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
-                var currentStatus = req.StatusHistory.Last().ChangedStatus;
+                var currentStatus = req.GetCurrentStatus();
                 var evidences = detail.Evidences;
-                var historyLines = req.StatusHistory.Select(s => $"{s.ChangedStatus} @ {s.ChangedAt:yyyy-MM-dd}");
+                var historyLines = req.GetOrderedStatusHistory().Select(s => $"{s.ChangedStatus} @ {s.ChangedAt:yyyy-MM-dd}");
 
                 var groupLabel = detail.GroupName ?? (detail.GroupId.HasValue ? detail.GroupId.Value.ToString() : "不明");
 
@@ -249,7 +249,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 }
 
                 var isRequestOwner = req.UserId == user.Id;
-                var currentStatus = req.StatusHistory.Last().ChangedStatus;
+                var currentStatus = req.GetCurrentStatus();
                 if (isRequestOwner && currentStatus == BudgetManagementBotSystem.Domain.Enums.RequestStatus.Pending)
                 {
                     await _userCancelRequestUseCase.ExecuteAsync(groupId.Value, reqId, user.Id);

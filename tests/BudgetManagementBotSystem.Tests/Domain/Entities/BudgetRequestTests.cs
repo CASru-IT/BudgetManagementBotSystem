@@ -71,4 +71,16 @@ public class BudgetRequestTests
         Assert.Throws<InvalidOperationException>(
             () => request.UpdateStatus(RequestStatus.Approved));
     }
+
+    [Fact]
+    public void GetCurrentStatus_UsesChangedAtOrder_WhenStatusHistoryListOrderDiffers()
+    {
+        var request = Create();
+        request.StatusHistory.Clear();
+        request.StatusHistory.Add(new RequestStatusChange(RequestStatus.Approved, new DateTime(2030, 1, 2, 0, 0, 0, DateTimeKind.Utc)));
+        request.StatusHistory.Add(new RequestStatusChange(RequestStatus.Pending, new DateTime(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
+
+        Assert.Equal(RequestStatus.Approved, request.GetCurrentStatus());
+        Assert.Throws<InvalidOperationException>(() => request.UpdateStatus(RequestStatus.Approved));
+    }
 }

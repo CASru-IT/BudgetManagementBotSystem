@@ -78,7 +78,7 @@ public class Group
     {
         decimal currentBudget = GetTotalBudgetForFiscalYear(fiscalYear);
         var pendingTotal = _requests
-            .Where(r => r.FiscalYear == fiscalYear && r.StatusHistory.Last().ChangedStatus == RequestStatus.Pending)
+            .Where(r => r.FiscalYear == fiscalYear && r.GetCurrentStatus() == RequestStatus.Pending)
             .Sum(r => r.Amount.Value);
 
         return currentBudget - pendingTotal - amount.Value >= 0;
@@ -86,7 +86,7 @@ public class Group
 
     public IReadOnlyCollection<BudgetRequest> GetRequestsByStatus(RequestStatus status)
     {
-        return _requests.Where(r => r.StatusHistory.Last().ChangedStatus == status).ToList();
+        return _requests.Where(r => r.GetCurrentStatus() == status).ToList();
     }
 
     private bool IsUserMemberOfGroup(User user)

@@ -41,6 +41,25 @@ public class BudgetRequest
         CheckStatusTransition(newStatus);
         StatusHistory.Add(new RequestStatusChange(newStatus, DateTime.UtcNow));
     }
+
+    public RequestStatus GetCurrentStatus()
+    {
+        if (StatusHistory.Count == 0)
+        {
+            throw new InvalidOperationException("Status history is empty.");
+        }
+
+        return GetOrderedStatusHistory().Last().ChangedStatus;
+    }
+
+    public IReadOnlyCollection<RequestStatusChange> GetOrderedStatusHistory()
+    {
+        return StatusHistory
+            .OrderBy(status => status.ChangedAt)
+            .ThenBy(status => status.Id)
+            .ToList();
+    }
+
     public void UpdateStatus(RequestStatus newStatus, User changedBy)
     {
         CheckStatusTransition(newStatus, changedBy);
@@ -54,7 +73,7 @@ public class BudgetRequest
             throw new InvalidOperationException("最初のステータスはPendingでなければなりません。");
         }
 
-        var currentStatus = StatusHistory.Last().ChangedStatus;
+        var currentStatus = GetCurrentStatus();
 
         switch (currentStatus)
         {
@@ -85,7 +104,7 @@ public class BudgetRequest
             throw new ArgumentOutOfRangeException(nameof(newStatus), "最初のステータスはPendingでなければなりません。");
         }
 
-        var currentStatus = StatusHistory.Last().ChangedStatus;
+        var currentStatus = GetCurrentStatus();
         switch (changedBy.Role)
         {
             case AccountRole.Accountant:

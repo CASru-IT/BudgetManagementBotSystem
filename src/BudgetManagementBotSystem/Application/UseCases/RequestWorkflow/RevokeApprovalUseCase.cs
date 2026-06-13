@@ -45,7 +45,7 @@ namespace BudgetManagementBotSystem.Application.UseCases.RequestWorkflow
 
             if (request == null) throw new ArgumentException("Request not found", nameof(requestId));
 
-            var currentStatus = request.StatusHistory.Last().ChangedStatus;
+            var currentStatus = request.GetCurrentStatus();
             if (currentStatus != RequestStatus.Approved)
             {
                 throw new InvalidOperationException($"Request {requestId} is not approved.");

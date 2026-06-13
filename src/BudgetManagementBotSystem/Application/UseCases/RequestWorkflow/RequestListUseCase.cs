@@ -59,7 +59,7 @@ namespace BudgetManagementBotSystem.Application.UseCases.RequestWorkflow
             {
                 if (Enum.TryParse<RequestStatus>(status, true, out var parsed))
                 {
-                    allRequests = allRequests.Where(r => groups.First(g => g.Id == r.GroupId).Requests.First(req => req.Id == r.Id).StatusHistory.Last().ChangedStatus == parsed);
+                    allRequests = allRequests.Where(r => groups.First(g => g.Id == r.GroupId).Requests.First(req => req.Id == r.Id).GetCurrentStatus() == parsed);
                 }
                 else
                 {
