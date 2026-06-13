@@ -31,9 +31,10 @@
 ## 承認フローの運用
 
 - `/pending-list` で未承認申請を確認します。
-- `/approve` と `/reject` で申請を承認・却下します。
+- 現行の Discord コマンドでは `/reject` で申請を却下できます。却下時は理由を入力し、申請者に DM 通知を送ります。
+- `ApproveBudgetRequestUseCase` は実装済みですが、`/approve` スラッシュコマンドは現行の `ApprovalModule` では公開されていません。
 - `/revoke-approval` は、承認済み申請の承認を取り消すために使います。
-- これらのコマンドは、承認対象の申請 ID を基準に処理されるため、一覧や詳細確認と組み合わせて使うのが前提です。
+- これらのコマンドは、対象の申請 ID を基準に処理されるため、一覧や詳細確認と組み合わせて使うのが前提です。
 
 ## 予算参照と増額の運用
 
@@ -46,7 +47,8 @@
 
 - `/register-group` と `/delete-group` で班を追加・無効化します。
 - `/list-groups` は登録済み班の確認に使います。
-- `/register-user` で Discord ユーザーをシステムに登録し、`/set-user-role` で権限を設定します。
+- `/register-user` で Discord ユーザーをシステムに登録し、`/set-user-name` で表示名、`/set-user-role` で権限を設定します。
+- `/remove-user` はユーザーを無効化し、`/activate-user` は無効化済みユーザーを再有効化します。
 - `/assign-group` と `/unassign-group` でユーザーの班所属を更新します。
 - `/list-users`、`/user-info`、`/group-members` は、運用確認や問い合わせ対応で使う参照系コマンドです。
 
@@ -69,16 +71,17 @@
 | `/list-requests` | 申請一覧の取得（ページング） | 管理者/会計/班長/役員: 全班参照、一般ユーザー: 自班のみ |
 | `/cancel-request` | 確認待ち申請の取消 | 申請者（自身の Pending のみ）または管理者 |
 | `/pending-list` | 未承認申請の一覧表示 | 管理者/会計/班長/役員: 全件、一般ユーザー: 自班のみ |
-| `/approve`, `/reject` | 申請の承認／却下 | 会計担当 (`Accountant`) の権限が必要 |
+| `/reject` | 申請の却下。理由入力と申請者 DM 通知あり | 会計担当 (`Accountant`) または管理者 (`Admin`) の権限が必要 |
+| `/approve` | 申請の承認 | UseCase は実装済みだが、現行スラッシュコマンドとしては未公開 |
 | `/revoke-approval` | 承認済み申請の承認取り消し | 会計担当 (`Accountant`) の権限が必要 |
 | `/remaining-budget` | 班の残予算を表示 | システム登録ユーザー。自班未設定で任意班参照は特権（Admin等）必要 |
 | `/usage-history` | 班ごとの予算使用履歴 | システム登録ユーザー（既定で自身の班） |
 | `/all-history` | 全班の予算履歴表示 | 実装上は特別な権限制御なし（運用で制限を推奨） |
 | `/add-budget` | 追加予算の付与 | 管理者 (`Admin`) または 会長/役員相当 (`President`) |
 | `/register-group` | 新しい班の登録 | 実装上は制限なし（運用上は管理者限定を推奨） |
-| `/list-groups` | 登録済み班一覧表示 | 管理者 (`Admin`) のみ |
+| `/list-groups` | 登録済み班一覧表示 | システムに登録されたユーザー |
 | `/delete-group` | 班の削除／無効化 | 管理者 (`Admin`) のみ |
-| `/register-user`, `/set-user-role`, `/remove-user`, `/list-users`, `/assign-group`, `/unassign-group`, `/user-info` | ユーザー登録・権限設定・参照等 | 管理者 (`Admin`) のみ |
+| `/register-user`, `/set-user-name`, `/set-user-role`, `/remove-user`, `/activate-user`, `/list-users`, `/assign-group`, `/unassign-group`, `/user-info` | ユーザー登録・表示名変更・権限設定・有効/無効化・参照等 | 管理者 (`Admin`) のみ |
 | `/group-members` | 指定班のメンバー一覧 | 管理者/会長: 任意班参照可能、一般ユーザー: 自班のみ |
 
 上記はソースコードの現状に基づく要約です。運用ポリシーに合わせて、各 UseCase または `AuthorizationHelper` を変更してください。

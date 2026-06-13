@@ -1,18 +1,19 @@
 # BudgetManagementBotSystem — 実装状況
 
-このドキュメントは現行実装（2026-04 時点）の状況をまとめます。
+このドキュメントは現行実装（2026-06 時点）の状況をまとめます。
 
 設計の前提や各ユースケースの処理フローは [設計資料](design.md) を、コマンドの優先度や実装順序は [コマンド実装計画](command-implementation-plan.md) を参照してください。
 
-## 現在の実装状況（2026-04 時点）
+## 現在の実装状況（2026-06 時点）
 
 ### 実装済み
 
 - Worker 起動時に `Discord:Token` を読み取り、Discord Bot を起動
 - スラッシュコマンドのグローバル登録
-- `/test` コマンド（疎通確認）
-- `StartBudgetRequestWizard` コマンド（現状は案内メッセージ応答のみ）
+- `Program.cs` で既定カルチャを `ja-JP` に固定
+- Docker 実行時の `LANG` / `LC_ALL` を `ja_JP.UTF-8` に固定
 - ドメイン層（`Group` / `User` / `BudgetRequest` / `BudgetTransaction` など）
+- `BudgetRequest.RequestDate`、`RequestStatusChange.ChangedAt`、`BudgetTransaction.TransactionDate` は `DateTime.UtcNow` で保存
 - `SubmitBudgetRequestUseCase`
   - 入力: `userId(int)`, `groupId(int)`, `amount(decimal)`, `description(string)`, `evidenceFilePaths(IEnumerable<string>)`
   - 申請作成
@@ -36,10 +37,18 @@
 - `EfCoreUserRepository`（`IUserRepository` 実装）
 - `LocalFileStorage`（`IFileStorage` 実装）
   - `EvidenceStorage:BasePath`（既定: `data/evidences`）配下へ保存
+- ユーザー管理コマンド
+  - `/register-user` は Discord のユーザー選択から表示名を取得
+  - `/set-user-name` で登録済みユーザーの表示名を変更
+  - `/set-user-role` で登録済みユーザーの権限を変更
+  - `/remove-user` でユーザーを無効化
+  - `/activate-user` で無効化済みユーザーを再有効化
 
 注: Presentation 層の一部コマンドについて、スラッシュコマンド引数の受け取り方を改善しました。管理系コマンド（`/register-user` 等）は文字列での Discord ID 受け取りから、Discord のユーザー選択 (`IUser` 相当の `user` パラメータ) に変更されています。これによりコマンド UI 上で直接ユーザーを選べるようになり、`targetUser.Id` から Discord ID を取得します。
 
 追記: 管理系の権限操作についてはコマンド整理を行い、`/grant-role` と `/revoke-role` を `/set-user-role` に統合しました。`/set-user-role` は管理者のみ実行可能となるよう、Presentation 層で権限チェックを導入しています。
+
+追記: `ApproveBudgetRequestUseCase` と承認通知 UseCase は残っていますが、現行の `ApprovalModule` では `/approve` スラッシュコマンドは公開されていません。承認操作を Discord から行う場合は、`ApprovalModule` への再追加が必要です。
 
 ### テスト実装済み
 
@@ -53,9 +62,7 @@
 
 ### 未実装 / 実装途中
 
-- Discord 側の業務コマンド本実装（`StartBudgetRequestWizard` はプレースホルダー応答のみ）
-- プレゼンテーション層からユースケース呼び出しまでの接続
-- DTOs / Queries の具体実装
+- `/approve` スラッシュコマンドの再公開（UseCase は実装済み）
 - ファイル保存のクラウド実装（現状はローカル保存のみ）
 - 監査観点での申請ステータス変更者の永続化（`RequestStatusChange` への保持）
 
@@ -70,7 +77,6 @@
   - `/request-detail`
   - `/cancel-request`
   - `/pending-list`
-  - `/approve`
   - `/reject`
   - `/revoke-approval`
   - `/remaining-budget`
@@ -81,8 +87,10 @@
 
 - DM でもコード上は利用可能だが、Discord 側の UI 表示やユーザー選択の可否はクライアント仕様に依存する
   - `/register-user`
+  - `/set-user-name`
   - `/set-user-role`
   - `/remove-user`
+  - `/activate-user`
   - `/user-info`
   - `/assign-group`
   - `/unassign-group`

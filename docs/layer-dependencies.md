@@ -45,7 +45,7 @@ Infrastructure は Application のインターフェースを実装し、Domain 
 
 ### Presentation
 
-Presentation は Discord のコマンド入口です。理想的には Application のユースケースだけを呼び出すべきですが、現状の `ApprovalModule` では一部で Domain と Infrastructure に直接アクセスしています。
+Presentation は Discord のコマンド入口です。現状は多くの処理が Application の UseCase / Query UseCase 経由に寄せられていますが、一部のモジュールでは認可判定や一覧表示のために Repository を直接参照しています。
 
 ### Composition Root
 
@@ -53,17 +53,17 @@ Presentation は Discord のコマンド入口です。理想的には Applicati
 
 ## 現状の例外
 
-現時点では、`ApprovalModule` が Presentation 層としてはやや強い結合を持っています。
+現時点では、主に管理系・班系モジュールが Presentation 層としてはやや強い結合を持っています。
 
-- `IUserRepository` を直接利用してユーザーを引いている
-- `BudgetManagementDbContext` を直接利用して申請の検索や状態確認をしている
-- 承認・却下は Application のユースケース経由だが、一覧表示と一部の判定は Presentation 側で完結している
+- `UserManagementModule` が `IUserRepository` を直接利用して呼び出し元ユーザーを確認している
+- `GroupModule` が `IGroupRepository` / `IUserRepository` を直接利用して班一覧や呼び出し元ユーザーを確認している
+- `ApprovalModule` は申請一覧・却下・承認取消を `GetPendingRequestsUseCase`、`RequestQueryUseCase`、`RejectBudgetRequestUseCase`、`RevokeApprovalUseCase` などへ寄せている
 
-このため、現状の実装は「完全に Application 経由」ではなく、Presentation が Domain / Infrastructure に少し踏み込んでいます。
+このため、現状の実装は「完全に Application 経由」ではなく、Presentation が Domain の Repository インターフェースに少し踏み込んでいます。
 
 ## 目指す形
 
-将来的には、Presentation が Application のユースケースだけを呼び出し、Repository や DbContext の直接参照をなくすと、依存関係はより明確になります。`ApprovalModule` の検索処理も Application 側の Query もしくは UseCase に寄せると、層の責務分離が分かりやすくなります。
+将来的には、Presentation が Application のユースケースだけを呼び出し、Repository の直接参照をなくすと、依存関係はより明確になります。特にユーザー管理・班管理の認可判定を Application 側の Command / Query UseCase に寄せると、層の責務分離が分かりやすくなります。
 
 ## 参照箇所
 
