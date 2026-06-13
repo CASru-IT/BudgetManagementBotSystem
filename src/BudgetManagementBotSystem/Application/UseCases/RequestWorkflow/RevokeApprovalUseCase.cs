@@ -32,18 +32,21 @@ namespace BudgetManagementBotSystem.Application.UseCases.RequestWorkflow
             var groups = await _groupRepository.GetAllAsync();
             if (groups == null) throw new ArgumentException("No groups available");
 
+            Group? group = null;
             BudgetRequest? request = null;
             foreach (var g in groups)
             {
                 var r = g.Requests.FirstOrDefault(x => x.Id == requestId);
                 if (r != null)
                 {
+                    group = g;
                     request = r;
                     break;
                 }
             }
 
             if (request == null) throw new ArgumentException("Request not found", nameof(requestId));
+            if (group == null) throw new ArgumentException("Group not found for request", nameof(requestId));
 
             var currentStatus = request.GetCurrentStatus();
             if (currentStatus != RequestStatus.Approved)
@@ -52,6 +55,7 @@ namespace BudgetManagementBotSystem.Application.UseCases.RequestWorkflow
             }
 
             request.UpdateStatus(RequestStatus.ApprovalCancelled, actingUser);
+            group.AddBudgetTransaction(new BudgetTransaction(true, request.Amount.Value, request.FiscalYear));
 
             await _unitOfWork.SaveChangesAsync();
         }

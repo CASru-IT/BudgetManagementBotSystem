@@ -33,7 +33,11 @@ public class ApproveBudgetRequestUseCase
 			throw new UnauthorizedAccessException("This action requires accountant privileges");
 		}
 
+		var request = group.Requests.FirstOrDefault(r => r.Id == requestId);
+		if (request == null) throw new ArgumentNullException(nameof(requestId), "Request not found in group");
+
 		group.UpdateBudgetRequestStatus(requestId, RequestStatus.Approved, changedByUser);
+		group.AddBudgetTransaction(new BudgetTransaction(false, request.Amount.Value, request.FiscalYear));
 
 		await _unitOfWork.SaveChangesAsync();
 	}
