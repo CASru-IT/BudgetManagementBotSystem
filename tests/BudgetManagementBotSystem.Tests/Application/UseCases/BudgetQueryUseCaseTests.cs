@@ -37,10 +37,9 @@ public class BudgetQueryUseCaseTests
 
         var result = await useCase.GetRemainingBudgetAsync(discordUserId, groupId, specifiedFiscalYear);
 
-        Assert.Equal(200_000m, result.TotalBudget);
+        Assert.Equal(200_000m, result.ActualBalance);
         Assert.Equal(25_000m, result.PendingTotal);
-        Assert.Equal(50_000m, result.ApprovedTotal);
-        Assert.Equal(150_000m, result.Available);
+        Assert.Equal(175_000m, result.AvailableAfterPending);
     }
 
     [Fact]
@@ -68,10 +67,9 @@ public class BudgetQueryUseCaseTests
 
         var result = await useCase.GetRemainingBudgetAsync(discordUserId, groupId);
 
-        Assert.Equal(200_000m, result.TotalBudget);
+        Assert.Equal(200_000m, result.ActualBalance);
         Assert.Equal(0m, result.PendingTotal);
-        Assert.Equal(20_000m, result.ApprovedTotal);
-        Assert.Equal(180_000m, result.Available);
+        Assert.Equal(200_000m, result.AvailableAfterPending);
     }
 
     [Fact]

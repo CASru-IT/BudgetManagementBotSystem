@@ -26,7 +26,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 try
                 {
                     var dto = await _budgetQueryUseCase.GetRemainingBudgetAsync(discordUserId, groupId, fiscalYear);
-                    await RespondAsync($"班:{dto.GroupName} 現在予算:{dto.TotalBudget:C} 承認済合計:{dto.ApprovedTotal:C} 未承認合計:{dto.PendingTotal:C} 利用可能:{dto.Available:C} 会計年度:{(fiscalYear?.ToString() ?? dto.FiscalYear.ToString())}");
+                    await RespondAsync($"班:{dto.GroupName} 実残高:{dto.ActualBalance:C} 未承認合計:{dto.PendingTotal:C} 申請考慮後:{dto.AvailableAfterPending:C} 会計年度:{(fiscalYear?.ToString() ?? dto.FiscalYear.ToString())}");
                 }
                 catch (Exception ex)
                 {
@@ -102,7 +102,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
                 var remainingBudget = await _budgetQueryUseCase.GetRemainingBudgetAsync(discordUserId, groupId, fiscalYear);
 
-                await RespondAsync($"班 {groupId} に {decAmount:C} を追加して、合計 {remainingBudget.TotalBudget:C} となりました。", ephemeral: true);
+                await RespondAsync($"班 {groupId} に {decAmount:C} を追加して、実残高 {remainingBudget.ActualBalance:C} となりました。", ephemeral: true);
             }
             catch (ArgumentNullException ex)
             {
