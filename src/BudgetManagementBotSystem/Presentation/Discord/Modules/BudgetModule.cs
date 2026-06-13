@@ -9,12 +9,18 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         private readonly IUserRepository _userRepository;
         private readonly BudgetQueryUseCase _budgetQueryUseCase;
         private readonly IncreaseBudgetLimitUseCase _increaseBudgetLimitUseCase;
+        private readonly AdminAddBudgetTransactionUseCase _adminAddBudgetTransactionUseCase;
 
-        public BudgetModule(IUserRepository userRepository, BudgetQueryUseCase budgetQueryUseCase, IncreaseBudgetLimitUseCase increaseBudgetLimitUseCase)
+        public BudgetModule(
+            IUserRepository userRepository,
+            BudgetQueryUseCase budgetQueryUseCase,
+            IncreaseBudgetLimitUseCase increaseBudgetLimitUseCase,
+            AdminAddBudgetTransactionUseCase adminAddBudgetTransactionUseCase)
         {
             _userRepository = userRepository;
             _budgetQueryUseCase = budgetQueryUseCase;
             _increaseBudgetLimitUseCase = increaseBudgetLimitUseCase;
+            _adminAddBudgetTransactionUseCase = adminAddBudgetTransactionUseCase;
         }
 
         [SlashCommand("remaining-budget", "現在の残予算を確認する")]
@@ -137,6 +143,49 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             catch (Exception ex)
             {
                 await RespondAsync($"全履歴取得中にエラーが発生しました: {ex.Message}", ephemeral: true);
+            }
+        }
+
+        [SlashCommand("admin-add-transaction", "管理者用: 予算取引を直接追加する")]
+        public async Task AdminAddTransaction(
+            [Summary("group-id")] int groupId,
+            [Summary("type")] string transactionType,
+            [Summary("amount")] double amount,
+            [Summary("fiscal-year")] int? fiscalYear = null)
+        {
+            try
+            {
+                var result = await _adminAddBudgetTransactionUseCase.ExecuteAsync(
+                    Context.User.Id,
+                    groupId,
+                    transactionType,
+                    Convert.ToDecimal(amount),
+                    fiscalYear);
+
+                var label = result.IsIncome ? "収入" : "支出";
+                await RespondAsync(
+                    $"予算取引を追加しました。班:{result.GroupName} 種別:{label} 金額:{result.Amount:C} 会計年度:{result.FiscalYear} 実残高:{result.ActualBalance:C}",
+                    ephemeral: true);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                await RespondAsync("エラー: この操作には管理者権限が必要です。", ephemeral: true);
+            }
+            catch (ArgumentOutOfRangeException ex)
+            {
+                await RespondAsync($"エラー: {ex.Message}", ephemeral: true);
+            }
+            catch (ArgumentException ex)
+            {
+                await RespondAsync($"エラー: {ex.Message}", ephemeral: true);
+            }
+            catch (InvalidOperationException ex)
+            {
+                await RespondAsync($"エラー: {ex.Message}", ephemeral: true);
+            }
+            catch (Exception ex)
+            {
+                await RespondAsync($"予算取引追加中にエラーが発生しました: {ex.Message}", ephemeral: true);
             }
         }
     }

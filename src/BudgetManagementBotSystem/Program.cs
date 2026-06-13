@@ -41,6 +41,7 @@ builder.Services.AddScoped<RegisterUserUseCase>();
 builder.Services.AddScoped<BootstrapAdminUseCase>();
 builder.Services.AddScoped<SubmitBudgetRequestUseCase>();
 builder.Services.AddScoped<IncreaseBudgetLimitUseCase>();
+builder.Services.AddScoped<AdminAddBudgetTransactionUseCase>();
 builder.Services.AddScoped<CancelBudgetRequestUseCase>();
 builder.Services.AddScoped<UserCancelBudgetRequestUseCase>();
 builder.Services.AddScoped<ApproveBudgetRequestUseCase>();
