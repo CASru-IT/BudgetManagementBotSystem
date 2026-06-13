@@ -188,13 +188,40 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
                 var groupLabel = detail.GroupName ?? (detail.GroupId.HasValue ? detail.GroupId.Value.ToString() : "不明");
 
-                var body = $"ID:{req.Id} 班:{groupLabel} ユーザー:{req.UserId} 金額:{req.Amount.Value:C} 状態:{currentStatus} 日付:{req.RequestDate:yyyy-MM-dd}\n説明:{req.Description}\n" +
-                           (evidences.Any() ? "証跡:\n" + string.Join("\n", evidences.Select(e => e.FileName)) + "\n" : "") +
-                           "履歴:\n" + string.Join("\n", historyLines);
+                var requesterName = string.IsNullOrWhiteSpace(detail.RequesterName) ? "不明" : detail.RequesterName;
+                var requesterDiscordId = detail.RequesterDiscordUserId?.ToString() ?? "不明";
+                var evidenceText = evidences.Any()
+                    ? string.Join("\n", evidences.Select(e => e.FileName))
+                    : "なし";
+                var historyText = string.Join("\n", historyLines);
+                if (string.IsNullOrWhiteSpace(historyText))
+                {
+                    historyText = "なし";
+                }
+
+                var embedBuilder = new EmbedBuilder()
+                    .WithTitle($"申請詳細 #{req.Id}")
+                    .WithColor(Color.Blue)
+                    .AddField("班", groupLabel, true)
+                    .AddField("金額", req.Amount.Value.ToString("C"), true)
+                    .AddField("状態", currentStatus.ToString(), true)
+                    .AddField("申請日", req.RequestDate.ToString("yyyy-MM-dd"), true)
+                    .AddField("申請者", requesterName, true)
+                    .AddField("申請者DiscordID", requesterDiscordId, true)
+                    .AddField("説明", req.Description)
+                    .AddField("証跡", evidenceText)
+                    .AddField("履歴", historyText);
+
+                if (detail.MissingEvidencePaths.Any())
+                {
+                    embedBuilder.AddField("添付できない証跡", string.Join("\n", detail.MissingEvidencePaths));
+                }
+
+                var embed = embedBuilder.Build();
 
                 if (!evidences.Any())
                 {
-                    await RespondAsync(body);
+                    await RespondAsync(embed: embed);
                     return;
                 }
 
@@ -204,13 +231,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     files.Add(new FileAttachment(new MemoryStream(evidence.Content, writable: false), evidence.FileName));
                 }
 
-                var responseText = body;
-                if (detail.MissingEvidencePaths.Any())
-                {
-                    responseText += "\n添付できない証跡がありました:\n" + string.Join("\n", detail.MissingEvidencePaths);
-                }
-
-                await RespondWithFilesAsync(files, text: responseText);
+                await RespondWithFilesAsync(files, embeds: new[] { embed });
             }
             catch (Exception ex)
             {
