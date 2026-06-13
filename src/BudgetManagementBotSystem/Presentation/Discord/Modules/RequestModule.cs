@@ -75,7 +75,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     await FollowupAsync($"証跡ファイルの保存に成功しました: {savedEvidenceCount}件", ephemeral: true);
                 }
 
-                var notifiedCount = await NotifyAccountantsAsync(requestId, groupId, amountDec, description);
+                var notifiedCount = await NotifyAccountantsAsync(requestId, groupId, amountDec, description, user.Name, user.DiscordUserId);
                 if (notifiedCount > 0)
                 {
                     await FollowupAsync($"会計担当者 {notifiedCount} 名に DM で通知しました。", ephemeral: true);
@@ -103,7 +103,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             }
         }
 
-        private async Task<int> NotifyAccountantsAsync(int requestId, int groupId, decimal amount, string description)
+        private async Task<int> NotifyAccountantsAsync(int requestId, int groupId, decimal amount, string description, string requesterName, ulong requesterDiscordUserId)
         {
             var users = await _userRepository.GetAllAsync();
             if (users == null)
@@ -120,7 +120,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 return 0;
             }
 
-            var message = $"新しい予算使用申請が作成されました。\n申請ID: {requestId}\n班ID: {groupId}\n金額: {amount:C}\n説明: {description}\n確認するには /request-detail request-id:{requestId} を実行してください。";
+            var message = $"新しい予算使用申請が作成されました。\n申請ID: {requestId}\n班ID: {groupId}\n申請者: {requesterName}\n申請者DiscordID: {requesterDiscordUserId}\n金額: {amount:C}\n説明: {description}\n確認するには /request-detail request-id:{requestId} を実行してください。";
 
             var sendTasks = accountantUsers.Select(async accountant =>
             {
