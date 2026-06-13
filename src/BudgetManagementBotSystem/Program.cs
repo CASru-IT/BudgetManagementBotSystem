@@ -37,6 +37,7 @@ builder.Services.AddScoped<IGroupRepository, EfCoreGroupRepository>();
 builder.Services.AddScoped<IUserRepository, EfCoreUserRepository>();
 builder.Services.AddScoped<RegisterGroupUseCase>();
 builder.Services.AddScoped<DeleteGroupUseCase>();
+builder.Services.AddScoped<ListGroupsUseCase>();
 builder.Services.AddScoped<RegisterUserUseCase>();
 builder.Services.AddScoped<BootstrapAdminUseCase>();
 builder.Services.AddScoped<SubmitBudgetRequestUseCase>();
