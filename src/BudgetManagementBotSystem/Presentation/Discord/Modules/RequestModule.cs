@@ -3,6 +3,7 @@ using Discord.Interactions;
 using BudgetManagementBotSystem.Application.DTOs;
 using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 using BudgetManagementBotSystem.Domain.Repository;
+using BudgetManagementBotSystem.Presentation.Discord.Helpers;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {
@@ -56,8 +57,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
-                await FollowupAsync($"証跡ファイルをこのチャンネルに {attachCount} 件添付してください。30秒以内にアップロードしてください。", ephemeral: true);
-                var uploaded = await _discordBotService.WaitForAttachmentUploadAsync(Context.User.Id, TimeSpan.FromSeconds(30), attachCount, Context.Channel);
+                await FollowupAsync($"証跡ファイルをこのチャンネルに {attachCount} 件添付してください。90秒以内にアップロードしてください。", ephemeral: true);
+                var uploaded = await _discordBotService.WaitForAttachmentUploadAsync(Context.User.Id, TimeSpan.FromSeconds(90), attachCount, Context.Channel);
                 if (uploaded == null || !uploaded.Any() || uploaded.Count < attachCount)
                 {
                     await FollowupAsync("証跡ファイルの受け取りに失敗しました。申請を中止します。", ephemeral: true);
@@ -120,11 +121,17 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 return 0;
             }
 
-            var message = $"新しい予算使用申請が作成されました。\n申請ID: {requestId}\n班ID: {groupId}\n申請者: {requesterName}\n申請者DiscordID: {requesterDiscordUserId}\n金額: {amount:C}\n説明: {description}\n確認するには /request-detail request-id:{requestId} を実行してください。";
+            var embed = DiscordEmbedFactory.BuildNewRequestAccountantDmEmbed(
+                requestId,
+                groupId,
+                amount,
+                description,
+                requesterName,
+                requesterDiscordUserId);
 
             var sendTasks = accountantUsers.Select(async accountant =>
             {
-                return await _discordBotService.SendDirectMessageAsync(accountant.DiscordUserId, message);
+                return await _discordBotService.SendDirectMessageAsync(accountant.DiscordUserId, embed);
             });
 
             var results = await Task.WhenAll(sendTasks);
