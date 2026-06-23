@@ -8,18 +8,20 @@ namespace BudgetManagementBotSystem.Application.UseCases.RequestWorkflow
     public class RequestDetailUseCase
     {
         private readonly IGroupRepository _groupRepository;
+        private readonly IUserRepository _userRepository;
         private readonly IFileStorage _fileStorage;
 
-        public RequestDetailUseCase(IGroupRepository groupRepository, IFileStorage fileStorage)
+        public RequestDetailUseCase(IGroupRepository groupRepository, IUserRepository userRepository, IFileStorage fileStorage)
         {
             _groupRepository = groupRepository;
+            _userRepository = userRepository;
             _fileStorage = fileStorage;
         }
 
         public async Task<RequestDetailDto> GetByIdAsync(int requestId)
         {
             var groups = await _groupRepository.GetAllAsync();
-            if (groups == null) return new RequestDetailDto(null, null, null, Array.Empty<UploadedEvidenceDto>(), Array.Empty<string>());
+            if (groups == null) return new RequestDetailDto(null, null, null, null, null, Array.Empty<UploadedEvidenceDto>(), Array.Empty<string>());
 
             foreach (var g in groups)
             {
@@ -44,11 +46,20 @@ namespace BudgetManagementBotSystem.Application.UseCases.RequestWorkflow
                         }
                     }
 
-                    return new RequestDetailDto(r, g.Id, g.Name, evidences, missingEvidencePaths);
+                    var requester = await _userRepository.GetByIdAsync(r.UserId);
+
+                    return new RequestDetailDto(
+                        r,
+                        g.Id,
+                        g.Name,
+                        requester?.Name,
+                        requester?.DiscordUserId,
+                        evidences,
+                        missingEvidencePaths);
                 }
             }
 
-            return new RequestDetailDto(null, null, null, Array.Empty<UploadedEvidenceDto>(), Array.Empty<string>());
+            return new RequestDetailDto(null, null, null, null, null, Array.Empty<UploadedEvidenceDto>(), Array.Empty<string>());
         }
     }
 }

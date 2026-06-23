@@ -1,6 +1,6 @@
 # BudgetManagementBotSystem — 設計資料
 
-このドキュメントは現行実装（2026-04 時点）の設計をまとめます。
+このドキュメントは現行実装（2026-06 時点）の設計をまとめます。
 
 実装の到達点は [実装状況](implementation.md) に、Discord コマンドの優先度は [コマンド実装計画](command-implementation-plan.md) に分けて整理しています。
 
@@ -12,6 +12,7 @@
   - `Infrastructure`: Discord 連携、EF Core `DbContext`、ローカルファイル保存
   - `Presentation`: Discord コマンドモジュール
 - 起動時に `Program` で `DbContext`・`Repository`・`UnitOfWork`・`IFileStorage(LocalFileStorage)`・`DiscordBotService`・`Worker` を DI 登録
+- `Program` で既定カルチャを `ja-JP` に固定し、Docker 実行時は `LANG` / `LC_ALL` を `ja_JP.UTF-8` に固定
 - `Worker` が `Discord:Token` を読み、Bot を開始
   - `DiscordBotService` はアセンブリ内の `InteractionModule` を自動登録し、グローバルスラッシュコマンドを登録
 
@@ -206,6 +207,9 @@ class User {
   +bool IsActive
   +Deactivate()
   +Activate()
+  +ChangeName(name) void
+  +ChangeRole(role) void
+  +ChangeGroupId(groupId) void
 }
 
 class Money {
@@ -229,6 +233,7 @@ class RequestStatus {
   Approved
   Rejected
   ApprovalCancelled
+  Cancelled
 }
 
 class AccountRole {
@@ -256,10 +261,12 @@ Group ..> User : CreateBudgetRequest(user)
 ## ドメインルール
 
 - `BudgetRequest` の初期ステータスは `Pending`
+- `BudgetRequest.RequestDate`、`RequestStatusChange.ChangedAt`、`BudgetTransaction.TransactionDate` は UTC で保存する
 - ステータス遷移制約
   - `Pending -> Approved | Rejected`
+  - 申請者自身による取消系では `Pending -> Cancelled` も扱う
   - `Approved -> ApprovalCancelled`
-  - `Rejected` / `ApprovalCancelled` からの遷移は禁止
+  - `Rejected` / `ApprovalCancelled` / `Cancelled` からの遷移は禁止
 - `Group.AddBudgetTransaction`
   - 対象会計年度の予算が負になる取引追加を禁止
 - `Money`
@@ -269,7 +276,7 @@ Group ..> User : CreateBudgetRequest(user)
 ## 既知の不整合・未実装
 
 - `EfCoreGroupRepository` / `EfCoreUserRepository` は実装済み
-- Discord コマンドは `/test` と `StartBudgetRequestWizard` があるが、業務ユースケースとの接続は未実装
-- `Application/DTOs` / `Application/Queries` は具体実装が未作成
+- Discord の業務コマンドは主要な UseCase / Query UseCase に接続済み
+- `ApproveBudgetRequestUseCase` は実装済みだが、現行の `ApprovalModule` では `/approve` スラッシュコマンドが公開されていない
 - `IFileStorage` は `LocalFileStorage` 実装済み（ローカル保存のみ）
 - `RequestStatusChange` は変更者情報を保持しておらず、監査要件がある場合は拡張が必要

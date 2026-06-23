@@ -31,7 +31,7 @@ public class UserCancelBudgetRequestUseCase
 
         if (request.UserId != userId) throw new UnauthorizedAccessException("ユーザーはこの申請の作成者ではありません。");
 
-        var current = request.StatusHistory.Last().ChangedStatus;
+        var current = request.GetCurrentStatus();
         if (current != RequestStatus.Pending) throw new InvalidOperationException("この申請は取消できる状態ではありません。");
 
         group.UpdateBudgetRequestStatus(requestId, RequestStatus.Cancelled);

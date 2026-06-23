@@ -54,6 +54,33 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Helpers
             return embed;
         }
 
+        public static Embed BuildNewRequestAccountantDmEmbed(
+            int requestId,
+            int groupId,
+            decimal amount,
+            string description,
+            string requesterName,
+            ulong requesterDiscordUserId)
+        {
+            var displayDescription = description.Length > 900
+                ? description.Substring(0, 900) + "..."
+                : description;
+
+            return new EmbedBuilder()
+                .WithTitle("新しい予算使用申請が作成されました")
+                .WithColor(Color.Gold)
+                .WithDescription("内容を確認し、必要に応じて承認または却下してください。")
+                .AddField("申請ID", requestId, true)
+                .AddField("班ID", groupId, true)
+                .AddField("金額", amount.ToString("C"), true)
+                .AddField("申請者", requesterName, true)
+                .AddField("申請者 Discord ID", requesterDiscordUserId.ToString(), true)
+                .AddField("説明", displayDescription)
+                .WithFooter($"/request-detail request-id:{requestId} で詳細を確認できます")
+                .WithCurrentTimestamp()
+                .Build();
+        }
+
         public static Embed BuildApprovedRequestDmEmbed(ApprovedRequestNotificationDto notification)
         {
             var description = notification.Description.Length > 80

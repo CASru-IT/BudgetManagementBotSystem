@@ -1,27 +1,24 @@
+using Discord;
 using Discord.Interactions;
+using BudgetManagementBotSystem.Application.DTOs;
 using BudgetManagementBotSystem.Application.UseCases.Groups;
-using BudgetManagementBotSystem.Domain.Enums;
-using BudgetManagementBotSystem.Domain.Repository;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {
     public class GroupModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly RegisterGroupUseCase _registerGroupUseCase;
-        private readonly IGroupRepository _groupRepository;
-        private readonly IUserRepository _userRepository;
         private readonly DeleteGroupUseCase _deleteGroupUseCase;
+        private readonly ListGroupsUseCase _listGroupsUseCase;
 
         public GroupModule(
             RegisterGroupUseCase registerGroupUseCase,
-            IGroupRepository groupRepository,
-            IUserRepository userRepository,
-            DeleteGroupUseCase deleteGroupUseCase)
+            DeleteGroupUseCase deleteGroupUseCase,
+            ListGroupsUseCase listGroupsUseCase)
         {
             _registerGroupUseCase = registerGroupUseCase;
-            _groupRepository = groupRepository;
-            _userRepository = userRepository;
             _deleteGroupUseCase = deleteGroupUseCase;
+            _listGroupsUseCase = listGroupsUseCase;
         }
 
         [SlashCommand("register-group", "新しい班を登録する")]
@@ -34,26 +31,15 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         [SlashCommand("list-groups", "登録済みの班一覧を表示する")]
         public async Task ListGroups()
         {
-            var discordUserId = Context.User.Id;
-            var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
-            if (user == null)
+            try
             {
-                await RespondAsync("エラー: Discord ユーザーが登録されていません。", ephemeral: true);
-                return;
+                var groups = await _listGroupsUseCase.ExecuteAsync(Context.User.Id);
+                await RespondAsync(embed: BuildGroupListEmbed(groups), ephemeral: true);
             }
-
-            var groups = await _groupRepository.GetAllAsync();
-            if (groups == null || groups.Count == 0)
+            catch (ArgumentException ex)
             {
-                await RespondAsync("登録済みの班はありません。", ephemeral: true);
-                return;
+                await RespondAsync(embed: BuildListGroupsErrorEmbed(ex.Message), ephemeral: true);
             }
-
-            var lines = groups
-                .OrderBy(group => group.Id)
-                .Select(group => $"班名: {group.Name} / 班ID: {group.Id}");
-
-            await RespondAsync($"班一覧\n{string.Join("\n", lines)}", ephemeral: true);
         }
 
         [SlashCommand("delete-group", "班を削除または無効化する")]
@@ -80,6 +66,42 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             {
                 await RespondAsync($"班削除中にエラーが発生しました: {ex.Message}", ephemeral: true);
             }
+        }
+
+        private static Embed BuildGroupListEmbed(IEnumerable<GroupListItemDto> groups)
+        {
+            var orderedGroups = groups.ToList();
+
+            var embed = new EmbedBuilder()
+                .WithTitle("班一覧")
+                .WithColor(Color.Blue)
+                .AddField("登録班数", orderedGroups.Count.ToString(), true);
+
+            if (orderedGroups.Count == 0)
+            {
+                return embed
+                    .WithDescription("登録済みの班はありません。")
+                    .Build();
+            }
+
+            foreach (var group in orderedGroups)
+            {
+                embed.AddField(
+                    group.Name,
+                    $"班ID: `{group.Id}`",
+                    true);
+            }
+
+            return embed.Build();
+        }
+
+        private static Embed BuildListGroupsErrorEmbed(string message)
+        {
+            return new EmbedBuilder()
+                .WithTitle("班一覧を表示できません")
+                .WithColor(Color.Red)
+                .WithDescription(message)
+                .Build();
         }
     }
 }

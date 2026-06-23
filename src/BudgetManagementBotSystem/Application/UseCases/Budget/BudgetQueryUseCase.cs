@@ -37,19 +37,17 @@ namespace BudgetManagementBotSystem.Application.UseCases.Budget
                 ? new BudgetManagementBotSystem.Domain.ValueObjects.FiscalYear(fiscalYear.Value, startMonth)
                 : new BudgetManagementBotSystem.Domain.ValueObjects.FiscalYear(startMonth);
 
-            decimal totalBudget = group.GetTotalBudgetForFiscalYear(resolvedFiscalYear);
-            var pendingTotal = group.Requests.Where(r => r.StatusHistory.Last().ChangedStatus == BudgetManagementBotSystem.Domain.Enums.RequestStatus.Pending && r.FiscalYear == resolvedFiscalYear).Sum(r => r.Amount.Value);
-            var approvedTotal = group.Requests.Where(r => r.StatusHistory.Last().ChangedStatus == BudgetManagementBotSystem.Domain.Enums.RequestStatus.Approved && r.FiscalYear == resolvedFiscalYear).Sum(r => r.Amount.Value);
-            var available = totalBudget - approvedTotal;
+            decimal actualBalance = group.GetTotalBudgetForFiscalYear(resolvedFiscalYear);
+            var pendingTotal = group.Requests.Where(r => r.GetCurrentStatus() == BudgetManagementBotSystem.Domain.Enums.RequestStatus.Pending && r.FiscalYear == resolvedFiscalYear).Sum(r => r.Amount.Value);
+            var availableAfterPending = actualBalance - pendingTotal;
 
             return new RemainingBudgetDto
             {
                 GroupId = group.Id,
                 GroupName = group.Name,
-                TotalBudget = totalBudget,
+                ActualBalance = actualBalance,
                 PendingTotal = pendingTotal,
-                ApprovedTotal = approvedTotal,
-                Available = available
+                AvailableAfterPending = availableAfterPending
                 ,
                 FiscalYear = resolvedFiscalYear.Year
             };

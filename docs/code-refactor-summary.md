@@ -49,3 +49,11 @@
 - 2026-05-26: `UserManagementModule` のスラッシュ引数を文字列の Discord ID から `IUser` (user) へ変更。
   - コマンド引数名: `discord-user-id` -> `user`
   - 理由: Discord のスラッシュコマンド UI でユーザー選択を行い、`targetUser.Id` を利用するため。
+- 2026-06-09: 日時保存を `DateTime.UtcNow` に統一。
+  - 対象: `BudgetRequest.RequestDate`、`RequestStatusChange.ChangedAt`、`BudgetTransaction.TransactionDate`
+- 2026-06-09: 日本語表示を安定させるため、`Program.cs` の既定カルチャを `ja-JP` に固定し、Docker 環境変数に `LANG=ja_JP.UTF-8` / `LC_ALL=ja_JP.UTF-8` を追加。
+- 2026-06-09: ユーザー管理を拡張。
+  - `/register-user` はニックネーム、グローバル名、ユーザー名の順で表示名を取得。
+  - `/set-user-name` と `/activate-user` を追加。
+  - `/remove-user` は削除ではなく無効化として明示。
+- 2026-06-09: `ApprovalModule` から `/approve` スラッシュコマンドを削除。承認 UseCase と通知 UseCase は残っているため、Discord から承認する場合はコマンド再公開が必要。

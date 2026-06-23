@@ -30,6 +30,11 @@ public class User
         IsActive = true;
     }
 
+    public void ChangeName(string name)
+    {
+        Name = name;
+    }
+
     public void ChangeRole(AccountRole role)
     {
         Role = role;

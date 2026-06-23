@@ -182,7 +182,7 @@ public class DiscordBotService
     {
         try
         {
-            var user = _client.GetUser(userId);
+            var (user, _) = await GetUserForDirectMessageAsync(userId);
             if (user == null)
             {
                 return false;
@@ -202,7 +202,7 @@ public class DiscordBotService
     {
         try
         {
-            var user = _client.GetUser(userId);
+            var (user, _) = await GetUserForDirectMessageAsync(userId);
             if (user == null)
             {
                 return false;
@@ -216,5 +216,140 @@ public class DiscordBotService
         {
             return false;
         }
+    }
+
+    public async Task<DirectMessageSendResult> TestDirectMessageAsync(ulong userId, Embed embed)
+    {
+        if (_client == null)
+        {
+            return DirectMessageSendResult.Failure(
+                "Bot クライアントが初期化されていません。",
+                "DiscordBotService.StartAsync が完了していない可能性があります。");
+        }
+
+        var (user, userLookupException) = await GetUserForDirectMessageAsync(userId);
+        if (user == null)
+        {
+            if (userLookupException is global::Discord.Net.HttpException httpException)
+            {
+                return DirectMessageSendResult.Failure(
+                    BuildDiscordUserLookupFailureMessage(httpException),
+                    "Discord API からユーザー取得失敗が返されました。",
+                    httpException.GetType().FullName,
+                    httpException.HttpCode.ToString(),
+                    httpException.DiscordCode?.ToString(),
+                    httpException.Reason);
+            }
+
+            if (userLookupException != null)
+            {
+                return DirectMessageSendResult.Failure(
+                    "Discord ユーザーを取得できませんでした。",
+                    userLookupException.Message,
+                    userLookupException.GetType().FullName);
+            }
+
+            return DirectMessageSendResult.Failure(
+                "Discord ユーザーを取得できませんでした。",
+                "Bot のユーザーキャッシュと Discord API のどちらからも対象ユーザーを取得できませんでした。DiscordUserId が正しいか確認してください。");
+        }
+
+        try
+        {
+            var dmChannel = await user.CreateDMChannelAsync();
+            await dmChannel.SendMessageAsync(embed: embed);
+            return DirectMessageSendResult.Success();
+        }
+        catch (global::Discord.Net.HttpException ex)
+        {
+            return DirectMessageSendResult.Failure(
+                BuildDiscordHttpFailureMessage(ex),
+                "Discord API から DM 送信失敗が返されました。",
+                ex.GetType().FullName,
+                ex.HttpCode.ToString(),
+                ex.DiscordCode?.ToString(),
+                ex.Reason);
+        }
+        catch (Exception ex)
+        {
+            return DirectMessageSendResult.Failure(
+                "DM チャンネル作成またはメッセージ送信中に例外が発生しました。",
+                ex.Message,
+                ex.GetType().FullName);
+        }
+    }
+
+    private async Task<(IUser? User, Exception? Exception)> GetUserForDirectMessageAsync(ulong userId)
+    {
+        var cachedUser = _client.GetUser(userId);
+        if (cachedUser != null)
+        {
+            return (cachedUser, null);
+        }
+
+        try
+        {
+            return (await _client.Rest.GetUserAsync(userId), null);
+        }
+        catch (Exception ex)
+        {
+            return (null, ex);
+        }
+    }
+
+    private static string BuildDiscordUserLookupFailureMessage(global::Discord.Net.HttpException ex)
+    {
+        if ((int?)ex.DiscordCode == 10013)
+        {
+            return "DiscordUserId に該当する Discord ユーザーが見つかりませんでした。";
+        }
+
+        if ((int)ex.HttpCode == 404)
+        {
+            return "Discord API がユーザー未検出を返しました。DiscordUserId が正しいか確認してください。";
+        }
+
+        return "Discord API へのユーザー取得リクエストが失敗しました。";
+    }
+
+    private static string BuildDiscordHttpFailureMessage(global::Discord.Net.HttpException ex)
+    {
+        if ((int?)ex.DiscordCode == 50007)
+        {
+            return "対象ユーザーが DM を受け取れません。プライバシー設定、Bot のブロック、共通サーバー設定の影響が考えられます。";
+        }
+
+        if ((int)ex.HttpCode == 403)
+        {
+            return "Discord API が 403 Forbidden を返しました。対象ユーザーまたはサーバー側の権限・プライバシー設定が原因の可能性があります。";
+        }
+
+        return "Discord API への DM 送信リクエストが失敗しました。";
+    }
+}
+
+public sealed record DirectMessageSendResult(
+    bool IsSuccess,
+    string Summary,
+    string Detail,
+    string? ExceptionType = null,
+    string? HttpCode = null,
+    string? DiscordCode = null,
+    string? DiscordReason = null)
+{
+    public static DirectMessageSendResult Success()
+    {
+        return new DirectMessageSendResult(true, "DM を送信できました。", "対象ユーザーへのテスト DM 送信に成功しました。");
+    }
+
+    public static DirectMessageSendResult Failure(
+        string summary,
+        string detail,
+        string? exceptionType = null,
+        string? httpCode = null,
+        string? discordCode = null,
+        string? discordReason = null)
+    {
+        return new DirectMessageSendResult(false, summary, detail, exceptionType, httpCode, discordCode, discordReason);
     }
 }

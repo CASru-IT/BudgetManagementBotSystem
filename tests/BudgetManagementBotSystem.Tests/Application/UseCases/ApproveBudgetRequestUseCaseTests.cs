@@ -21,6 +21,7 @@ public class ApproveBudgetRequestUseCaseTests
         var requester = new User("Requester", 22222UL, AccountRole.Accountant);
         requester.ChangeGroupId(0);
         var group = new Group("Test Group");
+        group.AddBudgetTransaction(new BudgetTransaction(true, 100_000m, new FiscalYear(4)));
 
         _ = group.CreateBudgetRequest(requester, new Money(50_000m), new FiscalYear(4), "備品購入", Array.Empty<string>());
         var request = group.Requests.Single();
@@ -41,6 +42,9 @@ public class ApproveBudgetRequestUseCaseTests
         await useCase.ExecuteAsync(groupId, requestId, changedByUserId);
 
         Assert.Equal(RequestStatus.Approved, request.StatusHistory.Last().ChangedStatus);
+        var expense = group.BudgetTransactions.Single(t => !t.IsIncome);
+        Assert.Equal(50_000m, expense.Amount.Value);
+        Assert.Equal(50_000m, group.GetTotalBudgetForFiscalYear(request.FiscalYear));
         mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
     }
 
@@ -145,6 +149,7 @@ public class ApproveBudgetRequestUseCaseTests
         requester1.ChangeGroupId(0);
         requester2.ChangeGroupId(0);
         var group = new Group("Test Group");
+        group.AddBudgetTransaction(new BudgetTransaction(true, 100_000m, new FiscalYear(4)));
 
         _ = group.CreateBudgetRequest(requester1, new Money(30_000m), new FiscalYear(4), "PC購入", Array.Empty<string>());
         _ = group.CreateBudgetRequest(requester2, new Money(50_000m), new FiscalYear(4), "モニター購入", Array.Empty<string>());
@@ -170,6 +175,8 @@ public class ApproveBudgetRequestUseCaseTests
 
         Assert.Equal(RequestStatus.Approved, request2.StatusHistory.Last().ChangedStatus);
         Assert.Equal(RequestStatus.Pending, request1.StatusHistory.Last().ChangedStatus);
+        var expense = group.BudgetTransactions.Single(t => !t.IsIncome);
+        Assert.Equal(50_000m, expense.Amount.Value);
         mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
     }
 

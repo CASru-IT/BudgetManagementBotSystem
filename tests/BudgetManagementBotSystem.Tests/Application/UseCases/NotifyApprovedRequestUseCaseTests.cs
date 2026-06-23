@@ -32,11 +32,10 @@ public class NotifyApprovedRequestUseCaseTests
         mockGroupRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Group> { group });
 
         var mockFileStorage = new Mock<IFileStorage>();
-        var requestDetailUseCase = new RequestDetailUseCase(mockGroupRepository.Object, mockFileStorage.Object);
-
         var mockUserRepository = new Mock<IUserRepository>();
         mockUserRepository.Setup(r => r.GetByIdAsync(approverUserId)).ReturnsAsync(approver);
         mockUserRepository.Setup(r => r.GetByIdAsync(requester.Id)).ReturnsAsync(requester);
+        var requestDetailUseCase = new RequestDetailUseCase(mockGroupRepository.Object, mockUserRepository.Object, mockFileStorage.Object);
 
         var useCase = new NotifyApprovedRequestUseCase(
             requestDetailUseCase,
@@ -76,11 +75,10 @@ public class NotifyApprovedRequestUseCaseTests
         mockGroupRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Group> { group });
 
         var mockFileStorage = new Mock<IFileStorage>();
-        var requestDetailUseCase = new RequestDetailUseCase(mockGroupRepository.Object, mockFileStorage.Object);
-
         var mockUserRepository = new Mock<IUserRepository>();
         mockUserRepository.Setup(r => r.GetByIdAsync(approverUserId)).ReturnsAsync(approver);
         mockUserRepository.Setup(r => r.GetByIdAsync(requester.Id)).ReturnsAsync((User?)null);
+        var requestDetailUseCase = new RequestDetailUseCase(mockGroupRepository.Object, mockUserRepository.Object, mockFileStorage.Object);
 
         var useCase = new NotifyApprovedRequestUseCase(
             requestDetailUseCase,

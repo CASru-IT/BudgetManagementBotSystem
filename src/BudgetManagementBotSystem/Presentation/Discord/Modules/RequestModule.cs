@@ -3,6 +3,7 @@ using Discord.Interactions;
 using BudgetManagementBotSystem.Application.DTOs;
 using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 using BudgetManagementBotSystem.Domain.Repository;
+using BudgetManagementBotSystem.Presentation.Discord.Helpers;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {
@@ -15,7 +16,6 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         private readonly InfraStructure.Discord.DiscordBotService _discordBotService;
         private readonly RequestListUseCase _requestListUseCase;
         private readonly RequestDetailUseCase _requestDetailUseCase;
-        private readonly RequestQueryUseCase _requestQueryUseCase;
 
         public RequestModule(SubmitBudgetRequestUseCase submitBudgetRequestUseCase, CancelBudgetRequestUseCase cancelBudgetRequestUseCase, UserCancelBudgetRequestUseCase userCancelRequestUseCase, IUserRepository userRepository, BudgetManagementBotSystem.InfraStructure.Discord.DiscordBotService discordBotService, RequestListUseCase requestListUseCase, RequestDetailUseCase requestDetailUseCase, RequestQueryUseCase requestQueryUseCase)
         {
@@ -26,7 +26,6 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             _discordBotService = discordBotService;
             _requestListUseCase = requestListUseCase;
             _requestDetailUseCase = requestDetailUseCase;
-            _requestQueryUseCase = requestQueryUseCase;
         }
 
         [SlashCommand("create-request", "予算使用申請を作成する")]
@@ -58,8 +57,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
-                await FollowupAsync($"証跡ファイルをこのチャンネルに {attachCount} 件添付してください。30秒以内にアップロードしてください。", ephemeral: true);
-                var uploaded = await _discordBotService.WaitForAttachmentUploadAsync(Context.User.Id, TimeSpan.FromSeconds(30), attachCount, Context.Channel);
+                await FollowupAsync($"証跡ファイルをこのチャンネルに {attachCount} 件添付してください。90秒以内にアップロードしてください。", ephemeral: true);
+                var uploaded = await _discordBotService.WaitForAttachmentUploadAsync(Context.User.Id, TimeSpan.FromSeconds(90), attachCount, Context.Channel);
                 if (uploaded == null || !uploaded.Any() || uploaded.Count < attachCount)
                 {
                     await FollowupAsync("証跡ファイルの受け取りに失敗しました。申請を中止します。", ephemeral: true);
@@ -77,7 +76,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     await FollowupAsync($"証跡ファイルの保存に成功しました: {savedEvidenceCount}件", ephemeral: true);
                 }
 
-                var notifiedCount = await NotifyAccountantsAsync(requestId, groupId, amountDec, description);
+                var notifiedCount = await NotifyAccountantsAsync(requestId, groupId, amountDec, description, user.Name, user.DiscordUserId);
                 if (notifiedCount > 0)
                 {
                     await FollowupAsync($"会計担当者 {notifiedCount} 名に DM で通知しました。", ephemeral: true);
@@ -105,7 +104,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             }
         }
 
-        private async Task<int> NotifyAccountantsAsync(int requestId, int groupId, decimal amount, string description)
+        private async Task<int> NotifyAccountantsAsync(int requestId, int groupId, decimal amount, string description, string requesterName, ulong requesterDiscordUserId)
         {
             var users = await _userRepository.GetAllAsync();
             if (users == null)
@@ -122,11 +121,17 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 return 0;
             }
 
-            var message = $"新しい予算使用申請が作成されました。\n申請ID: {requestId}\n班ID: {groupId}\n金額: {amount:C}\n説明: {description}\n確認するには /request-detail request-id:{requestId} を実行してください。";
+            var embed = DiscordEmbedFactory.BuildNewRequestAccountantDmEmbed(
+                requestId,
+                groupId,
+                amount,
+                description,
+                requesterName,
+                requesterDiscordUserId);
 
             var sendTasks = accountantUsers.Select(async accountant =>
             {
-                return await _discordBotService.SendDirectMessageAsync(accountant.DiscordUserId, message);
+                return await _discordBotService.SendDirectMessageAsync(accountant.DiscordUserId, embed);
             });
 
             var results = await Task.WhenAll(sendTasks);
@@ -184,19 +189,46 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
-                var currentStatus = req.StatusHistory.Last().ChangedStatus;
+                var currentStatus = req.GetCurrentStatus();
                 var evidences = detail.Evidences;
-                var historyLines = req.StatusHistory.Select(s => $"{s.ChangedStatus} @ {s.ChangedAt:yyyy-MM-dd}");
+                var historyLines = req.GetOrderedStatusHistory().Select(s => $"{s.ChangedStatus} @ {s.ChangedAt:yyyy-MM-dd}");
 
                 var groupLabel = detail.GroupName ?? (detail.GroupId.HasValue ? detail.GroupId.Value.ToString() : "不明");
 
-                var body = $"ID:{req.Id} 班:{groupLabel} ユーザー:{req.UserId} 金額:{req.Amount.Value:C} 状態:{currentStatus} 日付:{req.RequestDate:yyyy-MM-dd}\n説明:{req.Description}\n" +
-                           (evidences.Any() ? "証跡:\n" + string.Join("\n", evidences.Select(e => e.FileName)) + "\n" : "") +
-                           "履歴:\n" + string.Join("\n", historyLines);
+                var requesterName = string.IsNullOrWhiteSpace(detail.RequesterName) ? "不明" : detail.RequesterName;
+                var requesterDiscordId = detail.RequesterDiscordUserId?.ToString() ?? "不明";
+                var evidenceText = evidences.Any()
+                    ? string.Join("\n", evidences.Select(e => e.FileName))
+                    : "なし";
+                var historyText = string.Join("\n", historyLines);
+                if (string.IsNullOrWhiteSpace(historyText))
+                {
+                    historyText = "なし";
+                }
+
+                var embedBuilder = new EmbedBuilder()
+                    .WithTitle($"申請詳細 #{req.Id}")
+                    .WithColor(Color.Blue)
+                    .AddField("班", groupLabel, true)
+                    .AddField("金額", req.Amount.Value.ToString("C"), true)
+                    .AddField("状態", currentStatus.ToString(), true)
+                    .AddField("申請日", req.RequestDate.ToString("yyyy-MM-dd"), true)
+                    .AddField("申請者", requesterName, true)
+                    .AddField("申請者DiscordID", requesterDiscordId, true)
+                    .AddField("説明", req.Description)
+                    .AddField("証跡", evidenceText)
+                    .AddField("履歴", historyText);
+
+                if (detail.MissingEvidencePaths.Any())
+                {
+                    embedBuilder.AddField("添付できない証跡", string.Join("\n", detail.MissingEvidencePaths));
+                }
+
+                var embed = embedBuilder.Build();
 
                 if (!evidences.Any())
                 {
-                    await RespondAsync(body);
+                    await RespondAsync(embed: embed);
                     return;
                 }
 
@@ -206,13 +238,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     files.Add(new FileAttachment(new MemoryStream(evidence.Content, writable: false), evidence.FileName));
                 }
 
-                var responseText = body;
-                if (detail.MissingEvidencePaths.Any())
-                {
-                    responseText += "\n添付できない証跡がありました:\n" + string.Join("\n", detail.MissingEvidencePaths);
-                }
-
-                await RespondWithFilesAsync(files, text: responseText);
+                await RespondWithFilesAsync(files, embeds: new[] { embed });
             }
             catch (Exception ex)
             {
@@ -249,7 +275,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 }
 
                 var isRequestOwner = req.UserId == user.Id;
-                var currentStatus = req.StatusHistory.Last().ChangedStatus;
+                var currentStatus = req.GetCurrentStatus();
                 if (isRequestOwner && currentStatus == BudgetManagementBotSystem.Domain.Enums.RequestStatus.Pending)
                 {
                     await _userCancelRequestUseCase.ExecuteAsync(groupId.Value, reqId, user.Id);

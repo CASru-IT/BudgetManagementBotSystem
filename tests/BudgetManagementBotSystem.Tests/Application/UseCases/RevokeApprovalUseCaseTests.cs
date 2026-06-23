@@ -20,11 +20,13 @@ public class RevokeApprovalUseCaseTests
         var requester = new User("Requester", 22222UL, AccountRole.Accountant);
         requester.ChangeGroupId(0);
         var group = new Group("Test Group");
+        group.AddBudgetTransaction(new BudgetTransaction(true, 100_000m, new FiscalYear(4)));
 
         _ = group.CreateBudgetRequest(requester, new Money(50_000m), new FiscalYear(4), "備品購入", Array.Empty<string>());
         var request = group.Requests.Single();
         typeof(BudgetRequest).GetProperty("Id")!.SetValue(request, requestId);
         request.UpdateStatus(RequestStatus.Approved, actingUser);
+        group.AddBudgetTransaction(new BudgetTransaction(false, request.Amount.Value, request.FiscalYear));
 
         var mockGroupRepository = new Mock<IGroupRepository>();
         mockGroupRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Group> { group });
@@ -41,6 +43,10 @@ public class RevokeApprovalUseCaseTests
         await useCase.ExecuteAsync(requestId, discordUserId);
 
         Assert.Equal(RequestStatus.ApprovalCancelled, request.StatusHistory.Last().ChangedStatus);
+        var reversal = group.BudgetTransactions.Last();
+        Assert.True(reversal.IsIncome);
+        Assert.Equal(50_000m, reversal.Amount.Value);
+        Assert.Equal(100_000m, group.GetTotalBudgetForFiscalYear(request.FiscalYear));
         mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
     }
 
