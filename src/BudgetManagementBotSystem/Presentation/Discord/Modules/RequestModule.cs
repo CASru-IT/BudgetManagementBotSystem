@@ -44,7 +44,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
         [SlashCommand("create-request", "予算使用申請を作成します")]
         public async Task CreateRequest(
-            [Summary("group-id"), Autocomplete(typeof(GroupAutocompleteHandler))] string groupId,
+            [Summary("group-id"), Autocomplete(typeof(GroupAutocompleteHandler))] int groupId,
             [Summary("amount")] double amount,
             [Summary("description")] string description,
             [Summary("attach-count")] int attachCount = 1)
@@ -57,12 +57,6 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 if (user == null)
                 {
                     await FollowupAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("Discordユーザーがシステムに登録されていません。管理者に登録を依頼してください。"), ephemeral: true);
-                    return;
-                }
-
-                if (!int.TryParse(groupId, out var parsedGroupId))
-                {
-                    await FollowupAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("班IDは数値で指定してください。"), ephemeral: true);
                     return;
                 }
 
@@ -85,11 +79,11 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 await FollowupAsync(embed: DiscordEmbedFactory.BuildInfoEmbed("証跡ファイルを受け取りました", "保存処理を開始します。"), ephemeral: true);
 
                 var evidenceFiles = new List<UploadedEvidenceDto>(uploaded);
-                var (requestId, savedEvidenceCount) = await _submitBudgetRequestUseCase.ExecuteAsync(user.Id, parsedGroupId, amountDecimal, description, evidenceFiles);
-                var notifiedCount = await NotifyAccountantsAsync(requestId, parsedGroupId, amountDecimal, description, user.Name, user.DiscordUserId);
+                var (requestId, savedEvidenceCount) = await _submitBudgetRequestUseCase.ExecuteAsync(user.Id, groupId, amountDecimal, description, evidenceFiles);
+                var notifiedCount = await NotifyAccountantsAsync(requestId, groupId, amountDecimal, description, user.Name, user.DiscordUserId);
 
                 await FollowupAsync(
-                    embed: DiscordEmbedFactory.BuildRequestCreatedEmbed(requestId, parsedGroupId, amountDecimal, description, savedEvidenceCount, notifiedCount),
+                    embed: DiscordEmbedFactory.BuildRequestCreatedEmbed(requestId, groupId, amountDecimal, description, savedEvidenceCount, notifiedCount),
                     ephemeral: true);
             }
             catch (ArgumentNullException)

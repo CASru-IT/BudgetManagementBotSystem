@@ -33,6 +33,6 @@ internal static class AutocompleteText
     public static object ValueForParameter(int id, global::Discord.Interactions.IParameterInfo parameter)
     {
         var parameterType = Nullable.GetUnderlyingType(parameter.ParameterType) ?? parameter.ParameterType;
-        return parameterType == typeof(string) ? id.ToString() : id;
+        return parameterType == typeof(string) ? id.ToString() : (long)id;
     }
 }
