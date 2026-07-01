@@ -84,13 +84,14 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Helpers
             }
 
             AddTransactionFields(embed, result.Items);
-            AddLimitedFooter(embed, result.Items.Count, result.Total);
+            AddLimitedFooter(embed, Math.Min(result.Items.Count, MaxListItems), result.Total);
             return embed.Build();
         }
 
         public static Embed BuildAllHistoryEmbed(IEnumerable<TransactionDto> transactions, int requestedTake)
         {
-            var items = transactions.Take(MaxListItems).ToList();
+            var allItems = transactions.ToList();
+            var items = allItems.Take(MaxListItems).ToList();
             var embed = new EmbedBuilder()
                 .WithTitle("全班の予算履歴")
                 .WithColor(Color.Blue)
@@ -105,10 +106,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Helpers
             }
 
             AddTransactionFields(embed, items);
-            if (requestedTake > MaxListItems)
-            {
-                embed.WithFooter($"Discord表示制限により先頭{MaxListItems}件を表示しています。");
-            }
+            AddLimitedFooter(embed, items.Count, allItems.Count);
 
             return embed.Build();
         }
@@ -164,7 +162,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Helpers
                     $"日付: `{request.RequestDate:yyyy-MM-dd}`\nステータス: `{request.Status}`\n説明: {Truncate(request.Description, ShortTextLength)}");
             }
 
-            AddLimitedFooter(embed, result.Items.Count, result.Total);
+            AddLimitedFooter(embed, Math.Min(result.Items.Count, MaxListItems), result.Total);
             return embed.Build();
         }
 
@@ -365,7 +363,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Helpers
                     $"申請日: `{request.RequestDate:yyyy-MM-dd}`\n説明: {Truncate(request.Description, ShortTextLength)}");
             }
 
-            AddLimitedFooter(embed, result.Items.Count, result.Total, "承認・却下は /approve /reject コマンドを使用してください。");
+            AddLimitedFooter(embed, Math.Min(result.Items.Count, MaxListItems), result.Total, "承認・却下は /approve /reject コマンドを使用してください。");
             return embed.Build();
         }
 

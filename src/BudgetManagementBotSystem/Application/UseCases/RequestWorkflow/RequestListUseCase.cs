@@ -25,10 +25,9 @@ namespace BudgetManagementBotSystem.Application.UseCases.RequestWorkflow
             var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
             if (user == null) throw new ArgumentException("Discord user not registered");
 
-            var isPrivileged = user.Role == BudgetManagementBotSystem.Domain.Enums.AccountRole.Admin
-                || user.Role == BudgetManagementBotSystem.Domain.Enums.AccountRole.Accountant
-                || user.Role == BudgetManagementBotSystem.Domain.Enums.AccountRole.President
-                || user.Role == BudgetManagementBotSystem.Domain.Enums.AccountRole.GroupLeader;
+            var canViewAllGroups = user.Role == AccountRole.Admin
+                || user.Role == AccountRole.Accountant
+                || user.Role == AccountRole.President;
 
             var groups = await _groupRepository.GetAllAsync();
             if (groups == null) return new PagedResult<PendingRequestDto> { Total = 0, Page = page, PageSize = pageSize };
@@ -44,7 +43,7 @@ namespace BudgetManagementBotSystem.Application.UseCases.RequestWorkflow
                 Status = r.GetCurrentStatus()
             }));
 
-            if (isPrivileged)
+            if (canViewAllGroups)
             {
                 if (groupId.HasValue)
                 {
@@ -53,7 +52,17 @@ namespace BudgetManagementBotSystem.Application.UseCases.RequestWorkflow
             }
             else
             {
-                allRequests = allRequests.Where(r => r.GroupId == user.GroupId!.Value);
+                if (!user.GroupId.HasValue)
+                {
+                    return new PagedResult<PendingRequestDto>
+                    {
+                        Total = 0,
+                        Page = page,
+                        PageSize = pageSize
+                    };
+                }
+
+                allRequests = allRequests.Where(r => r.GroupId == user.GroupId.Value);
             }
 
             if (!string.IsNullOrWhiteSpace(status))

@@ -3,6 +3,7 @@ using BudgetManagementBotSystem.Domain.Enums;
 using BudgetManagementBotSystem.Domain.Repository;
 using BudgetManagementBotSystem.Presentation.Discord.Helpers;
 using Discord.Interactions;
+using Microsoft.Extensions.Logging;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {
@@ -12,17 +13,20 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         private readonly BudgetQueryUseCase _budgetQueryUseCase;
         private readonly IncreaseBudgetLimitUseCase _increaseBudgetLimitUseCase;
         private readonly AdminAddBudgetTransactionUseCase _adminAddBudgetTransactionUseCase;
+        private readonly ILogger<BudgetModule> _logger;
 
         public BudgetModule(
             IUserRepository userRepository,
             BudgetQueryUseCase budgetQueryUseCase,
             IncreaseBudgetLimitUseCase increaseBudgetLimitUseCase,
-            AdminAddBudgetTransactionUseCase adminAddBudgetTransactionUseCase)
+            AdminAddBudgetTransactionUseCase adminAddBudgetTransactionUseCase,
+            ILogger<BudgetModule> logger)
         {
             _userRepository = userRepository;
             _budgetQueryUseCase = budgetQueryUseCase;
             _increaseBudgetLimitUseCase = increaseBudgetLimitUseCase;
             _adminAddBudgetTransactionUseCase = adminAddBudgetTransactionUseCase;
+            _logger = logger;
         }
 
         [SlashCommand("remaining-budget", "現在の残予算を確認します")]
@@ -41,8 +45,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             {
                 await RespondAsync(embed: DiscordEmbedFactory.BuildNotFoundEmbed("班", groupId.ToString()), ephemeral: true);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to get remaining budget. DiscordUserId: {DiscordUserId}, GroupId: {GroupId}, FiscalYear: {FiscalYear}", Context.User.Id, groupId, fiscalYear);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("予算状況を取得できません", "時間を置いて再実行してください。解決しない場合は管理者に連絡してください。"), ephemeral: true);
             }
         }
@@ -62,8 +67,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             {
                 await RespondAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("この履歴を確認する権限がありません。"), ephemeral: true);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to get usage history. DiscordUserId: {DiscordUserId}, GroupId: {GroupId}, Page: {Page}, PageSize: {PageSize}, FiscalYear: {FiscalYear}", Context.User.Id, groupId, page, pageSize, fiscalYear);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("使用履歴を取得できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }
@@ -117,8 +123,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             {
                 await RespondAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("追加金額は正の数で指定してください。"), ephemeral: true);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to add budget. DiscordUserId: {DiscordUserId}, GroupId: {GroupId}, Amount: {Amount}, FiscalYear: {FiscalYear}", Context.User.Id, groupId, amount, fiscalYear);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("追加予算を処理できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }
@@ -131,8 +138,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 var allTransactions = await _budgetQueryUseCase.GetAllHistoryAsync(take);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildAllHistoryEmbed(allTransactions, take), ephemeral: !allTransactions.Any());
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to get all history. DiscordUserId: {DiscordUserId}, Take: {Take}", Context.User.Id, take);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("全班履歴を取得できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }
@@ -179,8 +187,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             {
                 await RespondAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("この取引を追加すると予算条件を満たせません。"), ephemeral: true);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to add budget transaction. DiscordUserId: {DiscordUserId}, GroupId: {GroupId}, TransactionType: {TransactionType}, Amount: {Amount}, FiscalYear: {FiscalYear}", Context.User.Id, groupId, transactionType, amount, fiscalYear);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("予算取引を追加できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }

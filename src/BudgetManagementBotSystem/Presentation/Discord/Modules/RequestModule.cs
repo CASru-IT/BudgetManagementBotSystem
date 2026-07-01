@@ -6,6 +6,7 @@ using BudgetManagementBotSystem.InfraStructure.Discord;
 using BudgetManagementBotSystem.Presentation.Discord.Helpers;
 using Discord;
 using Discord.Interactions;
+using Microsoft.Extensions.Logging;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {
@@ -18,6 +19,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         private readonly DiscordBotService _discordBotService;
         private readonly RequestListUseCase _requestListUseCase;
         private readonly RequestDetailUseCase _requestDetailUseCase;
+        private readonly ILogger<RequestModule> _logger;
 
         public RequestModule(
             SubmitBudgetRequestUseCase submitBudgetRequestUseCase,
@@ -26,7 +28,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             IUserRepository userRepository,
             DiscordBotService discordBotService,
             RequestListUseCase requestListUseCase,
-            RequestDetailUseCase requestDetailUseCase)
+            RequestDetailUseCase requestDetailUseCase,
+            ILogger<RequestModule> logger)
         {
             _submitBudgetRequestUseCase = submitBudgetRequestUseCase;
             _cancelBudgetRequestUseCase = cancelBudgetRequestUseCase;
@@ -35,6 +38,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             _discordBotService = discordBotService;
             _requestListUseCase = requestListUseCase;
             _requestDetailUseCase = requestDetailUseCase;
+            _logger = logger;
         }
 
         [SlashCommand("create-request", "予算使用申請を作成します")]
@@ -93,8 +97,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             {
                 await FollowupAsync(embed: DiscordEmbedFactory.BuildWarningEmbed("予算上限を超過しています", "現在の予算上限を超えるため、申請は作成されませんでした。"), ephemeral: true);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to create request. DiscordUserId: {DiscordUserId}, GroupId: {GroupId}, Amount: {Amount}, AttachCount: {AttachCount}", Context.User.Id, groupId, amount, attachCount);
                 await FollowupAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("申請を作成できません", "時間を置いて再実行してください。解決しない場合は管理者に連絡してください。"), ephemeral: true);
             }
         }
@@ -118,8 +123,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             {
                 await RespondAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("Discordユーザーがシステムに登録されていません。管理者に登録を依頼してください。"), ephemeral: true);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to list requests. DiscordUserId: {DiscordUserId}, Status: {Status}, Page: {Page}, PageSize: {PageSize}, GroupId: {GroupId}", Context.User.Id, status, page, pageSize, groupId);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("申請一覧を取得できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }
@@ -155,8 +161,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
                 await RespondWithFilesAsync(files, embeds: new[] { embed });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to get request detail. DiscordUserId: {DiscordUserId}, RequestId: {RequestId}", Context.User.Id, requestId);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("申請詳細を取得できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }
@@ -205,8 +212,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 await _cancelBudgetRequestUseCase.ExecuteAsync(detail.GroupId.Value, parsedRequestId, user.Id);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildSuccessEmbed("申請を取り消しました", $"申請 `#{parsedRequestId}` を管理者として取り消しました。"), ephemeral: true);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to cancel request. DiscordUserId: {DiscordUserId}, RequestId: {RequestId}", Context.User.Id, requestId);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("申請を取り消せません", "申請状態や権限を確認してから再実行してください。"), ephemeral: true);
             }
         }

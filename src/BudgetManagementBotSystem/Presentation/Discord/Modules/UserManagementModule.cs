@@ -4,6 +4,7 @@ using BudgetManagementBotSystem.Domain.Enums;
 using BudgetManagementBotSystem.Presentation.Discord.Helpers;
 using Discord;
 using Discord.Interactions;
+using Microsoft.Extensions.Logging;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {
@@ -12,15 +13,18 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         private readonly RegisterUserUseCase _registerUserUseCase;
         private readonly UserQueryUseCase _userQuery;
         private readonly UserCommandUseCase _userCommand;
+        private readonly ILogger<UserManagementModule> _logger;
 
         public UserManagementModule(
             RegisterUserUseCase registerUserUseCase,
             UserQueryUseCase userQuery,
-            UserCommandUseCase userCommand)
+            UserCommandUseCase userCommand,
+            ILogger<UserManagementModule> logger)
         {
             _registerUserUseCase = registerUserUseCase;
             _userQuery = userQuery;
             _userCommand = userCommand;
+            _logger = logger;
         }
 
         [SlashCommand("register-user", "システム利用ユーザーを登録します")]
@@ -51,8 +55,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 await _registerUserUseCase.ExecuteAsync(discordUserName, targetUser.Id, role);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildSuccessEmbed("ユーザーを登録しました", $"{discordUserName} を `{role}` として登録しました。"), ephemeral: true);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to register user. DiscordUserId: {DiscordUserId}, TargetDiscordUserId: {TargetDiscordUserId}, Role: {Role}", Context.User.Id, targetUser.Id, role);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("ユーザー登録を完了できません", "入力内容を確認して再実行してください。"), ephemeral: true);
             }
         }
@@ -155,8 +160,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 var users = await _userQuery.ListUsersAsync();
                 await RespondAsync(embed: DiscordEmbedFactory.BuildUserListEmbed(users), ephemeral: true);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to list users. DiscordUserId: {DiscordUserId}", Context.User.Id);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("ユーザー一覧を取得できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }
@@ -181,8 +187,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
                 await RespondAsync(embed: DiscordEmbedFactory.BuildUserInfoEmbed(user), ephemeral: true);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to get user info. DiscordUserId: {DiscordUserId}, UserId: {UserId}", Context.User.Id, userId);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("ユーザー情報を取得できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }
@@ -207,8 +214,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             {
                 await RespondAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("ユーザーIDまたは班IDを確認してください。"), ephemeral: true);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to assign group. DiscordUserId: {DiscordUserId}, UserId: {UserId}, GroupId: {GroupId}", Context.User.Id, userId, groupId);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("班所属を設定できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }
@@ -231,8 +239,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             {
                 await RespondAsync(embed: DiscordEmbedFactory.BuildNotFoundEmbed("ユーザー", userId.ToString()), ephemeral: true);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to unassign group. DiscordUserId: {DiscordUserId}, UserId: {UserId}", Context.User.Id, userId);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("班所属を解除できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }
@@ -259,8 +268,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 var members = await _userQuery.GetMembersByGroupIdAsync(groupId);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildGroupMembersEmbed(groupId, members), ephemeral: true);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to get group members. DiscordUserId: {DiscordUserId}, GroupId: {GroupId}", Context.User.Id, groupId);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("班メンバーを取得できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }

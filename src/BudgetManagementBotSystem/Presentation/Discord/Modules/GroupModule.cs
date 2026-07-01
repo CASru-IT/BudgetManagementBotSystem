@@ -1,6 +1,7 @@
 using BudgetManagementBotSystem.Application.UseCases.Groups;
 using BudgetManagementBotSystem.Presentation.Discord.Helpers;
 using Discord.Interactions;
+using Microsoft.Extensions.Logging;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {
@@ -9,15 +10,18 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         private readonly RegisterGroupUseCase _registerGroupUseCase;
         private readonly DeleteGroupUseCase _deleteGroupUseCase;
         private readonly ListGroupsUseCase _listGroupsUseCase;
+        private readonly ILogger<GroupModule> _logger;
 
         public GroupModule(
             RegisterGroupUseCase registerGroupUseCase,
             DeleteGroupUseCase deleteGroupUseCase,
-            ListGroupsUseCase listGroupsUseCase)
+            ListGroupsUseCase listGroupsUseCase,
+            ILogger<GroupModule> logger)
         {
             _registerGroupUseCase = registerGroupUseCase;
             _deleteGroupUseCase = deleteGroupUseCase;
             _listGroupsUseCase = listGroupsUseCase;
+            _logger = logger;
         }
 
         [SlashCommand("register-group", "新しい班を登録します")]
@@ -32,8 +36,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             {
                 await RespondAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("班名を確認してください。既に登録済みの班名は使用できません。"), ephemeral: true);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to register group. DiscordUserId: {DiscordUserId}", Context.User.Id);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("班を登録できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }
@@ -54,8 +59,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             {
                 await RespondAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("Discordユーザーがシステムに登録されていません。"), ephemeral: true);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to list groups. DiscordUserId: {DiscordUserId}", Context.User.Id);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("班一覧を取得できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }
@@ -76,8 +82,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             {
                 await RespondAsync(embed: DiscordEmbedFactory.BuildNotFoundEmbed("班", groupId.ToString()), ephemeral: true);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to delete group. DiscordUserId: {DiscordUserId}, GroupId: {GroupId}", Context.User.Id, groupId);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("班を削除できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }

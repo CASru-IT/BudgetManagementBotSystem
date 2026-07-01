@@ -2,6 +2,7 @@ using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 using BudgetManagementBotSystem.InfraStructure.Discord;
 using BudgetManagementBotSystem.Presentation.Discord.Helpers;
 using Discord.Interactions;
+using Microsoft.Extensions.Logging;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {
@@ -15,6 +16,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         private readonly NotifyRejectedRequestUseCase _notifyRejectedRequestUseCase;
         private readonly RevokeApprovalUseCase _revokeUseCase;
         private readonly DiscordBotService _discordBotService;
+        private readonly ILogger<ApprovalModule> _logger;
 
         public ApprovalModule(
             ApproveBudgetRequestUseCase approveUseCase,
@@ -24,7 +26,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             NotifyApprovedRequestUseCase notifyApprovedRequestUseCase,
             NotifyRejectedRequestUseCase notifyRejectedRequestUseCase,
             RevokeApprovalUseCase revokeUseCase,
-            DiscordBotService discordBotService)
+            DiscordBotService discordBotService,
+            ILogger<ApprovalModule> logger)
         {
             _approveUseCase = approveUseCase;
             _rejectUseCase = rejectUseCase;
@@ -34,6 +37,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             _notifyRejectedRequestUseCase = notifyRejectedRequestUseCase;
             _revokeUseCase = revokeUseCase;
             _discordBotService = discordBotService;
+            _logger = logger;
         }
 
         [SlashCommand("pending-list", "未承認の申請一覧を表示します")]
@@ -48,8 +52,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             {
                 await RespondAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("未承認申請を確認する権限がありません。"), ephemeral: true);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to get pending requests. DiscordUserId: {DiscordUserId}, Page: {Page}, PageSize: {PageSize}", Context.User.Id, page, pageSize);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("未承認申請を取得できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }
@@ -87,8 +92,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             {
                 await RespondAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("申請状態を確認してください。承認できるのは承認待ちの申請です。"), ephemeral: true);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to approve request. DiscordUserId: {DiscordUserId}, RequestId: {RequestId}", Context.User.Id, requestId);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("承認処理を完了できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }
@@ -126,8 +132,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             {
                 await RespondAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("申請状態を確認してください。却下できるのは承認待ちの申請です。"), ephemeral: true);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to reject request. DiscordUserId: {DiscordUserId}, RequestId: {RequestId}", Context.User.Id, requestId);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("却下処理を完了できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }
@@ -158,8 +165,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             {
                 await RespondAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("申請状態を確認してください。承認取消できるのは承認済みの申請です。"), ephemeral: true);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to revoke approval. DiscordUserId: {DiscordUserId}, RequestId: {RequestId}", Context.User.Id, requestId);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("承認取消を完了できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }
