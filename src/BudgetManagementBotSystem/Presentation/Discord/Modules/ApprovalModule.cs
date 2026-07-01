@@ -1,5 +1,6 @@
 using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 using BudgetManagementBotSystem.InfraStructure.Discord;
+using BudgetManagementBotSystem.Presentation.Discord.Autocomplete;
 using BudgetManagementBotSystem.Presentation.Discord.Helpers;
 using Discord.Interactions;
 using Microsoft.Extensions.Logging;
@@ -60,7 +61,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("approve", "指定した申請を承認します")]
-        public async Task Approve(int requestId)
+        public async Task Approve([Summary("request-id"), Autocomplete(typeof(RequestAutocompleteHandler))] int requestId)
         {
             try
             {
@@ -100,7 +101,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("reject", "指定した申請を却下します")]
-        public async Task Reject(int requestId, string reason)
+        public async Task Reject([Summary("request-id"), Autocomplete(typeof(RequestAutocompleteHandler))] int requestId, string reason)
         {
             try
             {
@@ -140,7 +141,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("revoke-approval", "承認済み申請の承認を取り消します")]
-        public async Task RevokeApproval([Summary("request-id")] string requestId)
+        public async Task RevokeApproval([Summary("request-id"), Autocomplete(typeof(RequestAutocompleteHandler))] string requestId)
         {
             try
             {

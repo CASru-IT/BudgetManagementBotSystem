@@ -31,6 +31,7 @@ public class DiscordBotService
         _interactions = new InteractionService(_client, new InteractionServiceConfig
         {
             AutoServiceScopes = true,
+            EnableAutocompleteHandlers = true,
             DefaultRunMode = RunMode.Async
         });
 

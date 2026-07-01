@@ -1,6 +1,7 @@
 using BudgetManagementBotSystem.Application.UseCases.UserManagement;
 using BudgetManagementBotSystem.Domain.Entities;
 using BudgetManagementBotSystem.Domain.Enums;
+using BudgetManagementBotSystem.Presentation.Discord.Autocomplete;
 using BudgetManagementBotSystem.Presentation.Discord.Helpers;
 using Discord;
 using Discord.Interactions;
@@ -64,7 +65,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
         [SlashCommand("set-user-name", "ユーザーの表示名を変更します")]
         public async Task SetUserName(
-            [Summary("user-id")] int userId,
+            [Summary("user-id"), Autocomplete(typeof(UserAutocompleteHandler))] int userId,
             [Summary("name")] string name)
         {
             var caller = await GetCallerAsync();
@@ -86,7 +87,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
         [SlashCommand("set-user-role", "ユーザーの権限やロールを設定します")]
         public async Task SetUserRole(
-            [Summary("user-id")] int userId,
+            [Summary("user-id"), Autocomplete(typeof(UserAutocompleteHandler))] int userId,
             [Summary("role")] AccountRole role)
         {
             var caller = await GetCallerAsync();
@@ -107,7 +108,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("remove-user", "ユーザーを無効化します")]
-        public async Task RemoveUser([Summary("user-id")] int userId)
+        public async Task RemoveUser([Summary("user-id"), Autocomplete(typeof(UserAutocompleteHandler))] int userId)
         {
             var caller = await GetCallerAsync();
             if (!await EnsureAdminAsync(caller))
@@ -127,7 +128,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("activate-user", "ユーザーを有効化します")]
-        public async Task ActivateUser([Summary("user-id")] int userId)
+        public async Task ActivateUser([Summary("user-id"), Autocomplete(typeof(UserAutocompleteHandler))] int userId)
         {
             var caller = await GetCallerAsync();
             if (!await EnsureAdminAsync(caller))
@@ -168,7 +169,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("user-info", "ユーザーの所属や権限情報を表示します")]
-        public async Task UserInfo([Summary("user-id")] int userId)
+        public async Task UserInfo([Summary("user-id"), Autocomplete(typeof(UserAutocompleteHandler))] int userId)
         {
             try
             {
@@ -196,8 +197,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
         [SlashCommand("assign-group", "ユーザーを班へ所属させます")]
         public async Task AssignGroup(
-            [Summary("user-id")] int userId,
-            [Summary("group-id")] int groupId)
+            [Summary("user-id"), Autocomplete(typeof(UserAutocompleteHandler))] int userId,
+            [Summary("group-id"), Autocomplete(typeof(GroupAutocompleteHandler))] int groupId)
         {
             try
             {
@@ -222,7 +223,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("unassign-group", "ユーザーの班所属を解除します")]
-        public async Task UnassignGroup([Summary("user-id")] int userId)
+        public async Task UnassignGroup([Summary("user-id"), Autocomplete(typeof(UserAutocompleteHandler))] int userId)
         {
             try
             {
@@ -247,7 +248,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("group-members", "班ごとの所属メンバー一覧を表示します")]
-        public async Task GroupMembers([Summary("group-id")] int groupId)
+        public async Task GroupMembers([Summary("group-id"), Autocomplete(typeof(GroupAutocompleteHandler))] int groupId)
         {
             try
             {

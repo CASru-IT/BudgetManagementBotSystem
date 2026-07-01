@@ -1,6 +1,7 @@
 using BudgetManagementBotSystem.Domain.Enums;
 using BudgetManagementBotSystem.Domain.Repository;
 using BudgetManagementBotSystem.InfraStructure.Discord;
+using BudgetManagementBotSystem.Presentation.Discord.Autocomplete;
 using Discord;
 using Discord.Interactions;
 
@@ -19,7 +20,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
         [SlashCommand("test-dm", "指定ユーザーへテスト DM を送信し、送信可否と失敗理由を確認します")]
         public async Task TestDm(
-            [Summary("user-id")] int userId,
+            [Summary("user-id"), Autocomplete(typeof(UserAutocompleteHandler))] int userId,
             [Summary("message")] string? message = null)
         {
             var caller = await _userRepository.GetByDiscordUserIdAsync(Context.User.Id);

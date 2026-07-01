@@ -1,6 +1,7 @@
 using BudgetManagementBotSystem.Application.UseCases.Budget;
 using BudgetManagementBotSystem.Domain.Enums;
 using BudgetManagementBotSystem.Domain.Repository;
+using BudgetManagementBotSystem.Presentation.Discord.Autocomplete;
 using BudgetManagementBotSystem.Presentation.Discord.Helpers;
 using Discord.Interactions;
 using Microsoft.Extensions.Logging;
@@ -30,7 +31,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("remaining-budget", "現在の残予算を確認します")]
-        public async Task RemainingBudget(int groupId, [Summary("fiscal-year")] int? fiscalYear = null)
+        public async Task RemainingBudget([Summary("group-id"), Autocomplete(typeof(GroupAutocompleteHandler))] int groupId, [Summary("fiscal-year")] int? fiscalYear = null)
         {
             try
             {
@@ -53,7 +54,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("usage-history", "予算使用履歴を表示します")]
-        public async Task UsageHistory(int groupId, int page = 1, int pageSize = 10, [Summary("fiscal-year")] int? fiscalYear = null)
+        public async Task UsageHistory([Summary("group-id"), Autocomplete(typeof(GroupAutocompleteHandler))] int groupId, int page = 1, int pageSize = 10, [Summary("fiscal-year")] int? fiscalYear = null)
         {
             try
             {
@@ -76,7 +77,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
         [SlashCommand("add-budget", "追加予算を付与します")]
         public async Task AddBudget(
-            int groupId,
+            [Summary("group-id"), Autocomplete(typeof(GroupAutocompleteHandler))] int groupId,
             double amount,
             [Summary("fiscal-year")] int? fiscalYear = null)
         {
@@ -147,7 +148,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
         [SlashCommand("admin-add-transaction", "管理者用: 予算取引を直接追加します")]
         public async Task AdminAddTransaction(
-            [Summary("group-id")] int groupId,
+            [Summary("group-id"), Autocomplete(typeof(GroupAutocompleteHandler))] int groupId,
             [Summary("type"), Choice("収入", "income"), Choice("支出", "expense")] string transactionType,
             [Summary("amount")] double amount,
             [Summary("fiscal-year")] int? fiscalYear = null)

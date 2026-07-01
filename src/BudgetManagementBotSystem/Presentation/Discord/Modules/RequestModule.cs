@@ -3,6 +3,7 @@ using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 using BudgetManagementBotSystem.Domain.Enums;
 using BudgetManagementBotSystem.Domain.Repository;
 using BudgetManagementBotSystem.InfraStructure.Discord;
+using BudgetManagementBotSystem.Presentation.Discord.Autocomplete;
 using BudgetManagementBotSystem.Presentation.Discord.Helpers;
 using Discord;
 using Discord.Interactions;
@@ -43,7 +44,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
         [SlashCommand("create-request", "予算使用申請を作成します")]
         public async Task CreateRequest(
-            [Summary("group-id")] int groupId,
+            [Summary("group-id"), Autocomplete(typeof(GroupAutocompleteHandler))] int groupId,
             [Summary("amount")] double amount,
             [Summary("description")] string description,
             [Summary("attach-count")] int attachCount = 1)
@@ -109,7 +110,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             [Summary("status")] string? status = null,
             [Summary("page")] int page = 1,
             [Summary("page-size")] int pageSize = 10,
-            [Summary("group-id")] int? groupId = null)
+            [Summary("group-id"), Autocomplete(typeof(GroupAutocompleteHandler))] int? groupId = null)
         {
             try
             {
@@ -131,7 +132,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("request-detail", "指定した申請の詳細を表示します")]
-        public async Task RequestDetail([Summary("request-id")] string requestId)
+        public async Task RequestDetail([Summary("request-id"), Autocomplete(typeof(RequestAutocompleteHandler))] string requestId)
         {
             try
             {
@@ -169,7 +170,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("cancel-request", "承認待ち状態の申請を取り消します")]
-        public async Task CancelRequest([Summary("request-id")] string requestId)
+        public async Task CancelRequest([Summary("request-id"), Autocomplete(typeof(RequestAutocompleteHandler))] string requestId)
         {
             try
             {

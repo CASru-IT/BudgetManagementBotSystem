@@ -1,4 +1,5 @@
 using BudgetManagementBotSystem.Application.UseCases.Groups;
+using BudgetManagementBotSystem.Presentation.Discord.Autocomplete;
 using BudgetManagementBotSystem.Presentation.Discord.Helpers;
 using Discord.Interactions;
 using Microsoft.Extensions.Logging;
@@ -67,7 +68,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("delete-group", "班を削除または無効化します")]
-        public async Task DeleteGroup([Summary("group-id")] int groupId)
+        public async Task DeleteGroup([Summary("group-id"), Autocomplete(typeof(GroupAutocompleteHandler))] int groupId)
         {
             try
             {
