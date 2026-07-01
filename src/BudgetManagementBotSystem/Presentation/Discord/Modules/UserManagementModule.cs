@@ -5,6 +5,7 @@ using BudgetManagementBotSystem.Presentation.Discord.Autocomplete;
 using BudgetManagementBotSystem.Presentation.Discord.Helpers;
 using Discord;
 using Discord.Interactions;
+using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules
@@ -150,6 +151,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         [SlashCommand("list-users", "登録済みユーザーを表示します")]
         public async Task ListUsers()
         {
+            await DeferAsync(ephemeral: true);
+
             try
             {
                 var caller = await GetCallerAsync();
@@ -159,12 +162,12 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 }
 
                 var users = await _userQuery.ListUsersAsync();
-                await RespondAsync(embed: DiscordEmbedFactory.BuildUserListEmbed(users), ephemeral: true);
+                await ReplyAsync(DiscordEmbedFactory.BuildUserListEmbed(users));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to list users. DiscordUserId: {DiscordUserId}", Context.User.Id);
-                await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("ユーザー一覧を取得できません", "時間を置いて再実行してください。"), ephemeral: true);
+                await ReplyAsync(DiscordEmbedFactory.BuildErrorEmbed("ユーザー一覧を取得できません", "時間を置いて再実行してください。"));
             }
         }
 
@@ -285,17 +288,28 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         {
             if (caller == null)
             {
-                await RespondAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("Discordユーザーがシステムに登録されていません。"), ephemeral: true);
+                await ReplyAsync(DiscordEmbedFactory.BuildAuthorizationErrorEmbed("Discordユーザーがシステムに登録されていません。"));
                 return false;
             }
 
             if (caller.Role != AccountRole.Admin)
             {
-                await RespondAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("このコマンドは管理者のみ実行できます。"), ephemeral: true);
+                await ReplyAsync(DiscordEmbedFactory.BuildAuthorizationErrorEmbed("このコマンドは管理者のみ実行できます。"));
                 return false;
             }
 
             return true;
+        }
+
+        private async Task ReplyAsync(Embed embed, bool ephemeral = true)
+        {
+            if (Context.Interaction is SocketInteraction { HasResponded: true })
+            {
+                await FollowupAsync(embed: embed, ephemeral: ephemeral);
+                return;
+            }
+
+            await RespondAsync(embed: embed, ephemeral: ephemeral);
         }
     }
 }
