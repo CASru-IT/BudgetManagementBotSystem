@@ -1,9 +1,11 @@
-using Discord;
-using Discord.Interactions;
 using BudgetManagementBotSystem.Application.DTOs;
 using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
+using BudgetManagementBotSystem.Domain.Enums;
 using BudgetManagementBotSystem.Domain.Repository;
+using BudgetManagementBotSystem.InfraStructure.Discord;
 using BudgetManagementBotSystem.Presentation.Discord.Helpers;
+using Discord;
+using Discord.Interactions;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {
@@ -13,11 +15,18 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         private readonly CancelBudgetRequestUseCase _cancelBudgetRequestUseCase;
         private readonly UserCancelBudgetRequestUseCase _userCancelRequestUseCase;
         private readonly IUserRepository _userRepository;
-        private readonly InfraStructure.Discord.DiscordBotService _discordBotService;
+        private readonly DiscordBotService _discordBotService;
         private readonly RequestListUseCase _requestListUseCase;
         private readonly RequestDetailUseCase _requestDetailUseCase;
 
-        public RequestModule(SubmitBudgetRequestUseCase submitBudgetRequestUseCase, CancelBudgetRequestUseCase cancelBudgetRequestUseCase, UserCancelBudgetRequestUseCase userCancelRequestUseCase, IUserRepository userRepository, BudgetManagementBotSystem.InfraStructure.Discord.DiscordBotService discordBotService, RequestListUseCase requestListUseCase, RequestDetailUseCase requestDetailUseCase, RequestQueryUseCase requestQueryUseCase)
+        public RequestModule(
+            SubmitBudgetRequestUseCase submitBudgetRequestUseCase,
+            CancelBudgetRequestUseCase cancelBudgetRequestUseCase,
+            UserCancelBudgetRequestUseCase userCancelRequestUseCase,
+            IUserRepository userRepository,
+            DiscordBotService discordBotService,
+            RequestListUseCase requestListUseCase,
+            RequestDetailUseCase requestDetailUseCase)
         {
             _submitBudgetRequestUseCase = submitBudgetRequestUseCase;
             _cancelBudgetRequestUseCase = cancelBudgetRequestUseCase;
@@ -28,79 +37,177 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             _requestDetailUseCase = requestDetailUseCase;
         }
 
-        [SlashCommand("create-request", "予算使用申請を作成する")]
+        [SlashCommand("create-request", "予算使用申請を作成します")]
         public async Task CreateRequest(
             [Summary("group-id")] int groupId,
             [Summary("amount")] double amount,
             [Summary("description")] string description,
-            [Summary("attach-count")]
-            int attachCount = 1)
+            [Summary("attach-count")] int attachCount = 1)
         {
+            await DeferAsync(ephemeral: true);
+
             try
             {
-                await DeferAsync(ephemeral: true);
-
-                var discordUserId = Context.User.Id;
-                var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
+                var user = await _userRepository.GetByDiscordUserIdAsync(Context.User.Id);
                 if (user == null)
                 {
-                    await FollowupAsync("エラー: Discord ユーザーがシステムに登録されていません。管理者に登録を依頼してください。", ephemeral: true);
+                    await FollowupAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("Discordユーザーがシステムに登録されていません。管理者に登録を依頼してください。"), ephemeral: true);
                     return;
                 }
 
-                decimal amountDec = Convert.ToDecimal(amount);
-
-                var evidenceFiles = new List<UploadedEvidenceDto>();
                 if (attachCount < 1)
                 {
-                    await FollowupAsync("添付ファイル数は1以上で指定してください。", ephemeral: true);
+                    await FollowupAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("添付ファイル数は1件以上で指定してください。"), ephemeral: true);
                     return;
                 }
 
-                await FollowupAsync($"証跡ファイルをこのチャンネルに {attachCount} 件添付してください。90秒以内にアップロードしてください。", ephemeral: true);
+                var amountDecimal = Convert.ToDecimal(amount);
+                await FollowupAsync(embed: DiscordEmbedFactory.BuildInfoEmbed("証跡ファイルをアップロードしてください", $"{attachCount}件の証跡ファイルをこのチャンネルに90秒以内にアップロードしてください。"), ephemeral: true);
+
                 var uploaded = await _discordBotService.WaitForAttachmentUploadAsync(Context.User.Id, TimeSpan.FromSeconds(90), attachCount, Context.Channel);
                 if (uploaded == null || !uploaded.Any() || uploaded.Count < attachCount)
                 {
-                    await FollowupAsync("証跡ファイルの受け取りに失敗しました。申請を中止します。", ephemeral: true);
+                    await FollowupAsync(embed: DiscordEmbedFactory.BuildWarningEmbed("申請を中止しました", "証跡ファイルの受け取りに失敗しました。もう一度申請してください。"), ephemeral: true);
                     return;
                 }
 
-                evidenceFiles.AddRange(uploaded);
-                await FollowupAsync("証跡ファイルを受け取りました。保存を開始します。", ephemeral: true);
+                await FollowupAsync(embed: DiscordEmbedFactory.BuildInfoEmbed("証跡ファイルを受け取りました", "保存処理を開始します。"), ephemeral: true);
 
-                var (requestId, savedEvidenceCount) = await _submitBudgetRequestUseCase.ExecuteAsync(user.Id, groupId, amountDec, description, evidenceFiles);
+                var evidenceFiles = new List<UploadedEvidenceDto>(uploaded);
+                var (requestId, savedEvidenceCount) = await _submitBudgetRequestUseCase.ExecuteAsync(user.Id, groupId, amountDecimal, description, evidenceFiles);
+                var notifiedCount = await NotifyAccountantsAsync(requestId, groupId, amountDecimal, description, user.Name, user.DiscordUserId);
 
-                await FollowupAsync($"申請を作成しました: 班 {groupId} 金額 {amountDec:C}", ephemeral: true);
-                if (savedEvidenceCount > 0)
+                await FollowupAsync(
+                    embed: DiscordEmbedFactory.BuildRequestCreatedEmbed(requestId, groupId, amountDecimal, description, savedEvidenceCount, notifiedCount),
+                    ephemeral: true);
+            }
+            catch (ArgumentNullException)
+            {
+                await FollowupAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("入力内容を確認してください。"), ephemeral: true);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                await FollowupAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("金額や添付ファイル数を確認してください。"), ephemeral: true);
+            }
+            catch (BudgetLimitExceededException)
+            {
+                await FollowupAsync(embed: DiscordEmbedFactory.BuildWarningEmbed("予算上限を超過しています", "現在の予算上限を超えるため、申請は作成されませんでした。"), ephemeral: true);
+            }
+            catch (Exception)
+            {
+                await FollowupAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("申請を作成できません", "時間を置いて再実行してください。解決しない場合は管理者に連絡してください。"), ephemeral: true);
+            }
+        }
+
+        [SlashCommand("list-requests", "自分の班または権限内の申請一覧を表示します")]
+        public async Task ListRequests(
+            [Summary("status")] string? status = null,
+            [Summary("page")] int page = 1,
+            [Summary("page-size")] int pageSize = 10,
+            [Summary("group-id")] int? groupId = null)
+        {
+            try
+            {
+                page = Math.Max(1, page);
+                pageSize = Math.Min(Math.Max(1, pageSize), 50);
+
+                var result = await _requestListUseCase.ExecuteAsync(Context.User.Id, status, page, pageSize, groupId);
+                await RespondAsync(embed: DiscordEmbedFactory.BuildRequestListEmbed(result, status), ephemeral: result.Total == 0);
+            }
+            catch (ArgumentException)
+            {
+                await RespondAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("Discordユーザーがシステムに登録されていません。管理者に登録を依頼してください。"), ephemeral: true);
+            }
+            catch (Exception)
+            {
+                await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("申請一覧を取得できません", "時間を置いて再実行してください。"), ephemeral: true);
+            }
+        }
+
+        [SlashCommand("request-detail", "指定した申請の詳細を表示します")]
+        public async Task RequestDetail([Summary("request-id")] string requestId)
+        {
+            try
+            {
+                if (!int.TryParse(requestId, out var parsedRequestId))
                 {
-                    await FollowupAsync($"証跡ファイルの保存に成功しました: {savedEvidenceCount}件", ephemeral: true);
+                    await RespondAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("申請IDは数値で指定してください。"), ephemeral: true);
+                    return;
                 }
 
-                var notifiedCount = await NotifyAccountantsAsync(requestId, groupId, amountDec, description, user.Name, user.DiscordUserId);
-                if (notifiedCount > 0)
+                var detail = await _requestDetailUseCase.GetByIdAsync(parsedRequestId);
+                if (detail.Request == null)
                 {
-                    await FollowupAsync($"会計担当者 {notifiedCount} 名に DM で通知しました。", ephemeral: true);
+                    await RespondAsync(embed: DiscordEmbedFactory.BuildNotFoundEmbed("申請", parsedRequestId.ToString()), ephemeral: true);
+                    return;
                 }
-                else
+
+                var embed = DiscordEmbedFactory.BuildRequestDetailEmbed(detail);
+                if (!detail.Evidences.Any())
                 {
-                    await FollowupAsync("会計担当者が見つからなかったため、DM 通知は送信されませんでした。", ephemeral: true);
+                    await RespondAsync(embed: embed);
+                    return;
                 }
+
+                var files = detail.Evidences
+                    .Select(evidence => new FileAttachment(new MemoryStream(evidence.Content, writable: false), evidence.FileName))
+                    .ToList();
+
+                await RespondWithFilesAsync(files, embeds: new[] { embed });
             }
-            catch (ArgumentNullException ex)
+            catch (Exception)
             {
-                await FollowupAsync($"入力エラー: {ex.ParamName} - {ex.Message}", ephemeral: true);
+                await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("申請詳細を取得できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
-            catch (ArgumentOutOfRangeException ex)
+        }
+
+        [SlashCommand("cancel-request", "承認待ち状態の申請を取り消します")]
+        public async Task CancelRequest([Summary("request-id")] string requestId)
+        {
+            try
             {
-                await FollowupAsync($"入力エラー: {ex.Message}", ephemeral: true);
+                if (!int.TryParse(requestId, out var parsedRequestId))
+                {
+                    await RespondAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("申請IDは数値で指定してください。"), ephemeral: true);
+                    return;
+                }
+
+                var user = await _userRepository.GetByDiscordUserIdAsync(Context.User.Id);
+                if (user == null)
+                {
+                    await RespondAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("Discordユーザーがシステムに登録されていません。"), ephemeral: true);
+                    return;
+                }
+
+                var detail = await _requestDetailUseCase.GetByIdAsync(parsedRequestId);
+                var request = detail.Request;
+                if (request == null || detail.GroupId == null)
+                {
+                    await RespondAsync(embed: DiscordEmbedFactory.BuildNotFoundEmbed("申請", parsedRequestId.ToString()), ephemeral: true);
+                    return;
+                }
+
+                var isRequestOwner = request.UserId == user.Id;
+                if (isRequestOwner && request.GetCurrentStatus() == RequestStatus.Pending)
+                {
+                    await _userCancelRequestUseCase.ExecuteAsync(detail.GroupId.Value, parsedRequestId, user.Id);
+                    await RespondAsync(embed: DiscordEmbedFactory.BuildSuccessEmbed("申請を取り消しました", $"申請 `#{parsedRequestId}` を申請者として取り消しました。"), ephemeral: true);
+                    return;
+                }
+
+                var isPrivilegedCancel = await AuthorizationHelper.IsPrivilegedAsync(_userRepository, Context.User.Id, AccountRole.Admin);
+                if (!isPrivilegedCancel)
+                {
+                    await RespondAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("この申請を取り消す権限がありません。"), ephemeral: true);
+                    return;
+                }
+
+                await _cancelBudgetRequestUseCase.ExecuteAsync(detail.GroupId.Value, parsedRequestId, user.Id);
+                await RespondAsync(embed: DiscordEmbedFactory.BuildSuccessEmbed("申請を取り消しました", $"申請 `#{parsedRequestId}` を管理者として取り消しました。"), ephemeral: true);
             }
-            catch (BudgetLimitExceededException ex)
+            catch (Exception)
             {
-                await FollowupAsync(ex.Message, ephemeral: true);
-            }
-            catch (Exception ex)
-            {
-                await FollowupAsync($"予期せぬエラーが発生しました: {ex.Message}", ephemeral: true);
+                await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("申請を取り消せません", "申請状態や権限を確認してから再実行してください。"), ephemeral: true);
             }
         }
 
@@ -113,7 +220,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             }
 
             var accountantUsers = users
-                .Where(user => user.IsActive && user.Role == BudgetManagementBotSystem.Domain.Enums.AccountRole.Accountant)
+                .Where(user => user.IsActive && user.Role == AccountRole.Accountant)
                 .ToList();
 
             if (accountantUsers.Count == 0)
@@ -129,178 +236,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 requesterName,
                 requesterDiscordUserId);
 
-            var sendTasks = accountantUsers.Select(async accountant =>
-            {
-                return await _discordBotService.SendDirectMessageAsync(accountant.DiscordUserId, embed);
-            });
-
+            var sendTasks = accountantUsers.Select(accountant => _discordBotService.SendDirectMessageAsync(accountant.DiscordUserId, embed));
             var results = await Task.WhenAll(sendTasks);
             return results.Count(result => result);
-        }
-
-        [SlashCommand("list-requests", "自分の班または役員会の申請一覧を表示する")]
-        public async Task ListRequests(
-            [Summary("status")] string? status = null,
-            [Summary("page")] int page = 1,
-            [Summary("page-size")] int pageSize = 10,
-            [Summary("group-id")] int? groupId = null)
-        {
-            try
-            {
-                if (page < 1) page = 1;
-                if (pageSize < 1) pageSize = 10;
-                pageSize = Math.Min(pageSize, 50);
-
-                var discordUserId = Context.User.Id;
-                var result = await _requestListUseCase.ExecuteAsync(discordUserId, status, page, pageSize, groupId);
-
-                if (result.Total == 0 || !result.Items.Any())
-                {
-                    await RespondAsync("該当する申請は見つかりませんでした。", ephemeral: true);
-                    return;
-                }
-
-                var lines = result.Items.Select(r => $"ID:{r.Id} 金額:{r.Amount:C} 日付:{r.RequestDate:yyyy-MM-dd} 説明:{(r.Description.Length>80? r.Description.Substring(0,80)+"...": r.Description)}");
-                var header = $"申請一覧 (ページ {result.Page}/{Math.Max(1, (int)Math.Ceiling(result.Total/(double)result.PageSize))}) 合計:{result.Total}";
-                await RespondAsync($"{header}\n{string.Join("\n", lines)}");
-            }
-            catch (Exception ex)
-            {
-                await RespondAsync($"申請一覧の取得中にエラーが発生しました: {ex.Message}", ephemeral: true);
-            }
-        }
-
-        [SlashCommand("request-detail", "指定した申請の詳細を表示する")]
-        public async Task RequestDetail([Summary("request-id")] string requestId)
-        {
-            try
-            {
-                if (!int.TryParse(requestId, out var reqId))
-                {
-                    await RespondAsync($"申請IDは数値で指定してください: {requestId}", ephemeral: true);
-                    return;
-                }
-
-                var detail = await _requestDetailUseCase.GetByIdAsync(reqId);
-                var req = detail.Request;
-                if (req == null)
-                {
-                    await RespondAsync($"申請が見つかりません: {reqId}", ephemeral: true);
-                    return;
-                }
-
-                var currentStatus = req.GetCurrentStatus();
-                var evidences = detail.Evidences;
-                var historyLines = req.GetOrderedStatusHistory().Select(s => $"{s.ChangedStatus} @ {s.ChangedAt:yyyy-MM-dd}");
-
-                var groupLabel = detail.GroupName ?? (detail.GroupId.HasValue ? detail.GroupId.Value.ToString() : "不明");
-
-                var requesterName = string.IsNullOrWhiteSpace(detail.RequesterName) ? "不明" : detail.RequesterName;
-                var requesterDiscordId = detail.RequesterDiscordUserId?.ToString() ?? "不明";
-                var evidenceText = evidences.Any()
-                    ? string.Join("\n", evidences.Select(e => e.FileName))
-                    : "なし";
-                var historyText = string.Join("\n", historyLines);
-                if (string.IsNullOrWhiteSpace(historyText))
-                {
-                    historyText = "なし";
-                }
-
-                var embedBuilder = new EmbedBuilder()
-                    .WithTitle($"申請詳細 #{req.Id}")
-                    .WithColor(Color.Blue)
-                    .AddField("班", groupLabel, true)
-                    .AddField("金額", req.Amount.Value.ToString("C"), true)
-                    .AddField("状態", currentStatus.ToString(), true)
-                    .AddField("申請日", req.RequestDate.ToString("yyyy-MM-dd"), true)
-                    .AddField("申請者", requesterName, true)
-                    .AddField("申請者DiscordID", requesterDiscordId, true)
-                    .AddField("説明", req.Description)
-                    .AddField("証跡", evidenceText)
-                    .AddField("履歴", historyText);
-
-                if (detail.MissingEvidencePaths.Any())
-                {
-                    embedBuilder.AddField("添付できない証跡", string.Join("\n", detail.MissingEvidencePaths));
-                }
-
-                var embed = embedBuilder.Build();
-
-                if (!evidences.Any())
-                {
-                    await RespondAsync(embed: embed);
-                    return;
-                }
-
-                var files = new List<FileAttachment>();
-                foreach (var evidence in evidences)
-                {
-                    files.Add(new FileAttachment(new MemoryStream(evidence.Content, writable: false), evidence.FileName));
-                }
-
-                await RespondWithFilesAsync(files, embeds: new[] { embed });
-            }
-            catch (Exception ex)
-            {
-                await RespondAsync($"申請詳細の取得中にエラーが発生しました: {ex.Message}", ephemeral: true);
-            }
-        }
-
-        [SlashCommand("cancel-request", "確認待ち状態の申請を取り消す")]
-        public async Task CancelRequest([Summary("request-id")] string requestId)
-        {
-            try
-            {
-                if (!int.TryParse(requestId, out var reqId))
-                {
-                    await RespondAsync($"申請IDは数値で指定してください: {requestId}", ephemeral: true);
-                    return;
-                }
-
-                var discordUserId = Context.User.Id;
-                var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
-                if (user == null)
-                {
-                    await RespondAsync("エラー: Discord ユーザーがシステムに登録されていません。", ephemeral: true);
-                    return;
-                }
-
-                var detail = await _requestDetailUseCase.GetByIdAsync(reqId);
-                var req = detail.Request;
-                var groupId = detail.GroupId;
-                if (req == null || groupId == null)
-                {
-                    await RespondAsync($"申請が見つかりません: {reqId}", ephemeral: true);
-                    return;
-                }
-
-                var isRequestOwner = req.UserId == user.Id;
-                var currentStatus = req.GetCurrentStatus();
-                if (isRequestOwner && currentStatus == BudgetManagementBotSystem.Domain.Enums.RequestStatus.Pending)
-                {
-                    await _userCancelRequestUseCase.ExecuteAsync(groupId.Value, reqId, user.Id);
-                    await RespondAsync($"申請 {reqId} を申請者が取消しました。", ephemeral: true);
-                    return;
-                }
-
-                var isPrivilegedCancel = await BudgetManagementBotSystem.Presentation.Discord.Helpers.AuthorizationHelper.IsPrivilegedAsync(
-                    _userRepository,
-                    discordUserId,
-                    BudgetManagementBotSystem.Domain.Enums.AccountRole.Admin);
-                if (!isPrivilegedCancel)
-                {
-                    await RespondAsync("エラー: 申請取消の権限がありません。", ephemeral: true);
-                    return;
-                }
-
-                await _cancelBudgetRequestUseCase.ExecuteAsync(groupId.Value, reqId, user.Id);
-
-                await RespondAsync($"申請 {reqId} を取消しました。", ephemeral: true);
-            }
-            catch (Exception ex)
-            {
-                await RespondAsync($"申請取消中にエラーが発生しました: {ex.Message}", ephemeral: true);
-            }
         }
     }
 }

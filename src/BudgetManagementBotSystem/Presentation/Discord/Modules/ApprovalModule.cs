@@ -1,8 +1,7 @@
-using Discord;
-using Discord.Interactions;
 using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 using BudgetManagementBotSystem.InfraStructure.Discord;
 using BudgetManagementBotSystem.Presentation.Discord.Helpers;
+using Discord.Interactions;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {
@@ -37,50 +36,36 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             _discordBotService = discordBotService;
         }
 
-        [SlashCommand("pending-list", "未承認の申請一覧を表示する")]
+        [SlashCommand("pending-list", "未承認の申請一覧を表示します")]
         public async Task PendingList(int page = 1, [Summary("page-size")] int? pageSize = null)
         {
             try
             {
-                var discordUserId = Context.User.Id;
-            var result = await _getPendingUseCase.ExecuteAsync(discordUserId, page, pageSize ?? 0);
-
-                if (result.Total == 0 || !result.Items.Any())
-                {
-                    var emptyEmbed = new EmbedBuilder()
-                        .WithTitle("未承認申請一覧")
-                        .WithColor(Color.Blue)
-                        .WithDescription("未承認の申請は見つかりませんでした。")
-                        .WithFooter("承認/却下は /approve /reject コマンドを使ってください")
-                        .Build();
-
-                    await RespondAsync(embed: emptyEmbed, ephemeral: true);
-                    return;
-                }
-
-                var embed = DiscordEmbedFactory.BuildPendingRequestsEmbed(result);
-                await RespondAsync(embed: embed);
+                var result = await _getPendingUseCase.ExecuteAsync(Context.User.Id, Math.Max(1, page), pageSize ?? 0);
+                await RespondAsync(embed: DiscordEmbedFactory.BuildPendingRequestsEmbed(result), ephemeral: result.Total == 0);
             }
-            catch (Exception ex)
+            catch (UnauthorizedAccessException)
             {
-                await RespondAsync($"一覧取得中にエラーが発生しました: {ex.Message}", ephemeral: true);
+                await RespondAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("未承認申請を確認する権限がありません。"), ephemeral: true);
+            }
+            catch (Exception)
+            {
+                await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("未承認申請を取得できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }
 
-        [SlashCommand("approve", "指定した申請を承認する")]
+        [SlashCommand("approve", "指定した申請を承認します")]
         public async Task Approve(int requestId)
         {
             try
             {
-                var discordUserId = Context.User.Id;
-                var userId = await _requestQueryUseCase.GetLocalUserIdByDiscordIdAsync(discordUserId);
+                var userId = await _requestQueryUseCase.GetLocalUserIdByDiscordIdAsync(Context.User.Id);
                 var groupId = await _requestQueryUseCase.GetGroupIdByRequestIdAsync(requestId);
 
                 await _approveUseCase.ExecuteAsync(groupId, requestId, userId);
 
                 var notification = await _notifyApprovedRequestUseCase.ExecuteAsync(requestId, userId);
                 var notificationSent = false;
-
                 if (notification != null)
                 {
                     notificationSent = await _discordBotService.SendDirectMessageAsync(
@@ -88,29 +73,38 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                         DiscordEmbedFactory.BuildApprovedRequestDmEmbed(notification));
                 }
 
-                var resultEmbed = DiscordEmbedFactory.BuildApprovalResultEmbed(requestId, notificationSent);
-                await RespondAsync(embed: resultEmbed);
+                await RespondAsync(embed: DiscordEmbedFactory.BuildApprovalResultEmbed(requestId, notificationSent));
             }
-            catch (Exception ex)
+            catch (UnauthorizedAccessException)
             {
-                await RespondAsync($"承認処理中にエラーが発生しました: {ex.Message}", ephemeral: true);
+                await RespondAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("この申請を承認する権限がありません。"), ephemeral: true);
+            }
+            catch (ArgumentException)
+            {
+                await RespondAsync(embed: DiscordEmbedFactory.BuildNotFoundEmbed("申請", requestId.ToString()), ephemeral: true);
+            }
+            catch (InvalidOperationException)
+            {
+                await RespondAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("申請状態を確認してください。承認できるのは承認待ちの申請です。"), ephemeral: true);
+            }
+            catch (Exception)
+            {
+                await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("承認処理を完了できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }
 
-        [SlashCommand("reject", "指定した申請を却下する")]
+        [SlashCommand("reject", "指定した申請を却下します")]
         public async Task Reject(int requestId, string reason)
         {
             try
             {
-                var discordUserId = Context.User.Id;
-                var userId = await _requestQueryUseCase.GetLocalUserIdByDiscordIdAsync(discordUserId);
+                var userId = await _requestQueryUseCase.GetLocalUserIdByDiscordIdAsync(Context.User.Id);
                 var groupId = await _requestQueryUseCase.GetGroupIdByRequestIdAsync(requestId);
 
                 await _rejectUseCase.ExecuteAsync(groupId, requestId, userId);
 
                 var notification = await _notifyRejectedRequestUseCase.ExecuteAsync(requestId, userId, reason);
                 var notificationSent = false;
-
                 if (notification != null)
                 {
                     notificationSent = await _discordBotService.SendDirectMessageAsync(
@@ -118,33 +112,55 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                         DiscordEmbedFactory.BuildRejectedRequestDmEmbed(notification));
                 }
 
-                var resultEmbed = DiscordEmbedFactory.BuildRejectionResultEmbed(requestId, notificationSent);
-                await RespondAsync(embed: resultEmbed);
+                await RespondAsync(embed: DiscordEmbedFactory.BuildRejectionResultEmbed(requestId, notificationSent, reason));
             }
-            catch (Exception ex)
+            catch (UnauthorizedAccessException)
             {
-                await RespondAsync($"却下処理中にエラーが発生しました: {ex.Message}", ephemeral: true);
+                await RespondAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("この申請を却下する権限がありません。"), ephemeral: true);
+            }
+            catch (ArgumentException)
+            {
+                await RespondAsync(embed: DiscordEmbedFactory.BuildNotFoundEmbed("申請", requestId.ToString()), ephemeral: true);
+            }
+            catch (InvalidOperationException)
+            {
+                await RespondAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("申請状態を確認してください。却下できるのは承認待ちの申請です。"), ephemeral: true);
+            }
+            catch (Exception)
+            {
+                await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("却下処理を完了できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }
 
-        [SlashCommand("revoke-approval", "承認済み申請の承認を取り消す")]
+        [SlashCommand("revoke-approval", "承認済み申請の承認を取り消します")]
         public async Task RevokeApproval([Summary("request-id")] string requestId)
         {
             try
             {
-                if (!int.TryParse(requestId, out var reqId))
+                if (!int.TryParse(requestId, out var parsedRequestId))
                 {
-                    await RespondAsync($"申請IDは数値で指定してください: {requestId}", ephemeral: true);
+                    await RespondAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("申請IDは数値で指定してください。"), ephemeral: true);
                     return;
                 }
-                var discordUserId = Context.User.Id;
-                await _revokeUseCase.ExecuteAsync(reqId, discordUserId);
 
-                await RespondAsync($"申請 {reqId} の承認を取り消しました。", ephemeral: true);
+                await _revokeUseCase.ExecuteAsync(parsedRequestId, Context.User.Id);
+                await RespondAsync(embed: DiscordEmbedFactory.BuildSuccessEmbed("承認を取り消しました", $"申請 `#{parsedRequestId}` の承認取消が完了しました。"), ephemeral: true);
             }
-            catch (Exception ex)
+            catch (UnauthorizedAccessException)
             {
-                await RespondAsync($"承認取消中にエラーが発生しました: {ex.Message}", ephemeral: true);
+                await RespondAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("承認を取り消す権限がありません。"), ephemeral: true);
+            }
+            catch (ArgumentException)
+            {
+                await RespondAsync(embed: DiscordEmbedFactory.BuildNotFoundEmbed("申請", requestId), ephemeral: true);
+            }
+            catch (InvalidOperationException)
+            {
+                await RespondAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("申請状態を確認してください。承認取消できるのは承認済みの申請です。"), ephemeral: true);
+            }
+            catch (Exception)
+            {
+                await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("承認取消を完了できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }
     }

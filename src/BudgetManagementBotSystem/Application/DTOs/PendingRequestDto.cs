@@ -1,4 +1,5 @@
 using System;
+using BudgetManagementBotSystem.Domain.Enums;
 
 namespace BudgetManagementBotSystem.Application.DTOs
 {
@@ -10,5 +11,6 @@ namespace BudgetManagementBotSystem.Application.DTOs
         public string Description { get; set; } = string.Empty;
         public int GroupId { get; set; }
         public string GroupName { get; set; } = string.Empty;
+        public RequestStatus Status { get; set; } = RequestStatus.Pending;
     }
 }

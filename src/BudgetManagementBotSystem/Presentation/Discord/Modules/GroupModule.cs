@@ -1,7 +1,6 @@
-using Discord;
-using Discord.Interactions;
-using BudgetManagementBotSystem.Application.DTOs;
 using BudgetManagementBotSystem.Application.UseCases.Groups;
+using BudgetManagementBotSystem.Presentation.Discord.Helpers;
+using Discord.Interactions;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {
@@ -21,87 +20,66 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             _listGroupsUseCase = listGroupsUseCase;
         }
 
-        [SlashCommand("register-group", "新しい班を登録する")]
+        [SlashCommand("register-group", "新しい班を登録します")]
         public async Task RegisterGroup([Summary("group-name")] string name)
         {
-            await _registerGroupUseCase.ExecuteAsync(name);
-            await RespondAsync($"班を登録しました: {name}");
+            try
+            {
+                await _registerGroupUseCase.ExecuteAsync(name);
+                await RespondAsync(embed: DiscordEmbedFactory.BuildSuccessEmbed("班を登録しました", $"班 `{name}` を登録しました。\n次に `/register-user` と `/assign-group` でユーザーを班に所属させてください。"), ephemeral: true);
+            }
+            catch (ArgumentException)
+            {
+                await RespondAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("班名を確認してください。既に登録済みの班名は使用できません。"), ephemeral: true);
+            }
+            catch (Exception)
+            {
+                await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("班を登録できません", "時間を置いて再実行してください。"), ephemeral: true);
+            }
         }
 
-        [SlashCommand("list-groups", "登録済みの班一覧を表示する")]
+        [SlashCommand("list-groups", "登録済みの班一覧を表示します")]
         public async Task ListGroups()
         {
             try
             {
                 var groups = await _listGroupsUseCase.ExecuteAsync(Context.User.Id);
-                await RespondAsync(embed: BuildGroupListEmbed(groups), ephemeral: true);
+                await RespondAsync(embed: DiscordEmbedFactory.BuildGroupListEmbed(groups), ephemeral: true);
             }
-            catch (ArgumentException ex)
+            catch (UnauthorizedAccessException)
             {
-                await RespondAsync(embed: BuildListGroupsErrorEmbed(ex.Message), ephemeral: true);
+                await RespondAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("班一覧を表示する権限がありません。"), ephemeral: true);
+            }
+            catch (ArgumentException)
+            {
+                await RespondAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("Discordユーザーがシステムに登録されていません。"), ephemeral: true);
+            }
+            catch (Exception)
+            {
+                await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("班一覧を取得できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }
 
-        [SlashCommand("delete-group", "班を削除または無効化する")]
+        [SlashCommand("delete-group", "班を削除または無効化します")]
         public async Task DeleteGroup([Summary("group-id")] int groupId)
         {
             try
             {
-                var discordUserId = Context.User.Id;
-                try
-                {
-                    var groupName = await _deleteGroupUseCase.ExecuteAsync(discordUserId, groupId);
-                    await RespondAsync($"班 {groupName}（ID: {groupId}）を削除（無効化）しました。", ephemeral: true);
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    await RespondAsync("エラー: このコマンドは管理者のみ実行できます。", ephemeral: true);
-                }
-                catch (ArgumentException ex)
-                {
-                    await RespondAsync($"エラー: {ex.Message}", ephemeral: true);
-                }
+                var groupName = await _deleteGroupUseCase.ExecuteAsync(Context.User.Id, groupId);
+                await RespondAsync(embed: DiscordEmbedFactory.BuildWarningEmbed("班を削除しました", $"班 `{groupName}` (`{groupId}`) を削除または無効化しました。"), ephemeral: true);
             }
-            catch (Exception ex)
+            catch (UnauthorizedAccessException)
             {
-                await RespondAsync($"班削除中にエラーが発生しました: {ex.Message}", ephemeral: true);
+                await RespondAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("このコマンドは管理者のみ実行できます。"), ephemeral: true);
             }
-        }
-
-        private static Embed BuildGroupListEmbed(IEnumerable<GroupListItemDto> groups)
-        {
-            var orderedGroups = groups.ToList();
-
-            var embed = new EmbedBuilder()
-                .WithTitle("班一覧")
-                .WithColor(Color.Blue)
-                .AddField("登録班数", orderedGroups.Count.ToString(), true);
-
-            if (orderedGroups.Count == 0)
+            catch (ArgumentException)
             {
-                return embed
-                    .WithDescription("登録済みの班はありません。")
-                    .Build();
+                await RespondAsync(embed: DiscordEmbedFactory.BuildNotFoundEmbed("班", groupId.ToString()), ephemeral: true);
             }
-
-            foreach (var group in orderedGroups)
+            catch (Exception)
             {
-                embed.AddField(
-                    group.Name,
-                    $"班ID: `{group.Id}`",
-                    true);
+                await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("班を削除できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
-
-            return embed.Build();
-        }
-
-        private static Embed BuildListGroupsErrorEmbed(string message)
-        {
-            return new EmbedBuilder()
-                .WithTitle("班一覧を表示できません")
-                .WithColor(Color.Red)
-                .WithDescription(message)
-                .Build();
         }
     }
 }
