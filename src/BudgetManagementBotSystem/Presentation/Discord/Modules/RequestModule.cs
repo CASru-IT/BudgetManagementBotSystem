@@ -238,7 +238,13 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 
                 var embed = DiscordEmbedFactory.BuildRequestDetailEmbed(detail);
                 var currentStatus = detail.Request.GetCurrentStatus();
-                var components = DiscordComponentFactory.BuildRequestDetailComponents(parsedRequestId, currentStatus);
+                var canApproveOrReject = await AuthorizationHelper.IsPrivilegedAsync(
+                    _userRepository,
+                    Context.User.Id,
+                    AccountRole.Accountant);
+                var components = canApproveOrReject
+                    ? DiscordComponentFactory.BuildRequestDetailComponents(parsedRequestId, currentStatus)
+                    : null;
                 if (!detail.Evidences.Any())
                 {
                     await RespondAsync(embed: embed, components: components);
