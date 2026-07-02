@@ -49,6 +49,11 @@
   - `/set-user-role` で登録済みユーザーの権限を変更
   - `/remove-user` でユーザーを無効化
   - `/activate-user` で無効化済みユーザーを再有効化
+- 一覧系コマンドのページングボタン
+  - `/usage-history`、`/list-requests`、`/pending-list` は2ページ以上の結果で「前へ」「更新」「次へ」ボタンを表示します。
+  - 検索条件は `PagingSessionStore` に15分間保持し、Discordの `customId` には短い token のみを含めます。
+  - ページングボタンを操作できるのは、一覧を表示した本人のみです。
+  - ボタン操作時は対象 UseCase を再実行し、Embed とボタン状態を同じメッセージ上で更新します。
 
 注: Presentation 層の一部コマンドについて、スラッシュコマンド引数の受け取り方を改善しました。管理系コマンド（`/register-user` 等）は文字列での Discord ID 受け取りから、Discord のユーザー選択 (`IUser` 相当の `user` パラメータ) に変更されています。これによりコマンド UI 上で直接ユーザーを選べるようになり、`targetUser.Id` から Discord ID を取得します。
 

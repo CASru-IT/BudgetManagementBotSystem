@@ -65,6 +65,7 @@ builder.Services.Configure<AdminBootstrapOptions>(builder.Configuration.GetSecti
 
 builder.Services.AddSingleton<DiscordBotService>();
 builder.Services.AddSingleton<PendingRequestConfirmationStore>();
+builder.Services.AddSingleton<PagingSessionStore>();
 builder.Services.AddHostedService<Worker>();
 
 var bot = builder.Build();

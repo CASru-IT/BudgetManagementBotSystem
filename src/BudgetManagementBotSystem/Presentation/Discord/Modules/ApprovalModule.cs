@@ -1,6 +1,7 @@
 using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 using BudgetManagementBotSystem.Presentation.Discord.Autocomplete;
 using BudgetManagementBotSystem.Presentation.Discord.Helpers;
+using BudgetManagementBotSystem.Presentation.Discord.Models;
 using BudgetManagementBotSystem.Presentation.Discord.Services;
 using Discord.Interactions;
 using Microsoft.Extensions.Logging;
@@ -12,17 +13,20 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         private readonly GetPendingRequestsUseCase _getPendingUseCase;
         private readonly RevokeApprovalUseCase _revokeUseCase;
         private readonly RequestWorkflowInteractionService _requestWorkflowInteractionService;
+        private readonly PagingSessionStore _pagingSessionStore;
         private readonly ILogger<ApprovalModule> _logger;
 
         public ApprovalModule(
             GetPendingRequestsUseCase getPendingUseCase,
             RevokeApprovalUseCase revokeUseCase,
             RequestWorkflowInteractionService requestWorkflowInteractionService,
+            PagingSessionStore pagingSessionStore,
             ILogger<ApprovalModule> logger)
         {
             _getPendingUseCase = getPendingUseCase;
             _revokeUseCase = revokeUseCase;
             _requestWorkflowInteractionService = requestWorkflowInteractionService;
+            _pagingSessionStore = pagingSessionStore;
             _logger = logger;
         }
 
@@ -31,8 +35,26 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         {
             try
             {
-                var result = await _getPendingUseCase.ExecuteAsync(Context.User.Id, Math.Max(1, page), pageSize ?? 0);
-                await RespondAsync(embed: DiscordEmbedFactory.BuildPendingRequestsEmbed(result), ephemeral: result.Total == 0);
+                var requestedPageSize = pageSize ?? 10;
+                var result = await _getPendingUseCase.ExecuteAsync(Context.User.Id, Math.Max(1, page), requestedPageSize);
+                var totalPages = CalculateTotalPages(result.Total, result.PageSize);
+                var components = totalPages > 1
+                    ? DiscordComponentFactory.BuildPagingComponents(
+                        _pagingSessionStore.Create(new PagingSession
+                        {
+                            OwnerDiscordUserId = Context.User.Id,
+                            Target = PagingTarget.PendingList,
+                            Page = result.Page,
+                            PageSize = result.PageSize
+                        }),
+                        result.Page,
+                        totalPages)
+                    : null;
+
+                await RespondAsync(
+                    embed: DiscordEmbedFactory.BuildPendingRequestsEmbed(result),
+                    components: components,
+                    ephemeral: result.Total == 0);
             }
             catch (UnauthorizedAccessException)
             {
@@ -132,6 +154,11 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 _logger.LogError(ex, "Failed to revoke approval. DiscordUserId: {DiscordUserId}, RequestId: {RequestId}", Context.User.Id, requestId);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("承認取消を完了できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
+        }
+
+        private static int CalculateTotalPages(int total, int pageSize)
+        {
+            return pageSize <= 0 ? 1 : Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
         }
     }
 }

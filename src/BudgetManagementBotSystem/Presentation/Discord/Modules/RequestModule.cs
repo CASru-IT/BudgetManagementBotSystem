@@ -25,6 +25,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         private readonly RequestDetailUseCase _requestDetailUseCase;
         private readonly BudgetQueryUseCase _budgetQueryUseCase;
         private readonly PendingRequestConfirmationStore _confirmationStore;
+        private readonly PagingSessionStore _pagingSessionStore;
         private readonly ILogger<RequestModule> _logger;
 
         public RequestModule(
@@ -37,6 +38,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             RequestDetailUseCase requestDetailUseCase,
             BudgetQueryUseCase budgetQueryUseCase,
             PendingRequestConfirmationStore confirmationStore,
+            PagingSessionStore pagingSessionStore,
             ILogger<RequestModule> logger)
         {
             _cancelBudgetRequestUseCase = cancelBudgetRequestUseCase;
@@ -48,6 +50,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             _requestDetailUseCase = requestDetailUseCase;
             _budgetQueryUseCase = budgetQueryUseCase;
             _confirmationStore = confirmationStore;
+            _pagingSessionStore = pagingSessionStore;
             _logger = logger;
         }
 
@@ -183,7 +186,26 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 pageSize = Math.Min(Math.Max(1, pageSize), 50);
 
                 var result = await _requestListUseCase.ExecuteAsync(Context.User.Id, status, page, pageSize, groupId);
-                await RespondAsync(embed: DiscordEmbedFactory.BuildRequestListEmbed(result, status), ephemeral: result.Total == 0);
+                var totalPages = CalculateTotalPages(result.Total, result.PageSize);
+                var components = totalPages > 1
+                    ? DiscordComponentFactory.BuildPagingComponents(
+                        _pagingSessionStore.Create(new PagingSession
+                        {
+                            OwnerDiscordUserId = Context.User.Id,
+                            Target = PagingTarget.RequestList,
+                            Page = result.Page,
+                            PageSize = result.PageSize,
+                            Status = status,
+                            GroupId = groupId
+                        }),
+                        result.Page,
+                        totalPages)
+                    : null;
+
+                await RespondAsync(
+                    embed: DiscordEmbedFactory.BuildRequestListEmbed(result, status),
+                    components: components,
+                    ephemeral: result.Total == 0);
             }
             catch (ArgumentException)
             {
@@ -315,6 +337,11 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             var sendTasks = accountantUsers.Select(accountant => _discordBotService.SendDirectMessageAsync(accountant.DiscordUserId, embed));
             var results = await Task.WhenAll(sendTasks);
             return results.Count(result => result);
+        }
+
+        private static int CalculateTotalPages(int total, int pageSize)
+        {
+            return pageSize <= 0 ? 1 : Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
         }
     }
 }

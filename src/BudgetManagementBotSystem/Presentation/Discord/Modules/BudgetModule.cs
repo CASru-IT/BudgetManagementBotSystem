@@ -3,6 +3,8 @@ using BudgetManagementBotSystem.Domain.Enums;
 using BudgetManagementBotSystem.Domain.Repository;
 using BudgetManagementBotSystem.Presentation.Discord.Autocomplete;
 using BudgetManagementBotSystem.Presentation.Discord.Helpers;
+using BudgetManagementBotSystem.Presentation.Discord.Models;
+using BudgetManagementBotSystem.Presentation.Discord.Services;
 using Discord.Interactions;
 using Microsoft.Extensions.Logging;
 
@@ -14,6 +16,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         private readonly BudgetQueryUseCase _budgetQueryUseCase;
         private readonly IncreaseBudgetLimitUseCase _increaseBudgetLimitUseCase;
         private readonly AdminAddBudgetTransactionUseCase _adminAddBudgetTransactionUseCase;
+        private readonly PagingSessionStore _pagingSessionStore;
         private readonly ILogger<BudgetModule> _logger;
 
         public BudgetModule(
@@ -21,12 +24,14 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             BudgetQueryUseCase budgetQueryUseCase,
             IncreaseBudgetLimitUseCase increaseBudgetLimitUseCase,
             AdminAddBudgetTransactionUseCase adminAddBudgetTransactionUseCase,
+            PagingSessionStore pagingSessionStore,
             ILogger<BudgetModule> logger)
         {
             _userRepository = userRepository;
             _budgetQueryUseCase = budgetQueryUseCase;
             _increaseBudgetLimitUseCase = increaseBudgetLimitUseCase;
             _adminAddBudgetTransactionUseCase = adminAddBudgetTransactionUseCase;
+            _pagingSessionStore = pagingSessionStore;
             _logger = logger;
         }
 
@@ -62,7 +67,26 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 pageSize = Math.Min(Math.Max(1, pageSize), 50);
 
                 var result = await _budgetQueryUseCase.GetUsageHistoryAsync(Context.User.Id, page, pageSize, groupId, fiscalYear);
-                await RespondAsync(embed: DiscordEmbedFactory.BuildUsageHistoryEmbed(result, fiscalYear), ephemeral: result.Total == 0);
+                var totalPages = CalculateTotalPages(result.Total, result.PageSize);
+                var components = totalPages > 1
+                    ? DiscordComponentFactory.BuildPagingComponents(
+                        _pagingSessionStore.Create(new PagingSession
+                        {
+                            OwnerDiscordUserId = Context.User.Id,
+                            Target = PagingTarget.UsageHistory,
+                            Page = result.Page,
+                            PageSize = result.PageSize,
+                            GroupId = groupId,
+                            FiscalYear = fiscalYear
+                        }),
+                        result.Page,
+                        totalPages)
+                    : null;
+
+                await RespondAsync(
+                    embed: DiscordEmbedFactory.BuildUsageHistoryEmbed(result, fiscalYear),
+                    components: components,
+                    ephemeral: result.Total == 0);
             }
             catch (UnauthorizedAccessException)
             {
@@ -193,6 +217,11 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 _logger.LogError(ex, "Failed to add budget transaction. DiscordUserId: {DiscordUserId}, GroupId: {GroupId}, TransactionType: {TransactionType}, Amount: {Amount}, FiscalYear: {FiscalYear}", Context.User.Id, groupId, transactionType, amount, fiscalYear);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("予算取引を追加できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
+        }
+
+        private static int CalculateTotalPages(int total, int pageSize)
+        {
+            return pageSize <= 0 ? 1 : Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
         }
     }
 }
