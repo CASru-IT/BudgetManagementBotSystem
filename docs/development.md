@@ -31,6 +31,7 @@ cp src/BudgetManagementBotSystem/sample.appsettings.json src/BudgetManagementBot
 appsettings のポイント（開発環境）:
 
 - `Discord:Token` に Bot トークンを設定
+- `Discord:CommandRegistrationMode` は通常 `Guild` にし、`Discord:GuildId` に開発用サーバー ID を設定
 - `UseInMemoryDatabase` を `true` に設定して、PostgreSQL を用意せずに起動可能にする
 - `EvidenceStorage:BasePath` はローカル保存先（既定: `data/evidences`）
 
@@ -38,7 +39,11 @@ appsettings のポイント（開発環境）:
 
 ```json
 {
-  "Discord": { "Token": "YOUR_DISCORD_BOT_TOKEN" },
+  "Discord": {
+    "Token": "YOUR_DISCORD_BOT_TOKEN",
+    "CommandRegistrationMode": "Guild",
+    "GuildId": 123456789012345678
+  },
   "UseInMemoryDatabase": true,
   "EvidenceStorage": { "BasePath": "data/evidences" }
 }

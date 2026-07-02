@@ -63,6 +63,14 @@ cp .env.example .env
   - Discord の Bot トークンを指定します。公開しないでください。
   - 例: `Discord__Token=NzA1...`（実際の値は長いトークン文字列）
 
+- `Discord__CommandRegistrationMode` (`Guild`|`Global`)
+  - スラッシュコマンドの登録先を指定します。この Bot は単一サーバー運用を想定しているため、既定は `Guild` です。
+  - `Guild` では Discord への反映が速く、起動時に現在の実装済みコマンドだけを登録するため、古いコマンドを落としやすくなります。
+
+- `Discord__GuildId` (`Guild` 登録時は必須)
+  - コマンドを登録する Discord サーバー ID を指定します。
+  - `Discord__CommandRegistrationMode=Global` の場合は不要です。
+
 - `DB_USER`, `DB_PASSWORD`, `DB_NAME` (推奨)
   - Compose のデフォルト設定ではこれらの値から接続文字列を生成します（`ConnectionStrings__Db` が未指定の場合）。
   - 例: `DB_USER=postgres` / `DB_PASSWORD=secret` / `DB_NAME=budget`

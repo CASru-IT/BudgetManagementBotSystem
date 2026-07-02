@@ -9,7 +9,9 @@
 ### 実装済み
 
 - Worker 起動時に `Discord:Token` を読み取り、Discord Bot を起動
-- スラッシュコマンドのグローバル登録
+- スラッシュコマンドは `Discord:CommandRegistrationMode` に従って Guild / Global に登録
+  - 既定は `Guild`。`Discord:GuildId` に指定したサーバーへ `deleteMissing=true` で登録し、コードから消えた古いコマンドを登録対象から外します。
+  - `Global` は複数サーバー展開時のみ使用します。Discord 側の反映に時間がかかる場合があります。
 - `Program.cs` で既定カルチャを `ja-JP` に固定
 - Docker 実行時の `LANG` / `LC_ALL` を `ja_JP.UTF-8` に固定
 - ドメイン層（`Group` / `User` / `BudgetRequest` / `BudgetTransaction` など）
@@ -61,7 +63,9 @@
 
 追記: 管理系の権限操作についてはコマンド整理を行い、`/grant-role` と `/revoke-role` を `/set-user-role` に統合しました。`/set-user-role` は管理者のみ実行可能となるよう、Presentation 層で権限チェックを導入しています。
 
-追記: `ApproveBudgetRequestUseCase` と承認通知 UseCase は残っていますが、現行の `ApprovalModule` では `/approve` スラッシュコマンドは公開されていません。承認操作を Discord から行う場合は、`ApprovalModule` への再追加が必要です。
+追記: `/grant-role` と `/revoke-role` が古い Discord クライアント表示から実行された場合は、通常処理に入る前に ephemeral メッセージで `/set-user-role` への移行を案内します。
+
+追記: `ApprovalModule` では `/approve` スラッシュコマンドを公開しています。`/request-detail` のボタン操作からも同じ承認処理を実行できます。
 
 ### テスト実装済み
 
@@ -75,7 +79,6 @@
 
 ### 未実装 / 実装途中
 
-- `/approve` スラッシュコマンドの再公開（UseCase は実装済み）
 - ファイル保存のクラウド実装（現状はローカル保存のみ）
 - 監査観点での申請ステータス変更者の永続化（`RequestStatusChange` への保持）
 

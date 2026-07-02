@@ -44,20 +44,7 @@ public class DiscordBotService
         {
             try
             {
-                var configuration = _provider.GetService<IConfiguration>();
-                var guildIdStr = configuration?["Discord:TestGuildId"];
-                if (!string.IsNullOrWhiteSpace(guildIdStr) && ulong.TryParse(guildIdStr, out var guildId))
-                {
-                    Console.WriteLine($"Registering commands to test guild {guildId}");
-                    await _interactions.RegisterCommandsToGuildAsync(guildId);
-                    Console.WriteLine("Registered commands to test guild.");
-                }
-                else
-                {
-                    Console.WriteLine("Registering commands globally (may take up to an hour to appear)");
-                    await _interactions.RegisterCommandsGloballyAsync();
-                    Console.WriteLine("Registered commands globally.");
-                }
+                await RegisterApplicationCommandsAsync();
             }
             catch (Exception ex)
             {
@@ -70,6 +57,11 @@ public class DiscordBotService
             var ctx = new SocketInteractionContext(_client, interaction);
             try
             {
+                if (await TryRejectDeprecatedSlashCommandAsync(interaction))
+                {
+                    return;
+                }
+
                 var result = await _interactions.ExecuteCommandAsync(ctx, _provider);
                 if (!result.IsSuccess)
                 {
@@ -92,6 +84,68 @@ public class DiscordBotService
 
         await _client.LoginAsync(TokenType.Bot, token);
         await _client.StartAsync();
+    }
+
+    private async Task RegisterApplicationCommandsAsync()
+    {
+        var configuration = _provider.GetService<IConfiguration>();
+        var mode = GetCommandRegistrationMode(configuration);
+
+        if (mode == CommandRegistrationMode.Guild)
+        {
+            var guildId = GetConfiguredGuildId(configuration)
+                ?? throw new InvalidOperationException("Discord:GuildId is required when Discord:CommandRegistrationMode is Guild.");
+
+            Console.WriteLine($"Registering commands to guild {guildId} with deleteMissing=true");
+            await _interactions.RegisterCommandsToGuildAsync(guildId, deleteMissing: true);
+            Console.WriteLine("Registered commands to guild.");
+            return;
+        }
+
+        // Global commands may take time to propagate on Discord. Prefer guild commands for this bot unless multi-guild deployment is required.
+        Console.WriteLine("Registering commands globally with deleteMissing=true (may take up to an hour to appear)");
+        await _interactions.RegisterCommandsGloballyAsync(deleteMissing: true);
+        Console.WriteLine("Registered commands globally.");
+    }
+
+    private static CommandRegistrationMode GetCommandRegistrationMode(IConfiguration? configuration)
+    {
+        var configuredMode = configuration?["Discord:CommandRegistrationMode"];
+        if (Enum.TryParse<CommandRegistrationMode>(configuredMode, ignoreCase: true, out var mode))
+        {
+            return mode;
+        }
+
+        return CommandRegistrationMode.Guild;
+    }
+
+    private static ulong? GetConfiguredGuildId(IConfiguration? configuration)
+    {
+        return TryGetGuildId(configuration?["Discord:GuildId"])
+            ?? TryGetGuildId(configuration?["Discord:TestGuildId"]);
+    }
+
+    private static ulong? TryGetGuildId(string? guildId)
+    {
+        return ulong.TryParse(guildId, out var parsedGuildId)
+            ? parsedGuildId
+            : null;
+    }
+
+    private static async Task<bool> TryRejectDeprecatedSlashCommandAsync(SocketInteraction interaction)
+    {
+        if (interaction is not SocketSlashCommand command)
+        {
+            return false;
+        }
+
+        if (!DeprecatedSlashCommands.TryGet(command.CommandName, out var info))
+        {
+            return false;
+        }
+
+        await command.RespondAsync(info.Message, ephemeral: true);
+        return true;
     }
 
     /// <summary>
