@@ -215,9 +215,11 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 }
 
                 var embed = DiscordEmbedFactory.BuildRequestDetailEmbed(detail);
+                var currentStatus = detail.Request.GetCurrentStatus();
+                var components = DiscordComponentFactory.BuildRequestDetailComponents(parsedRequestId, currentStatus);
                 if (!detail.Evidences.Any())
                 {
-                    await RespondAsync(embed: embed);
+                    await RespondAsync(embed: embed, components: components);
                     return;
                 }
 
@@ -225,7 +227,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     .Select(evidence => new FileAttachment(new MemoryStream(evidence.Content, writable: false), evidence.FileName))
                     .ToList();
 
-                await RespondWithFilesAsync(files, embeds: new[] { embed });
+                await RespondWithFilesAsync(files, embeds: new[] { embed }, components: components);
             }
             catch (Exception ex)
             {

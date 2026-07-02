@@ -1,7 +1,7 @@
 using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
-using BudgetManagementBotSystem.InfraStructure.Discord;
 using BudgetManagementBotSystem.Presentation.Discord.Autocomplete;
 using BudgetManagementBotSystem.Presentation.Discord.Helpers;
+using BudgetManagementBotSystem.Presentation.Discord.Services;
 using Discord.Interactions;
 using Microsoft.Extensions.Logging;
 
@@ -9,35 +9,20 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {
     public class ApprovalModule : InteractionModuleBase<SocketInteractionContext>
     {
-        private readonly ApproveBudgetRequestUseCase _approveUseCase;
-        private readonly RejectBudgetRequestUseCase _rejectUseCase;
         private readonly GetPendingRequestsUseCase _getPendingUseCase;
-        private readonly RequestQueryUseCase _requestQueryUseCase;
-        private readonly NotifyApprovedRequestUseCase _notifyApprovedRequestUseCase;
-        private readonly NotifyRejectedRequestUseCase _notifyRejectedRequestUseCase;
         private readonly RevokeApprovalUseCase _revokeUseCase;
-        private readonly DiscordBotService _discordBotService;
+        private readonly RequestWorkflowInteractionService _requestWorkflowInteractionService;
         private readonly ILogger<ApprovalModule> _logger;
 
         public ApprovalModule(
-            ApproveBudgetRequestUseCase approveUseCase,
-            RejectBudgetRequestUseCase rejectUseCase,
             GetPendingRequestsUseCase getPendingUseCase,
-            RequestQueryUseCase requestQueryUseCase,
-            NotifyApprovedRequestUseCase notifyApprovedRequestUseCase,
-            NotifyRejectedRequestUseCase notifyRejectedRequestUseCase,
             RevokeApprovalUseCase revokeUseCase,
-            DiscordBotService discordBotService,
+            RequestWorkflowInteractionService requestWorkflowInteractionService,
             ILogger<ApprovalModule> logger)
         {
-            _approveUseCase = approveUseCase;
-            _rejectUseCase = rejectUseCase;
             _getPendingUseCase = getPendingUseCase;
-            _requestQueryUseCase = requestQueryUseCase;
-            _notifyApprovedRequestUseCase = notifyApprovedRequestUseCase;
-            _notifyRejectedRequestUseCase = notifyRejectedRequestUseCase;
             _revokeUseCase = revokeUseCase;
-            _discordBotService = discordBotService;
+            _requestWorkflowInteractionService = requestWorkflowInteractionService;
             _logger = logger;
         }
 
@@ -65,19 +50,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         {
             try
             {
-                var userId = await _requestQueryUseCase.GetLocalUserIdByDiscordIdAsync(Context.User.Id);
-                var groupId = await _requestQueryUseCase.GetGroupIdByRequestIdAsync(requestId);
-
-                await _approveUseCase.ExecuteAsync(groupId, requestId, userId);
-
-                var notification = await _notifyApprovedRequestUseCase.ExecuteAsync(requestId, userId);
-                var notificationSent = false;
-                if (notification != null)
-                {
-                    notificationSent = await _discordBotService.SendDirectMessageAsync(
-                        notification.RequesterDiscordUserId,
-                        DiscordEmbedFactory.BuildApprovedRequestDmEmbed(notification));
-                }
+                var notificationSent = await _requestWorkflowInteractionService.ApproveAsync(requestId, Context.User.Id);
 
                 await RespondAsync(embed: DiscordEmbedFactory.BuildApprovalResultEmbed(requestId, notificationSent));
             }
@@ -105,19 +78,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         {
             try
             {
-                var userId = await _requestQueryUseCase.GetLocalUserIdByDiscordIdAsync(Context.User.Id);
-                var groupId = await _requestQueryUseCase.GetGroupIdByRequestIdAsync(requestId);
-
-                await _rejectUseCase.ExecuteAsync(groupId, requestId, userId);
-
-                var notification = await _notifyRejectedRequestUseCase.ExecuteAsync(requestId, userId, reason);
-                var notificationSent = false;
-                if (notification != null)
-                {
-                    notificationSent = await _discordBotService.SendDirectMessageAsync(
-                        notification.RequesterDiscordUserId,
-                        DiscordEmbedFactory.BuildRejectedRequestDmEmbed(notification));
-                }
+                var notificationSent = await _requestWorkflowInteractionService.RejectAsync(requestId, Context.User.Id, reason);
 
                 await RespondAsync(embed: DiscordEmbedFactory.BuildRejectionResultEmbed(requestId, notificationSent, reason));
             }

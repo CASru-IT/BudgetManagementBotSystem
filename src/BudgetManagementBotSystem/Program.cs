@@ -59,6 +59,7 @@ builder.Services.AddScoped<NotifyApprovedRequestUseCase>();
 builder.Services.AddScoped<NotifyRejectedRequestUseCase>();
 builder.Services.AddScoped<BudgetQueryUseCase>();
 builder.Services.AddScoped<DiscordRequestNotificationService>();
+builder.Services.AddScoped<RequestWorkflowInteractionService>();
 builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
 builder.Services.Configure<AdminBootstrapOptions>(builder.Configuration.GetSection("AdminBootstrap"));
 
