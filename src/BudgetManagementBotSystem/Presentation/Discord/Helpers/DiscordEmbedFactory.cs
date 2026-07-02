@@ -201,6 +201,11 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Helpers
                 .AddField("履歴", Truncate(historyText, FieldTextLength))
                 .WithFooter(GetRequestDetailFooter(currentStatus, request.Id));
 
+            if (detail.Evidences.Any())
+            {
+                embed.AddField("添付ファイルの注意", "添付ファイルを開く際は、送信者と内容を確認してください。");
+            }
+
             if (detail.MissingEvidencePaths.Any())
             {
                 embed.AddField("添付できない証跡", Truncate(string.Join("\n", detail.MissingEvidencePaths), FieldTextLength));

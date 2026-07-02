@@ -39,7 +39,9 @@
   - `EvidenceStorage:BasePath`（既定: `data/evidences`）配下へ保存
 - `/create-request`
   - Discord の添付引数として `evidence-1` から `evidence-5` を受け取る実装です。`evidence-1` は必須、追加証憑は任意です。
-  - 証憑は jpg / jpeg / png / webp / pdf、1ファイル10MB以下に制限しています。
+  - 証憑ファイルの種類は拡張子や ContentType では拒否せず、Discord で添付可能なファイルを原則として受け付けます。
+  - 証憑は1ファイル10MB以下、最大5件に制限しています。ファイル名が空、0バイト、ダウンロード失敗の場合も登録できません。
+  - 保存時はファイル名を安全な名前に正規化し、一意な保存名で同名ファイルを上書きしないようにしています。
   - コマンド実行時点では申請を作成せず、確認 Embed と「申請する」「キャンセル」ボタンを表示します。
   - 確認データは `PendingRequestConfirmationStore` に10分間だけ保持し、「申請する」押下時に `SubmitBudgetRequestUseCase` を実行します。
   - 申請作成後の会計担当者 DM 通知は `DiscordRequestNotificationService` に分離しています。

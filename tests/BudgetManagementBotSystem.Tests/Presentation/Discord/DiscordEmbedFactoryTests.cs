@@ -1,5 +1,7 @@
 using BudgetManagementBotSystem.Application.DTOs;
+using BudgetManagementBotSystem.Domain.Entities;
 using BudgetManagementBotSystem.Domain.Enums;
+using BudgetManagementBotSystem.Domain.ValueObjects;
 using BudgetManagementBotSystem.Presentation.Discord.Helpers;
 using Discord;
 
@@ -111,6 +113,31 @@ public class DiscordEmbedFactoryTests
 
         Assert.Equal(20, embed.Fields.Count(field => field.Name.Contains("#")));
         Assert.Contains("20/50", embed.Footer?.Text);
+    }
+
+    [Fact]
+    public void BuildRequestDetailEmbed_WithEvidence_ShowsAttachmentWarning()
+    {
+        var request = new BudgetRequest(
+            userId: 1,
+            amount: new Money(1000m),
+            fiscalYear: new FiscalYear(2026, 4),
+            description: "receipt",
+            evidenceFilePaths: new[] { "stored/receipt.zip" });
+        var detail = new RequestDetailDto(
+            request,
+            groupId: 1,
+            groupName: "Group",
+            requesterName: "Requester",
+            requesterDiscordUserId: 123,
+            evidences: new[] { new UploadedEvidenceDto("receipt.zip", new byte[] { 1 }) },
+            missingEvidencePaths: Array.Empty<string>());
+
+        var embed = DiscordEmbedFactory.BuildRequestDetailEmbed(detail);
+
+        Assert.Contains(embed.Fields, field =>
+            field.Name == "添付ファイルの注意" &&
+            field.Value.Contains("添付ファイルを開く際は、送信者と内容を確認してください。"));
     }
 
     [Fact]
