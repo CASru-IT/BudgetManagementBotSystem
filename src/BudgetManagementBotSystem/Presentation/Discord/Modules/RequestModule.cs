@@ -1,10 +1,13 @@
 using BudgetManagementBotSystem.Application.DTOs;
+using BudgetManagementBotSystem.Application.UseCases.Budget;
 using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 using BudgetManagementBotSystem.Domain.Enums;
 using BudgetManagementBotSystem.Domain.Repository;
 using BudgetManagementBotSystem.InfraStructure.Discord;
 using BudgetManagementBotSystem.Presentation.Discord.Autocomplete;
 using BudgetManagementBotSystem.Presentation.Discord.Helpers;
+using BudgetManagementBotSystem.Presentation.Discord.Models;
+using BudgetManagementBotSystem.Presentation.Discord.Services;
 using Discord;
 using Discord.Interactions;
 using Microsoft.Extensions.Logging;
@@ -13,41 +16,51 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
 {
     public class RequestModule : InteractionModuleBase<SocketInteractionContext>
     {
-        private readonly SubmitBudgetRequestUseCase _submitBudgetRequestUseCase;
         private readonly CancelBudgetRequestUseCase _cancelBudgetRequestUseCase;
         private readonly UserCancelBudgetRequestUseCase _userCancelRequestUseCase;
         private readonly IUserRepository _userRepository;
+        private readonly IGroupRepository _groupRepository;
         private readonly DiscordBotService _discordBotService;
         private readonly RequestListUseCase _requestListUseCase;
         private readonly RequestDetailUseCase _requestDetailUseCase;
+        private readonly BudgetQueryUseCase _budgetQueryUseCase;
+        private readonly PendingRequestConfirmationStore _confirmationStore;
         private readonly ILogger<RequestModule> _logger;
 
         public RequestModule(
-            SubmitBudgetRequestUseCase submitBudgetRequestUseCase,
             CancelBudgetRequestUseCase cancelBudgetRequestUseCase,
             UserCancelBudgetRequestUseCase userCancelRequestUseCase,
             IUserRepository userRepository,
+            IGroupRepository groupRepository,
             DiscordBotService discordBotService,
             RequestListUseCase requestListUseCase,
             RequestDetailUseCase requestDetailUseCase,
+            BudgetQueryUseCase budgetQueryUseCase,
+            PendingRequestConfirmationStore confirmationStore,
             ILogger<RequestModule> logger)
         {
-            _submitBudgetRequestUseCase = submitBudgetRequestUseCase;
             _cancelBudgetRequestUseCase = cancelBudgetRequestUseCase;
             _userCancelRequestUseCase = userCancelRequestUseCase;
             _userRepository = userRepository;
+            _groupRepository = groupRepository;
             _discordBotService = discordBotService;
             _requestListUseCase = requestListUseCase;
             _requestDetailUseCase = requestDetailUseCase;
+            _budgetQueryUseCase = budgetQueryUseCase;
+            _confirmationStore = confirmationStore;
             _logger = logger;
         }
 
         [SlashCommand("create-request", "予算使用申請を作成します")]
         public async Task CreateRequest(
-            [Summary("group-id"), Autocomplete(typeof(GroupAutocompleteHandler))] int groupId,
-            [Summary("amount")] double amount,
-            [Summary("description")] string description,
-            [Summary("attach-count")] int attachCount = 1)
+            [Summary("group-id", "申請する班ID"), Autocomplete(typeof(GroupAutocompleteHandler))] int groupId,
+            [Summary("amount", "申請金額")] double amount,
+            [Summary("description", "購入目的や内容")] string description,
+            [Summary("evidence-1", "領収書・請求書などの証憑ファイル")] IAttachment evidence1,
+            [Summary("evidence-2", "追加の証憑ファイル")] IAttachment? evidence2 = null,
+            [Summary("evidence-3", "追加の証憑ファイル")] IAttachment? evidence3 = null,
+            [Summary("evidence-4", "追加の証憑ファイル")] IAttachment? evidence4 = null,
+            [Summary("evidence-5", "追加の証憑ファイル")] IAttachment? evidence5 = null)
         {
             await DeferAsync(ephemeral: true);
 
@@ -60,30 +73,81 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
-                if (attachCount < 1)
+                if (amount < 0)
                 {
-                    await FollowupAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("添付ファイル数は1件以上で指定してください。"), ephemeral: true);
+                    await FollowupAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("金額は0以上で指定してください。"), ephemeral: true);
                     return;
                 }
 
                 var amountDecimal = Convert.ToDecimal(amount);
-                await FollowupAsync(embed: DiscordEmbedFactory.BuildInfoEmbed("証跡ファイルをアップロードしてください", $"{attachCount}件の証跡ファイルをこのチャンネルに90秒以内にアップロードしてください。"), ephemeral: true);
-
-                var uploaded = await _discordBotService.WaitForAttachmentUploadAsync(Context.User.Id, TimeSpan.FromSeconds(90), attachCount, Context.Channel);
-                if (uploaded == null || !uploaded.Any() || uploaded.Count < attachCount)
+                var group = await _groupRepository.GetByIdAsync(groupId);
+                if (group == null)
                 {
-                    await FollowupAsync(embed: DiscordEmbedFactory.BuildWarningEmbed("申請を中止しました", "証跡ファイルの受け取りに失敗しました。もう一度申請してください。"), ephemeral: true);
+                    await FollowupAsync(embed: DiscordEmbedFactory.BuildNotFoundEmbed("班", groupId.ToString()), ephemeral: true);
                     return;
                 }
 
-                await FollowupAsync(embed: DiscordEmbedFactory.BuildInfoEmbed("証跡ファイルを受け取りました", "保存処理を開始します。"), ephemeral: true);
+                var attachments = new[] { evidence1, evidence2, evidence3, evidence4, evidence5 }
+                    .Where(attachment => attachment != null)
+                    .Cast<IAttachment>()
+                    .ToList();
 
-                var evidenceFiles = new List<UploadedEvidenceDto>(uploaded);
-                var (requestId, savedEvidenceCount) = await _submitBudgetRequestUseCase.ExecuteAsync(user.Id, groupId, amountDecimal, description, evidenceFiles);
-                var notifiedCount = await NotifyAccountantsAsync(requestId, groupId, amountDecimal, description, user.Name, user.DiscordUserId);
+                var validationErrors = EvidenceAttachmentValidator.Validate(attachments);
+                if (validationErrors.Count > 0)
+                {
+                    await FollowupAsync(
+                        embed: DiscordEmbedFactory.BuildValidationErrorEmbed(
+                            "証憑ファイルを登録できません。\n\n理由:\n- " + string.Join("\n- ", validationErrors)),
+                        ephemeral: true);
+                    return;
+                }
+
+                var evidenceFiles = new List<UploadedEvidenceDto>();
+                foreach (var attachment in attachments)
+                {
+                    var downloaded = await _discordBotService.DownloadAttachmentAsync(attachment);
+                    if (downloaded == null)
+                    {
+                        await FollowupAsync(
+                            embed: DiscordEmbedFactory.BuildWarningEmbed(
+                                "証憑ファイルを取得できません",
+                                "添付ファイルのダウンロードに失敗しました。もう一度 /create-request から申請してください。"),
+                            ephemeral: true);
+                        return;
+                    }
+
+                    evidenceFiles.Add(downloaded);
+                }
+
+                RemainingBudgetDto? remainingBudget = null;
+                try
+                {
+                    remainingBudget = await _budgetQueryUseCase.GetRemainingBudgetAsync(Context.User.Id, groupId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to load remaining budget for request confirmation. DiscordUserId: {DiscordUserId}, GroupId: {GroupId}, Amount: {Amount}, EvidenceFileCount: {EvidenceFileCount}", Context.User.Id, groupId, amount, evidenceFiles.Count);
+                }
+
+                var token = _confirmationStore.Create(new PendingRequestConfirmation
+                {
+                    RequesterDiscordUserId = Context.User.Id,
+                    UserId = user.Id,
+                    GroupId = groupId,
+                    GroupName = group.Name,
+                    Amount = amountDecimal,
+                    Description = description,
+                    EvidenceFiles = evidenceFiles
+                });
+
+                var components = new ComponentBuilder()
+                    .WithButton("申請する", $"request:create:confirm:{token}", ButtonStyle.Success)
+                    .WithButton("キャンセル", $"request:create:cancel:{token}", ButtonStyle.Secondary)
+                    .Build();
 
                 await FollowupAsync(
-                    embed: DiscordEmbedFactory.BuildRequestCreatedEmbed(requestId, groupId, amountDecimal, description, savedEvidenceCount, notifiedCount),
+                    embed: DiscordEmbedFactory.BuildRequestConfirmationEmbed(group.Name, groupId, amountDecimal, description, evidenceFiles, remainingBudget),
+                    components: components,
                     ephemeral: true);
             }
             catch (ArgumentNullException)
@@ -100,7 +164,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to create request. DiscordUserId: {DiscordUserId}, GroupId: {GroupId}, Amount: {Amount}, AttachCount: {AttachCount}", Context.User.Id, groupId, amount, attachCount);
+                var evidenceFileCount = new[] { evidence1, evidence2, evidence3, evidence4, evidence5 }.Count(attachment => attachment != null);
+                _logger.LogError(ex, "Failed to prepare request confirmation. DiscordUserId: {DiscordUserId}, GroupId: {GroupId}, Amount: {Amount}, EvidenceFileCount: {EvidenceFileCount}", Context.User.Id, groupId, amount, evidenceFileCount);
                 await FollowupAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("申請を作成できません", "時間を置いて再実行してください。解決しない場合は管理者に連絡してください。"), ephemeral: true);
             }
         }

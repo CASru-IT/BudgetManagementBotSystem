@@ -123,18 +123,7 @@ public class DiscordBotService
         {
             foreach (var att in msg.Attachments)
             {
-                UploadedEvidenceDto? uploaded = null;
-                try
-                {
-                    using var resp = await _httpClient.GetAsync(att.Url);
-                    resp.EnsureSuccessStatusCode();
-
-                    var content = await resp.Content.ReadAsByteArrayAsync();
-                    uploaded = new UploadedEvidenceDto(att.Filename, content);
-                }
-                catch
-                {
-                }
+                var uploaded = await DownloadAttachmentAsync(att);
 
                 if (uploaded == null)
                 {
@@ -176,6 +165,22 @@ public class DiscordBotService
         finally
         {
             _client.MessageReceived -= Handler;
+        }
+    }
+
+    public async Task<UploadedEvidenceDto?> DownloadAttachmentAsync(IAttachment attachment)
+    {
+        try
+        {
+            using var response = await _httpClient.GetAsync(attachment.Url);
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsByteArrayAsync();
+            return new UploadedEvidenceDto(attachment.Filename, content);
+        }
+        catch
+        {
+            return null;
         }
     }
 

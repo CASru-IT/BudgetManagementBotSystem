@@ -224,6 +224,41 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Helpers
                 .Build();
         }
 
+        public static Embed BuildRequestConfirmationEmbed(
+            string groupName,
+            int groupId,
+            decimal amount,
+            string description,
+            IReadOnlyCollection<UploadedEvidenceDto> evidenceFiles,
+            RemainingBudgetDto? remainingBudget = null)
+        {
+            var evidenceText = evidenceFiles.Count == 0
+                ? "証憑ファイルはありません。"
+                : string.Join("\n", evidenceFiles.Select(e => Truncate(e.FileName, ShortTextLength)));
+
+            var embed = new EmbedBuilder()
+                .WithTitle("申請内容を確認してください")
+                .WithColor(Color.Gold)
+                .AddField("班", $"{groupName} (ID: {groupId})", true)
+                .AddField("金額", amount.ToString("C"), true)
+                .AddField("説明", Truncate(description, FieldTextLength))
+                .AddField("証憑", Truncate(evidenceText, FieldTextLength));
+
+            if (remainingBudget != null)
+            {
+                var estimatedAfterRequest = remainingBudget.AvailableAfterPending - amount;
+                embed
+                    .AddField("現在の実残高", remainingBudget.ActualBalance.ToString("C"), true)
+                    .AddField("未承認申請合計", remainingBudget.PendingTotal.ToString("C"), true)
+                    .AddField("申請承認待ち後残高", remainingBudget.AvailableAfterPending.ToString("C"), true)
+                    .AddField("今回申請後の見込み残高", estimatedAfterRequest.ToString("C"), true);
+            }
+
+            return embed
+                .WithFooter("内容に問題がなければ「申請する」を押してください。確認は10分で期限切れになります。")
+                .Build();
+        }
+
         public static Embed BuildUserListEmbed(IEnumerable<User> users)
         {
             var orderedUsers = users.OrderBy(u => u.Id).ToList();

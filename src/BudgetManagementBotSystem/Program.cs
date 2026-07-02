@@ -10,6 +10,7 @@ using BudgetManagementBotSystem.InfraStructure.Persistence;
 using BudgetManagementBotSystem.Infrastructure.FileStorage;
 using BudgetManagementBotSystem.Infrastructure.Persistence;
 using BudgetManagementBotSystem.Infrastructure.Persistence.Repository;
+using BudgetManagementBotSystem.Presentation.Discord.Services;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 
@@ -57,10 +58,12 @@ builder.Services.AddScoped<RequestDetailUseCase>();
 builder.Services.AddScoped<NotifyApprovedRequestUseCase>();
 builder.Services.AddScoped<NotifyRejectedRequestUseCase>();
 builder.Services.AddScoped<BudgetQueryUseCase>();
+builder.Services.AddScoped<DiscordRequestNotificationService>();
 builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
 builder.Services.Configure<AdminBootstrapOptions>(builder.Configuration.GetSection("AdminBootstrap"));
 
 builder.Services.AddSingleton<DiscordBotService>();
+builder.Services.AddSingleton<PendingRequestConfirmationStore>();
 builder.Services.AddHostedService<Worker>();
 
 var bot = builder.Build();

@@ -37,6 +37,12 @@
 - `EfCoreUserRepository`（`IUserRepository` 実装）
 - `LocalFileStorage`（`IFileStorage` 実装）
   - `EvidenceStorage:BasePath`（既定: `data/evidences`）配下へ保存
+- `/create-request`
+  - Discord の添付引数として `evidence-1` から `evidence-5` を受け取る実装です。`evidence-1` は必須、追加証憑は任意です。
+  - 証憑は jpg / jpeg / png / webp / pdf、1ファイル10MB以下に制限しています。
+  - コマンド実行時点では申請を作成せず、確認 Embed と「申請する」「キャンセル」ボタンを表示します。
+  - 確認データは `PendingRequestConfirmationStore` に10分間だけ保持し、「申請する」押下時に `SubmitBudgetRequestUseCase` を実行します。
+  - 申請作成後の会計担当者 DM 通知は `DiscordRequestNotificationService` に分離しています。
 - ユーザー管理コマンド
   - `/register-user` は Discord のユーザー選択から表示名を取得
   - `/set-user-name` で登録済みユーザーの表示名を変更
