@@ -85,6 +85,7 @@ cp .env.example .env
 - `EvidenceStorage__BasePath` (必須)
   - コンテナ内の証跡ファイル保存先パス。デフォルトは `/app/data/evidences`。
   - `docker-compose.yml` ではホストの `./src/BudgetManagementBotSystem/data/evidences` をマウントしています。ホスト側のディレクトリに書き込み権限が必要です。
+  - 証跡ファイルは `.dockerignore` でビルド対象から除外され、Docker image には含まれません。
 
 - `FiscalYearStartMonth__Month` (推奨)
   - 会計年度の開始月です。`1` から `12` の範囲で指定します。
