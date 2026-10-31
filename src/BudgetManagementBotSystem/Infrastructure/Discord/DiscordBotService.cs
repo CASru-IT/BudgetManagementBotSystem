@@ -37,6 +37,11 @@ public class DiscordBotService
 
         _client.Log += m => { Console.WriteLine(m); return Task.CompletedTask; };
         _interactions.Log += m => { Console.WriteLine(m); return Task.CompletedTask; };
+        _interactions.AutocompleteHandlerExecuted += (_, context, result) =>
+        {
+            LogAutocomplete("completed", context.Interaction, result);
+            return Task.CompletedTask;
+        };
 
         await _interactions.AddModulesAsync(Assembly.GetExecutingAssembly(), _provider);
 
@@ -54,6 +59,7 @@ public class DiscordBotService
 
         _client.InteractionCreated += async interaction =>
         {
+            LogAutocomplete("received", interaction);
             var ctx = new SocketInteractionContext(_client, interaction);
             try
             {
@@ -65,6 +71,7 @@ public class DiscordBotService
                 var result = await _interactions.ExecuteCommandAsync(ctx, _provider);
                 if (!result.IsSuccess)
                 {
+                    LogAutocomplete("dispatch-failed", interaction, result);
                     Console.WriteLine($"Interaction execution failed: {result.Error} / {result.ErrorReason}");
                     if (!interaction.HasResponded)
                     {
@@ -84,6 +91,22 @@ public class DiscordBotService
 
         await _client.LoginAsync(TokenType.Bot, token);
         await _client.StartAsync();
+    }
+
+    private static void LogAutocomplete(string stage, IDiscordInteraction interaction, IResult? result = null)
+    {
+        if (interaction is not IAutocompleteInteraction autocomplete)
+        {
+            return;
+        }
+
+        var current = autocomplete.Data.Current;
+        var value = current?.Value;
+        Console.WriteLine($"Autocomplete stage={stage} id={interaction.Id} command={autocomplete.Data.CommandName} " +
+            $"commandId={autocomplete.Data.CommandId} guild={interaction.GuildId} channel={interaction.ChannelId} " +
+            $"option={current?.Name} optionType={current?.Type} valueType={value?.GetType().Name ?? "null"} " +
+            $"inputLength={value?.ToString()?.Length ?? 0} ageMs={(DateTimeOffset.UtcNow - interaction.CreatedAt).TotalMilliseconds:F0} " +
+            $"responded={interaction.HasResponded} success={result?.IsSuccess} error={result?.Error}");
     }
 
     private async Task RegisterApplicationCommandsAsync()

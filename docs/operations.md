@@ -100,6 +100,13 @@
 
 上記はソースコードの現状に基づく要約です。運用ポリシーに合わせて、各 UseCase または `AuthorizationHelper` を変更してください。
 
+## 入力候補の読み込み失敗の調査
+
+- Bot の標準出力の `Autocomplete` 行を、操作時刻と `id` で照合します。`received` は要求の受信、`completed` は非同期ハンドラーの終了、`dispatch-failed` はハンドラーへの振り分け失敗を示します。
+- `completed` の `success=True responded=True` は Discord API への候補応答成功を示します。端末で候補が表示されたことまでは保証しません。
+- `ageMs` は Discord が要求を作成してからの経過時間です。候補応答には 3 秒の期限があります。失敗した場合は同時刻の Discord.Net のエラーログも確認します。
+- コマンド・引数名、要求 ID、サーバー・チャンネル ID、入力の型と長さのみを記録し、入力内容や認証情報は記録しません。
+
 ## UI表示方針
 
 - 主要なDiscordコマンドの応答はEmbed表示に統一しています。
