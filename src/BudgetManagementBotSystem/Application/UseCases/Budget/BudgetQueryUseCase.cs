@@ -87,7 +87,8 @@ namespace BudgetManagementBotSystem.Application.UseCases.Budget
                 PageSize = pageSize,
                 Items = items
                 ,
-                ResolvedFiscalYear = resolvedFiscalYear.Year
+                ResolvedFiscalYear = resolvedFiscalYear.Year,
+                ResolvedGroupId = group.Id
             };
         }
 
