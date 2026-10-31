@@ -1,5 +1,6 @@
 using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 using BudgetManagementBotSystem.Domain.Enums;
+using BudgetManagementBotSystem.Domain.Exceptions;
 using BudgetManagementBotSystem.Domain.Repository;
 using BudgetManagementBotSystem.Presentation.Discord.Helpers;
 using BudgetManagementBotSystem.Presentation.Discord.Models;
@@ -13,6 +14,7 @@ public class RequestComponentModule : InteractionModuleBase<SocketInteractionCon
 {
     private readonly SubmitBudgetRequestUseCase _submitBudgetRequestUseCase;
     private readonly IUserRepository _userRepository;
+    private readonly IGroupRepository _groupRepository;
     private readonly PendingRequestConfirmationStore _store;
     private readonly DiscordRequestNotificationService _notificationService;
     private readonly RequestWorkflowInteractionService _requestWorkflowInteractionService;
@@ -24,10 +26,12 @@ public class RequestComponentModule : InteractionModuleBase<SocketInteractionCon
         PendingRequestConfirmationStore store,
         DiscordRequestNotificationService notificationService,
         RequestWorkflowInteractionService requestWorkflowInteractionService,
-        ILogger<RequestComponentModule> logger)
+        ILogger<RequestComponentModule> logger,
+        IGroupRepository groupRepository)
     {
         _submitBudgetRequestUseCase = submitBudgetRequestUseCase;
         _userRepository = userRepository;
+        _groupRepository = groupRepository;
         _store = store;
         _notificationService = notificationService;
         _requestWorkflowInteractionService = requestWorkflowInteractionService;
@@ -92,6 +96,10 @@ public class RequestComponentModule : InteractionModuleBase<SocketInteractionCon
                     savedEvidenceCount,
                     notifiedCount),
                 ephemeral: true);
+        }
+        catch (BudgetRequestMembershipException ex)
+        {
+            await FollowupAsync(embed: await RequestMembershipFeedback.BuildAsync(ex, _groupRepository, _logger), ephemeral: true);
         }
         catch (ArgumentNullException)
         {

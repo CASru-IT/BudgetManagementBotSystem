@@ -1,5 +1,6 @@
 using BudgetManagementBotSystem.Domain.ValueObjects;
 using BudgetManagementBotSystem.Domain.Enums;
+using BudgetManagementBotSystem.Domain.Exceptions;
 
 namespace BudgetManagementBotSystem.Domain.Entities;
 
@@ -33,10 +34,7 @@ public class Group
         {
             throw new InvalidOperationException("この予算申請のユーザーIDは、リクエストを追加しようとしているユーザーのIDと一致しません。");
         }
-        else if (!IsUserMemberOfGroup(user))
-        {
-            throw new InvalidOperationException("この予算申請のユーザーはグループのメンバーではありません。");
-        }
+        EnsureRequestMembership(user);
         _requests.Add(request);
     }
 
@@ -89,9 +87,13 @@ public class Group
         return _requests.Where(r => r.GetCurrentStatus() == status).ToList();
     }
 
-    private bool IsUserMemberOfGroup(User user)
+    public void EnsureRequestMembership(User user)
     {
-        return user.GroupId == Id;
+        ArgumentNullException.ThrowIfNull(user);
+        if (user.GroupId != Id)
+        {
+            throw new BudgetRequestMembershipException(user.GroupId, Id, Name);
+        }
     }
 
     private BudgetRequest GetBudgetRequestById(int requestId)

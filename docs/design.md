@@ -20,16 +20,16 @@
 
 ### SubmitBudgetRequestUseCase
 
-- 入力: `userId(int)`, `groupId(int)`, `amount(decimal)`, `description(string)`, `evidenceFilePaths(IEnumerable<string>)`
+- 入力: `userId(int)`, `groupId(int)`, `amount(decimal)`, `description(string)`, `evidenceFiles(IEnumerable<UploadedEvidenceDto>)`
 - 処理:
   1. `IUserRepository.GetByIdAsync(int userId)` でユーザー取得
   2. `IGroupRepository.GetByIdAsync(int groupId)` でグループ取得
   3. `amount` のバリデーション（負数禁止）
-  4. `evidenceFilePaths` の null チェック
-  5. `Group.CreateBudgetRequest(user, amount, fiscalYear, description, evidenceFilePaths)` で申請生成
-  6. `Group.IsWithinBudgetLimit` で予算上限判定
-  7. 上限超過時は `Rejected` に遷移
-  8. `IUnitOfWork.SaveChangesAsync` で保存
+  4. `Group.EnsureRequestMembership(user)` で最新の所属を確認。不一致・未設定は `BudgetRequestMembershipException` で拒否する（役職による例外なし）
+  5. `Group.IsWithinBudgetLimit` で予算上限を確認。超過時は申請を作成せず拒否
+  6. 証憑ファイルを保存し、保存済みパスを使って `Group.CreateBudgetRequest` で申請生成
+  7. `IUnitOfWork.SaveChangesAsync` で保存
+- Presentation は確認画面の前にも同じ所属ルールを確認する。専用例外は、登録された所属班・申請先・対処方法を含む非公開の案内へ変換し、一般的な一時障害の案内とは区別する。
 
 ### IncreaseBudgetLimitUseCase
 

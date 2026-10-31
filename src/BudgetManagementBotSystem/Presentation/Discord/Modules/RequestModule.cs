@@ -2,6 +2,7 @@ using BudgetManagementBotSystem.Application.DTOs;
 using BudgetManagementBotSystem.Application.UseCases.Budget;
 using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 using BudgetManagementBotSystem.Domain.Enums;
+using BudgetManagementBotSystem.Domain.Exceptions;
 using BudgetManagementBotSystem.Domain.Repository;
 using BudgetManagementBotSystem.InfraStructure.Discord;
 using BudgetManagementBotSystem.Presentation.Discord.Autocomplete;
@@ -90,6 +91,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
+                group.EnsureRequestMembership(user);
+
                 var attachments = new[] { evidence1, evidence2, evidence3, evidence4, evidence5 }
                     .Where(attachment => attachment != null)
                     .Cast<IAttachment>()
@@ -152,6 +155,10 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     embed: DiscordEmbedFactory.BuildRequestConfirmationEmbed(group.Name, groupId, amountDecimal, description, evidenceFiles, remainingBudget),
                     components: components,
                     ephemeral: true);
+            }
+            catch (BudgetRequestMembershipException ex)
+            {
+                await FollowupAsync(embed: await RequestMembershipFeedback.BuildAsync(ex, _groupRepository, _logger), ephemeral: true);
             }
             catch (ArgumentNullException)
             {
