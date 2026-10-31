@@ -90,9 +90,9 @@ public class Group
     public void EnsureRequestMembership(User user)
     {
         ArgumentNullException.ThrowIfNull(user);
-        if (user.GroupId != Id)
+        if (!user.IsMemberOf(Id))
         {
-            throw new BudgetRequestMembershipException(user.GroupId, Id, Name);
+            throw new BudgetRequestMembershipException(user.GroupIds, Id, Name);
         }
     }
 

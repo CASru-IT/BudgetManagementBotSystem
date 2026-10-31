@@ -29,7 +29,7 @@
 | `/list-groups`     | 登録済みユーザー               | 登録済みの班一覧を表示する                                 |
 | `/register-user`   | 管理者                         | システム利用ユーザーを登録する                             |
 | `/set-user-name`   | 管理者                         | 登録済みユーザーの表示名を変更する                         |
-| `/assign-group`    | 管理者                         | ユーザーを班へ所属させる                                   |
+| `/assign-group`    | 管理者                         | ユーザーの所属班を追加する（複数所属可）                                   |
 | `/cancel-request`  | 班長, 会長                     | 確認待ち状態の申請を取り消す                               |
 | `/revoke-approval` | 会計                           | 承認済み申請の承認を取り消す                               |
 | `/all-history`     | 会長, 会計                     | 全班の予算使用履歴を閲覧する                               |
@@ -38,7 +38,7 @@
 | `/activate-user`   | 管理者                         | 無効化済みユーザーを有効化する                             |
 | `/list-users`      | 管理者                         | 登録済みユーザーを表示する                                 |
 | `/user-info`       | 管理者                         | ユーザーの所属・権限情報を表示する                         |
-| `/unassign-group`  | 管理者                         | ユーザーの班所属を解除する                                 |
+| `/unassign-group`  | 管理者                         | ユーザーの指定班への所属だけを解除する                                 |
 | `/group-members`   | 管理者, 会長                   | 班ごとの所属メンバー一覧を表示する                         |
 | `/delete-group`    | 管理者                         | 班を削除または無効化する                                   |
 | `/become-admin`    | 管理者（初期化）               | パスワードで自分を管理者に昇格する                         |
@@ -68,7 +68,7 @@
 | `/register-user` (実装済み)  | ユーザー登録                 | RegisterUserUseCase                         |
 | `/set-user-name` (実装済み)  | ユーザー表示名の変更         | UserCommandUseCase                          |
 | `/set-user-role` (実装済み)  | ユーザーの役割を設定（統合） | UserCommandUseCase                          |
-| `/assign-group` (実装済み)   | 班所属の設定                 | UserCommandUseCase                          |
+| `/assign-group` (実装済み)   | 班所属の追加                 | UserCommandUseCase                          |
 
 ## フェーズ 2: 中優先度コマンド
 
@@ -80,7 +80,7 @@
 | `/activate-user` (実装済み)  | ユーザーの有効化         | UserCommandUseCase |
 | `/list-users` (実装済み)     | 登録済みユーザー一覧     | UserQueryUseCase   |
 | `/user-info` (実装済み)      | 所属・権限詳細の表示     | UserQueryUseCase   |
-| `/unassign-group` (実装済み) | 班所属の解除             | UserCommandUseCase |
+| `/unassign-group` (実装済み) | 指定班所属の解除             | UserCommandUseCase |
 | `/group-members` (実装済み)  | 班ごとの所属メンバー一覧 | UserQueryUseCase   |
 
 ### 2-2 集計系

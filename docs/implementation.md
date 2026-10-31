@@ -1,6 +1,8 @@
 # BudgetManagementBotSystem — 実装状況
 
-このドキュメントは現行実装（2026-06 時点）の状況をまとめます。
+このドキュメントは現行実装（2026-10 時点）の状況をまとめます。
+
+複数班所属に対応済みです。`UserGroupMemberships` に所属を保存し、`/assign-group` は追加、`/unassign-group` は指定班のみ解除します。申請判定・所属限定一覧・ユーザー情報・拒否案内も複数所属を扱います。既存所属は起動時に一度だけ移行します。詳細は [運用資料](operations.md) と [設計](superpowers/specs/2026-10-31-multiple-groups-design.md) を参照してください。
 
 設計の前提や各ユースケースの処理フローは [設計資料](design.md) を、コマンドの優先度や実装順序は [コマンド実装計画](command-implementation-plan.md) を参照してください。
 

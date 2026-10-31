@@ -72,7 +72,8 @@
 
 ```mermaid
 erDiagram
-    GROUPS ||--o{ USERS : GroupId
+    GROUPS ||--o{ USER_GROUP_MEMBERSHIPS : GroupId
+    USERS ||--o{ USER_GROUP_MEMBERSHIPS : UserId
     GROUPS ||--o{ BUDGET_TRANSACTIONS : GroupId
     GROUPS ||--o{ BUDGET_REQUESTS : GroupId
     USERS ||--o{ BUDGET_REQUESTS : UserId
@@ -88,9 +89,14 @@ erDiagram
         int Id PK
         string Name
       ulong DiscordUserId UK
-        int GroupId FK
+        int GroupId FK "旧版互換用、所属判定には使用しない"
         string Role
         bool IsActive
+    }
+
+    USER_GROUP_MEMBERSHIPS {
+        int UserId PK,FK
+        int GroupId PK,FK
     }
 
     BUDGET_TRANSACTIONS {
@@ -202,14 +208,17 @@ class User {
   +int Id
   +string Name
   +ulong DiscordUserId
-  +int GroupId
+  +IReadOnlyCollection~UserGroupMembership~ Memberships
+  +IReadOnlyList~int~ GroupIds
   +AccountRole Role
   +bool IsActive
   +Deactivate()
   +Activate()
   +ChangeName(name) void
   +ChangeRole(role) void
-  +ChangeGroupId(groupId) void
+  +AddGroup(groupId) void
+  +RemoveGroup(groupId) void
+  +IsMemberOf(groupId) bool
 }
 
 class Money {
@@ -254,12 +263,17 @@ BudgetTransaction --> Money
 BudgetTransaction --> FiscalYear
 RequestStatusChange --> RequestStatus
 User --> AccountRole
-User --> Group : GroupId
+User "1" *-- "0..*" UserGroupMembership : Memberships
+UserGroupMembership --> Group : GroupId
 Group ..> User : CreateBudgetRequest(user)
 ```
 
 ## ドメインルール
 
+- ユーザーは複数の班に所属可能。追加は重複せず、解除は指定班のみを対象とする。申請先が所属一覧に含まれていれば申請可能。
+- `UserGroupMemberships` の複合主キー `(UserId, GroupId)` で重複を防ぐ。ユーザー取得時には全所属を読み込む。
+- 旧 `Users.GroupId` は互換用に残す。既存所属は起動時の `MembershipSchemaUpgrade` で一度だけ引き継ぎ、移行記録を同一トランザクション内に保存する。財務テーブル・証憑は変更しない。
+- 残予算・使用履歴の班省略は所属が一つの場合だけ補完する。未所属・複数所属なら対象班の指定を促す。
 - `BudgetRequest` の初期ステータスは `Pending`
 - `BudgetRequest.RequestDate`、`RequestStatusChange.ChangedAt`、`BudgetTransaction.TransactionDate` は UTC で保存する
 - ステータス遷移制約

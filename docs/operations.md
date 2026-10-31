@@ -57,7 +57,9 @@
 - `/list-groups` は登録済み班の確認に使います。
 - `/register-user` で Discord ユーザーをシステムに登録し、`/set-user-name` で表示名、`/set-user-role` で権限を設定します。
 - `/remove-user` はユーザーを無効化し、`/activate-user` は無効化済みユーザーを再有効化します。
-- `/assign-group` と `/unassign-group` でユーザーの班所属を更新します。
+- `/assign-group user-id:<ユーザーID> group-id:<班ID>` で所属班を追加します。複数の班に所属でき、追加しても既存の所属は残ります。同じ班への再実行は重複を作りません。
+- `/unassign-group user-id:<ユーザーID> group-id:<班ID>` は指定班への所属だけを解除します。対象班を省略した場合は案内を返し、所属は変更しません。所属先を置き換える場合は、新しい班への追加と以前の班の解除をそれぞれ実行してください。
+- 登録済みのどの所属班にも `/create-request` で申請できます。未登録の班への申請は、登録されている所属一覧と追加手順を本人だけに案内します。
 - `/list-users`、`/user-info`、`/group-members` は、運用確認や問い合わせ対応で使う参照系コマンドです。
 
 ## 運用時の注意点
@@ -79,13 +81,13 @@
 | `/become-admin` | パスワードで自分を管理者に昇格 | `AdminBootstrap:Password` を知る者（初回の管理者登録用） |
 | `/create-request` | 予算使用申請を作成 | システムに登録されたユーザー。自身の所属班への申請のみ |
 | `/request-detail` | 申請の詳細・証跡を表示 | システムに登録されたユーザー（実装上の追加制限なし） |
-| `/list-requests` | 申請一覧の取得（ページング） | 管理者/会計/班長/役員: 全班参照、一般ユーザー: 自班のみ |
+| `/list-requests` | 申請一覧の取得（ページング） | 管理者/会計/会長: 全班参照、班長: 所属する全班。班指定時はその班に絞る |
 | `/cancel-request` | 確認待ち申請の取消 | 申請者（自身の Pending のみ）または管理者 |
 | `/pending-list` | 未承認申請の一覧表示 | 管理者/会計/班長/役員: 全件、一般ユーザー: 自班のみ |
 | `/reject` | 申請の却下。理由入力と申請者 DM 通知あり | 会計担当 (`Accountant`) の権限が必要 |
 | `/approve` | 申請の承認。申請者 DM 通知あり | 会計担当 (`Accountant`) の権限が必要 |
 | `/revoke-approval` | 承認済み申請の承認取り消し | 会計担当 (`Accountant`) の権限が必要 |
-| `/remaining-budget` | 班の残予算を表示 | システム登録ユーザー。自班未設定で任意班参照は特権（Admin等）必要 |
+| `/remaining-budget` | 班の残予算を表示 | システム登録ユーザー。`group-id` で対象班を指定 |
 | `/usage-history` | 班ごとの予算使用履歴 | システム登録ユーザー（既定で自身の班） |
 | `/all-history` | 全班の予算履歴表示 | 実装上は特別な権限制御なし（運用で制限を推奨） |
 | `/add-budget` | 追加予算の付与 | 管理者 (`Admin`) または 会長/役員相当 (`President`) |
@@ -93,7 +95,7 @@
 | `/list-groups` | 登録済み班一覧表示 | システムに登録されたユーザー |
 | `/delete-group` | 班の削除／無効化 | 管理者 (`Admin`) のみ |
 | `/register-user`, `/set-user-name`, `/set-user-role`, `/remove-user`, `/activate-user`, `/list-users`, `/assign-group`, `/unassign-group`, `/user-info` | ユーザー登録・表示名変更・権限設定・有効/無効化・参照等 | 管理者 (`Admin`) のみ |
-| `/group-members` | 指定班のメンバー一覧 | 管理者/会長: 任意班参照可能、一般ユーザー: 自班のみ |
+| `/group-members` | 指定班のメンバー一覧 | 管理者/会長: 任意班参照可能、その他: 所属するいずれかの班 |
 
 上記はソースコードの現状に基づく要約です。運用ポリシーに合わせて、各 UseCase または `AuthorizationHelper` を変更してください。
 

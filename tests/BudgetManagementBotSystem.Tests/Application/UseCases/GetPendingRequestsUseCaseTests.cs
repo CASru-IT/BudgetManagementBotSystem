@@ -18,7 +18,7 @@ public class GetPendingRequestsUseCaseTests
 
         var user = new User("Admin", discordUserId, AccountRole.Admin);
         var requester = new User("Requester", 22222UL, AccountRole.Accountant);
-        requester.ChangeGroupId(0);
+        requester.AddGroup(0);
         var group = new Group("Test Group");
 
         _ = group.CreateBudgetRequest(requester, new Money(10_000m), new FiscalYear(4), "Pending request", Array.Empty<string>());
@@ -57,7 +57,7 @@ public class GetPendingRequestsUseCaseTests
 
         var user = new User("Admin", discordUserId, AccountRole.Admin);
         var requester = new User("Requester", 22222UL, AccountRole.Accountant);
-        requester.ChangeGroupId(0);
+        requester.AddGroup(0);
         var group = new Group("Test Group");
 
         _ = group.CreateBudgetRequest(requester, new Money(10_000m), new FiscalYear(4), "Pending request 1", Array.Empty<string>());

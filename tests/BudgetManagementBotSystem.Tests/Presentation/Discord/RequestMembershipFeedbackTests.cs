@@ -22,6 +22,29 @@ namespace BudgetManagementBotSystem.Tests.Presentation.Discord;
 
 public class RequestMembershipFeedbackTests
 {
+    [Fact]
+    public async Task Feedback_ListsMultipleMembershipsAndAdditionGuidance()
+    {
+        var fixture = new Fixture(11);
+        var embed = await RequestMembershipFeedback.BuildAsync(
+            new BudgetRequestMembershipException(new[] { 11, 12 }, 10, "執行部"), fixture.Groups.Object, NullLogger.Instance);
+        Assert.Contains("ボードゲーム", embed.Description);
+        Assert.Contains("班ID: 12", embed.Description);
+        Assert.Contains("所属の追加", embed.Description);
+        Assert.Contains("既存の所属は残ります", embed.Description);
+    }
+
+    [Fact]
+    public async Task Feedback_LongMembershipListsRemainWithinDiscordLimit()
+    {
+        var groups = new Mock<IGroupRepository>();
+        groups.Setup(g => g.GetByIdAsync(It.IsAny<int>())).ReturnsAsync(new Group(new string('班', 200)));
+        var embed = await RequestMembershipFeedback.BuildAsync(
+            new BudgetRequestMembershipException(Enumerable.Range(1, 100), 101, new string('班', 200)), groups.Object, NullLogger.Instance);
+        Assert.True(embed.Description.Length <= 4096);
+        Assert.Contains("ほか 80 班", embed.Description);
+    }
+
     [Theory]
     [InlineData(11)]
     [InlineData(null)]
@@ -55,7 +78,8 @@ public class RequestMembershipFeedbackTests
             Description = "備品購入",
             EvidenceFiles = new List<UploadedEvidenceDto> { new("receipt.pdf", new byte[] { 1, 2, 3 }) }
         });
-        fixture.User.ChangeGroupId(membership);
+        fixture.User.RemoveGroup(10);
+        if (membership.HasValue) fixture.User.AddGroup(membership.Value);
         var module = new RecordingConfirmModule(fixture);
 
         await module.ConfirmCreateRequest(token);
@@ -82,7 +106,7 @@ public class RequestMembershipFeedbackTests
         fixture.Files.Verify(x => x.SaveFileAsync(It.IsAny<string>(), It.IsAny<Stream>()), Times.Never);
         fixture.UnitOfWork.Verify(x => x.SaveChangesAsync(), Times.Never);
         Assert.Empty(fixture.Group.Requests);
-        Assert.Equal(11, fixture.User.GroupId);
+        Assert.Equal(new[] { 11 }, fixture.User.GroupIds);
     }
 
     [Fact]
@@ -123,7 +147,7 @@ public class RequestMembershipFeedbackTests
             groups.Setup(x => x.GetByIdAsync(11)).ReturnsAsync((Group?)null);
 
         var embed = await RequestMembershipFeedback.BuildAsync(
-            new BudgetRequestMembershipException(11, 10, "執行部"), groups.Object, NullLogger.Instance);
+            new BudgetRequestMembershipException(new[] { 11 }, 10, "執行部"), groups.Object, NullLogger.Instance);
 
         AssertFeedback(embed, 11);
         Assert.DoesNotContain("private diagnostic", embed.Description);

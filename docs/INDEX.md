@@ -11,6 +11,8 @@
 - [コマンド実装計画](command-implementation-plan.md) — Discord コマンドの優先度と実装順序を確認する。
 - [レイヤー依存関係図](layer-dependencies.md) — 層ごとの責務分離と例外を確認する。
 - [コードリファクタ要約](code-refactor-summary.md) — 最近の構造変更と背景を確認する。
+- [複数所属の設計](superpowers/specs/2026-10-31-multiple-groups-design.md) — 所属追加・解除と既存データの移行を確認する。
+- [複数所属の更新手順](multiple-groups-upgrade.md) — 本番更新時のバックアップ・検証・切り戻しを確認する。
 
 更新手順:
 

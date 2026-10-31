@@ -10,6 +10,17 @@ namespace BudgetManagementBotSystem.Tests.Presentation.Discord;
 public class DiscordEmbedFactoryTests
 {
     [Fact]
+    public void UserInformationAndList_ShowAllMemberships()
+    {
+        var user = new User("兼任", 1, AccountRole.GroupLeader, 10);
+        user.AddGroup(11);
+        var info = DiscordEmbedFactory.BuildUserInfoEmbed(user);
+        Assert.Equal("10, 11", info.Fields.Single(f => f.Name == "所属班ID").Value);
+        var list = DiscordEmbedFactory.BuildUserListEmbed(new[] { user });
+        Assert.Contains(list.Fields, f => f.Value.Contains("10, 11"));
+    }
+
+    [Fact]
     public void BuildSuccessEmbed_UsesGreen()
     {
         var embed = DiscordEmbedFactory.BuildSuccessEmbed("完了", "処理が完了しました。");

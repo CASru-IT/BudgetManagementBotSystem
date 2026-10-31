@@ -61,6 +61,10 @@ dotnet run --project src/BudgetManagementBotSystem/BudgetManagementBotSystem.csp
 dotnet test
 ```
 
+複数所属の PostgreSQL 統合テストは、空の使い捨てデータベース（名前の末尾が `_test`）を用意し、接続文字列を `BUDGET_TEST_DB` に設定して `dotnet test` を実行します。この変数がない場合、その1件はスキップされます。既存テーブルがあるDBではテストが失敗するため、再実行時も新しいテストDBを用意してください。本番の接続情報は使用しません。
+
+テストでは旧単一所属形式のデータ移行、移行再実行、全所属の読込、班追加・指定解除、両班への申請、重複防止、財務データ保持を確認します。Discordへの通信や実際の申請は行いません。
+
 ## 補足
 
 - 開発ではローカルの証跡保存フォルダ `src/BudgetManagementBotSystem/data/evidences` を利用します。必要に応じて消去や権限を調整してください。
