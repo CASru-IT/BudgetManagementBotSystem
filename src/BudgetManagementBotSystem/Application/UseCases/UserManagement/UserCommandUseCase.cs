@@ -87,7 +87,7 @@ namespace BudgetManagementBotSystem.Application.UseCases.UserManagement
             var group = await _groupRepository.GetByIdAsync(groupId);
             if (group == null) throw new ArgumentException("Group not found");
             var groupName = group.Name;
-            user.ChangeGroupId(groupId);
+            user.AddGroup(groupId);
             await _unitOfWork.SaveChangesAsync();
 
             return groupName;
@@ -100,25 +100,25 @@ namespace BudgetManagementBotSystem.Application.UseCases.UserManagement
             var group = await _groupRepository.GetByIdAsync(groupId);
             if (group == null) throw new ArgumentException("Group not found");
             var groupName = group.Name;
-            user.ChangeGroupId(groupId);
+            user.AddGroup(groupId);
             await _unitOfWork.SaveChangesAsync();
 
             return groupName;
         }
 
-        public async Task UnassignGroupByDiscordIdAsync(ulong discordUserId)
+        public async Task UnassignGroupByDiscordIdAsync(ulong discordUserId, int groupId)
         {
             var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
             if (user == null) throw new ArgumentException("User not found");
-            user.ChangeGroupId(null);
+            user.RemoveGroup(groupId);
             await _unitOfWork.SaveChangesAsync();
         }
 
-        public async Task UnassignGroupByUserIdAsync(int userId)
+        public async Task UnassignGroupByUserIdAsync(int userId, int groupId)
         {
             var user = await _userRepository.GetByIdAsync(userId);
             if (user == null) throw new ArgumentException("User not found");
-            user.ChangeGroupId(null);
+            user.RemoveGroup(groupId);
             await _unitOfWork.SaveChangesAsync();
         }
     }

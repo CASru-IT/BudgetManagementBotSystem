@@ -75,6 +75,7 @@ if (!useInMemoryDatabase)
     using var scope = bot.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<BudgetManagementDbContext>();
     await dbContext.Database.EnsureCreatedAsync();
+    await MembershipSchemaUpgrade.ApplyAsync(dbContext);
 }
 
 bot.Run();

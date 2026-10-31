@@ -55,7 +55,7 @@ public class SubmitRequestPersistenceTests
         Assert.Equal(ownId, db.Entry(saved).Property<int?>("GroupId").CurrentValue);
         Assert.Equal(RequestStatus.Pending, saved.GetCurrentStatus());
         Assert.Equal("stored/receipt.pdf", Assert.Single(saved.Evidences).FilePath);
-        Assert.Equal(ownId, (await db.Users.SingleAsync()).GroupId);
+        Assert.Equal(new[] { ownId }, (await db.Users.Include(u => u.Memberships).SingleAsync()).GroupIds);
         Assert.Equal(1, result.SavedEvidenceCount);
     }
 }

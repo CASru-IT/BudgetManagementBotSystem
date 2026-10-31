@@ -1,4 +1,5 @@
 using BudgetManagementBotSystem.Application.UseCases.Budget;
+using BudgetManagementBotSystem.Application.Exceptions;
 using BudgetManagementBotSystem.Domain.Enums;
 using BudgetManagementBotSystem.Domain.Repository;
 using BudgetManagementBotSystem.Presentation.Discord.Autocomplete;
@@ -36,12 +37,16 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("remaining-budget", "現在の残予算を確認します")]
-        public async Task RemainingBudget([Summary("group-id"), Autocomplete(typeof(GroupAutocompleteHandler))] int groupId, [Summary("fiscal-year")] int? fiscalYear = null)
+        public async Task RemainingBudget([Summary("group-id"), Autocomplete(typeof(GroupAutocompleteHandler))] int? groupId = null, [Summary("fiscal-year")] int? fiscalYear = null)
         {
             try
             {
                 var dto = await _budgetQueryUseCase.GetRemainingBudgetAsync(Context.User.Id, groupId, fiscalYear);
                 await RespondAsync(embed: DiscordEmbedFactory.BuildRemainingBudgetEmbed(dto));
+            }
+            catch (GroupSelectionRequiredException ex)
+            {
+                await RespondAsync(embed: DiscordEmbedFactory.BuildWarningEmbed("表示する班を指定してください", ex.Message), ephemeral: true);
             }
             catch (UnauthorizedAccessException)
             {
@@ -49,7 +54,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             }
             catch (ArgumentException)
             {
-                await RespondAsync(embed: DiscordEmbedFactory.BuildNotFoundEmbed("班", groupId.ToString()), ephemeral: true);
+                await RespondAsync(embed: DiscordEmbedFactory.BuildNotFoundEmbed("班", groupId?.ToString() ?? "所属班"), ephemeral: true);
             }
             catch (Exception ex)
             {
@@ -59,7 +64,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         }
 
         [SlashCommand("usage-history", "予算使用履歴を表示します")]
-        public async Task UsageHistory([Summary("group-id"), Autocomplete(typeof(GroupAutocompleteHandler))] int groupId, int page = 1, int pageSize = 10, [Summary("fiscal-year")] int? fiscalYear = null)
+        public async Task UsageHistory([Summary("group-id"), Autocomplete(typeof(GroupAutocompleteHandler))] int? groupId = null, int page = 1, int pageSize = 10, [Summary("fiscal-year")] int? fiscalYear = null)
         {
             try
             {
@@ -76,7 +81,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                             Target = PagingTarget.UsageHistory,
                             Page = result.Page,
                             PageSize = result.PageSize,
-                            GroupId = groupId,
+                            GroupId = result.ResolvedGroupId,
                             FiscalYear = fiscalYear
                         }),
                         result.Page,
@@ -87,6 +92,10 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     embed: DiscordEmbedFactory.BuildUsageHistoryEmbed(result, fiscalYear),
                     components: components,
                     ephemeral: result.Total == 0);
+            }
+            catch (GroupSelectionRequiredException ex)
+            {
+                await RespondAsync(embed: DiscordEmbedFactory.BuildWarningEmbed("表示する班を指定してください", ex.Message), ephemeral: true);
             }
             catch (UnauthorizedAccessException)
             {

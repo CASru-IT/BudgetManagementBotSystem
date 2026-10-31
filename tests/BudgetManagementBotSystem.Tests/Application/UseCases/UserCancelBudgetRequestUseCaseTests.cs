@@ -24,7 +24,7 @@ namespace BudgetManagementBotSystem.Tests.Application.UseCases
             var user = new User("Alice", 12345ul, AccountRole.GroupLeader);
             typeof(User).GetProperty("Id", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public)!.SetValue(user, 11);
             // set user's GroupId
-            typeof(User).GetProperty("GroupId", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public)!.SetValue(user, 1);
+            user.AddGroup(1);
 
             var money = new BudgetManagementBotSystem.Domain.ValueObjects.Money(100);
             var fy = new BudgetManagementBotSystem.Domain.ValueObjects.FiscalYear(4);

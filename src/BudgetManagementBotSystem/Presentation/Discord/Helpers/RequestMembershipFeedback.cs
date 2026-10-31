@@ -10,16 +10,16 @@ public static class RequestMembershipFeedback
     public static async Task<Embed> BuildAsync(BudgetRequestMembershipException error,
         IGroupRepository groups, ILogger logger)
     {
-        var registeredGroup = "未設定";
-        if (error.UserGroupId is int groupId)
+        var registeredGroups = new List<string>();
+        foreach (var groupId in error.UserGroupIds.Take(20))
         {
-            registeredGroup = $"班ID: {groupId}";
+            var registeredGroup = $"班ID: {groupId}";
             try
             {
                 var group = await groups.GetByIdAsync(groupId);
                 if (group != null)
                 {
-                    registeredGroup = $"{group.Name}（班ID: {groupId}）";
+                    registeredGroup = $"{LimitName(group.Name)}（班ID: {groupId}）";
                 }
             }
             catch (Exception ex)
@@ -27,21 +27,26 @@ public static class RequestMembershipFeedback
                 // A failed name lookup must not hide the already-known rejection reason.
                 logger.LogWarning(ex, "Failed to resolve membership group name. GroupId: {GroupId}", groupId);
             }
+            registeredGroups.Add(registeredGroup);
         }
+        if (error.UserGroupIds.Count > 20) registeredGroups.Add($"ほか {error.UserGroupIds.Count - 20} 班");
+        var registeredGroupLabel = registeredGroups.Count == 0 ? "未設定" : string.Join("、", registeredGroups);
 
-        var reason = error.UserGroupId.HasValue
-            ? "登録されている所属班と申請先の班が異なるため、申請できません。"
+        var reason = error.UserGroupIds.Count > 0
+            ? "申請先の班が登録されている所属班に含まれていないため、申請できません。"
             : "所属班が登録されていないため、申請できません。";
-        var action = error.UserGroupId.HasValue
+        var action = error.UserGroupIds.Count > 0
             ? "所属班の予算へ申請する場合は、`/create-request` で所属班を選び直してください。\n"
             : "";
 
-        return DiscordEmbedFactory.BuildWarningEmbed("所属班を確認してください",
+        return new EmbedBuilder().WithTitle("所属班を確認してください").WithColor(Color.Gold).WithDescription(
             $"{reason}\n\n" +
-            $"登録されている所属班: {registeredGroup}\n" +
-            $"申請先: {error.RequestedGroupName}（班ID: {error.RequestedGroupId}）\n\n" +
+            $"登録されている所属班: {registeredGroupLabel}\n" +
+            $"申請先: {LimitName(error.RequestedGroupName)}（班ID: {error.RequestedGroupId}）\n\n" +
             "予算申請は、登録されている所属班に対してのみ行えます。\n" + action +
-            "所属が未設定、または登録内容が実際と異なる場合は、管理者に所属の確認・修正（`/assign-group`）を依頼してください。\n\n" +
-            "申請は作成されていません。");
+            "この班にも所属している場合は、管理者に `/assign-group` で所属の追加を依頼してください。既存の所属は残ります。\n\n" +
+            "申請は作成されていません。").Build();
     }
+
+    private static string LimitName(string name) => name.Length <= 100 ? name : name[..99] + "…";
 }

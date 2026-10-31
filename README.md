@@ -28,6 +28,9 @@ Discord 上で動作する予算管理 Bot システムです。
   - `/register-group`, `/delete-group`, `/list-groups`
   - `/register-user`, `/set-user-role`, `/remove-user`
   - `/assign-group`, `/unassign-group`, `/group-members`, `/list-users`, `/user-info`
+  - 複数班に所属可能。`/assign-group` は所属追加、`/unassign-group` は `group-id` で指定した班のみ解除します。
+
+既存環境の複数所属対応への更新は [更新手順](docs/multiple-groups-upgrade.md) を参照してください。
 
 詳しい実装状況は [実装状況](docs/implementation.md) を参照してください。
 

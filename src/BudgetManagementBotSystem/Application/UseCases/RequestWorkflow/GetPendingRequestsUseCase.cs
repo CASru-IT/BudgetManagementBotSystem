@@ -50,8 +50,8 @@ namespace BudgetManagementBotSystem.Application.UseCases.RequestWorkflow
 
             if (!isPrivileged)
             {
-                if (!user.GroupId.HasValue) return new PagedResult<PendingRequestDto> { Total = 0, Page = page, PageSize = showAll ? 0 : pageSize };
-                allRequests = allRequests.Where(r => r.GroupId == user.GroupId.Value);
+                if (user.GroupIds.Count == 0) return new PagedResult<PendingRequestDto> { Total = 0, Page = page, PageSize = showAll ? 0 : pageSize };
+                allRequests = allRequests.Where(r => user.IsMemberOf(r.GroupId));
             }
 
             var ordered = allRequests.OrderByDescending(r => r.RequestDate);

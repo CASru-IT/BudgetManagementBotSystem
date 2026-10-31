@@ -18,7 +18,7 @@ public class RevokeApprovalUseCaseTests
 
         var actingUser = new User("Accountant", discordUserId, AccountRole.Accountant);
         var requester = new User("Requester", 22222UL, AccountRole.Accountant);
-        requester.ChangeGroupId(0);
+        requester.AddGroup(0);
         var group = new Group("Test Group");
         group.AddBudgetTransaction(new BudgetTransaction(true, 100_000m, new FiscalYear(4)));
 
@@ -58,7 +58,7 @@ public class RevokeApprovalUseCaseTests
 
         var actingUser = new User("Admin", discordUserId, AccountRole.Admin);
         var requester = new User("Requester", 22222UL, AccountRole.Accountant);
-        requester.ChangeGroupId(0);
+        requester.AddGroup(0);
         var group = new Group("Test Group");
 
         _ = group.CreateBudgetRequest(requester, new Money(50_000m), new FiscalYear(4), "備品購入", Array.Empty<string>());

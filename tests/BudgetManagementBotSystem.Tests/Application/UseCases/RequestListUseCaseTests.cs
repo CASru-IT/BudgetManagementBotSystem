@@ -9,6 +9,20 @@ namespace BudgetManagementBotSystem.Tests.Application.UseCases;
 
 public class RequestListUseCaseTests
 {
+    [Theory]
+    [InlineData(null, 2)]
+    [InlineData(1, 1)]
+    [InlineData(2, 1)]
+    [InlineData(3, 0)]
+    public async Task GroupLeaderWithMultipleMemberships_SeesOnlySelectedMemberships(int? selected, int expected)
+    {
+        var (a, b, user) = CreateGroupsWithRequests(11111, AccountRole.GroupLeader);
+        user.AddGroup(b.Id);
+        var result = await CreateUseCase(11111, user, a, b).ExecuteAsync(11111, null, groupId: selected);
+        Assert.Equal(expected, result.Total);
+        if (selected.HasValue) Assert.All(result.Items, item => Assert.Equal(selected.Value, item.GroupId));
+    }
+
     [Fact]
     public async Task ExecuteAsync_GroupLeaderReturnsOnlyOwnGroupRequests()
     {
@@ -34,9 +48,8 @@ public class RequestListUseCaseTests
 
         var result = await useCase.ExecuteAsync(discordUserId, status: null, page: 1, pageSize: 10, groupId: groupB.Id);
 
-        Assert.Equal(1, result.Total);
-        Assert.Single(result.Items);
-        Assert.Equal(groupA.Id, result.Items[0].GroupId);
+        Assert.Equal(0, result.Total);
+        Assert.Empty(result.Items);
     }
 
     [Fact]

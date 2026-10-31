@@ -7,16 +7,22 @@ public class User
     public int Id { get; private set; }
     public string Name { get; private set; } = string.Empty;
     public ulong DiscordUserId { get; private set; }
-    public int? GroupId { get; private set; }
+    private readonly List<UserGroupMembership> _memberships = new();
+    public IReadOnlyCollection<UserGroupMembership> Memberships => _memberships.AsReadOnly();
+    public IReadOnlyList<int> GroupIds => _memberships.Select(m => m.GroupId).OrderBy(id => id).ToArray();
+    // Retained only for compatibility with the previous database/application version.
+    internal int? LegacyGroupId { get; private set; }
     public AccountRole Role { get; private set; }
     public bool IsActive { get; private set; }
+
+    private User() { }
 
     public User(string name, ulong discordUserId, AccountRole role, int? groupId = null)
     {
         Name = name;
         DiscordUserId = discordUserId;
         Role = role;
-        GroupId = groupId;
+        if (groupId.HasValue) AddGroup(groupId.Value);
         IsActive = true;
     }
 
@@ -40,8 +46,19 @@ public class User
         Role = role;
     }
 
-    public void ChangeGroupId(int? groupId)
+    public bool IsMemberOf(int groupId) => _memberships.Any(m => m.GroupId == groupId);
+
+    public void AddGroup(int groupId)
     {
-        GroupId = groupId;
+        if (IsMemberOf(groupId)) return;
+        _memberships.Add(new UserGroupMembership(groupId));
+        LegacyGroupId ??= groupId;
+    }
+
+    public void RemoveGroup(int groupId)
+    {
+        _memberships.RemoveAll(m => m.GroupId == groupId);
+        if (LegacyGroupId == groupId)
+            LegacyGroupId = GroupIds.Select(id => (int?)id).FirstOrDefault();
     }
 }

@@ -16,19 +16,19 @@ public class EfCoreUserRepository : IUserRepository
 
 	public async Task<User?> GetByIdAsync(int userId)
 	{
-		return await _context.Users
+		return await _context.Users.Include(u => u.Memberships)
 			.FirstOrDefaultAsync(u => u.Id == userId);
 	}
 
 	public async Task<User?> GetByDiscordUserIdAsync(ulong discordUserId)
 	{
-		return await _context.Users
+		return await _context.Users.Include(u => u.Memberships)
 			.FirstOrDefaultAsync(u => u.DiscordUserId == discordUserId);
 	}
 
 	public async Task<List<User>?> GetAllAsync()
 	{
-		return await _context.Users.ToListAsync();
+		return await _context.Users.Include(u => u.Memberships).ToListAsync();
 	}
 
 	public async Task<bool> IsUserExistsAsync(int userId)

@@ -198,7 +198,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             }
         }
 
-        [SlashCommand("assign-group", "ユーザーを班へ所属させます")]
+        [SlashCommand("assign-group", "ユーザーの所属班を追加します（既存の所属は残ります）")]
         public async Task AssignGroup(
             [Summary("user-id"), Autocomplete(typeof(UserAutocompleteHandler))] int userId,
             [Summary("group-id"), Autocomplete(typeof(GroupAutocompleteHandler))] int groupId)
@@ -212,7 +212,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 }
 
                 var groupName = await _userCommand.AssignGroupByUserIdAsync(userId, groupId);
-                await RespondAsync(embed: DiscordEmbedFactory.BuildSuccessEmbed("班所属を設定しました", $"ユーザーID `{userId}` を班 `{groupName}` (`{groupId}`) に所属させました。"), ephemeral: true);
+                await RespondAsync(embed: DiscordEmbedFactory.BuildSuccessEmbed("所属班を追加しました", $"ユーザーID `{userId}` を班 `{groupName}` (`{groupId}`) に所属させました。"), ephemeral: true);
             }
             catch (ArgumentException)
             {
@@ -225,8 +225,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             }
         }
 
-        [SlashCommand("unassign-group", "ユーザーの班所属を解除します")]
-        public async Task UnassignGroup([Summary("user-id"), Autocomplete(typeof(UserAutocompleteHandler))] int userId)
+        [SlashCommand("unassign-group", "指定した班への所属だけを解除します")]
+        public async Task UnassignGroup([Summary("user-id"), Autocomplete(typeof(UserAutocompleteHandler))] int userId,
+            [Summary("group-id"), Autocomplete(typeof(GroupAutocompleteHandler))] int? groupId = null)
         {
             try
             {
@@ -236,8 +237,13 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
-                await _userCommand.UnassignGroupByUserIdAsync(userId);
-                await RespondAsync(embed: DiscordEmbedFactory.BuildSuccessEmbed("班所属を解除しました", $"ユーザーID `{userId}` の班所属を解除しました。"), ephemeral: true);
+                if (!groupId.HasValue)
+                {
+                    await RespondAsync(embed: DiscordEmbedFactory.BuildWarningEmbed("解除する班を指定してください", "`/unassign-group` の `group-id` で対象の班を選んでください。所属は変更されていません。"), ephemeral: true);
+                    return;
+                }
+                await _userCommand.UnassignGroupByUserIdAsync(userId, groupId.Value);
+                await RespondAsync(embed: DiscordEmbedFactory.BuildSuccessEmbed("指定班の所属を解除しました", $"ユーザーID `{userId}` の班ID `{groupId.Value}` への所属を解除しました。他の所属は残っています。"), ephemeral: true);
             }
             catch (ArgumentException)
             {
@@ -263,7 +269,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                 }
 
                 var isPrivileged = caller.Role == AccountRole.Admin || caller.Role == AccountRole.President;
-                if (!isPrivileged && (!caller.GroupId.HasValue || caller.GroupId.Value != groupId))
+                if (!isPrivileged && !caller.IsMemberOf(groupId))
                 {
                     await RespondAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("指定班のメンバーを参照する権限がありません。"), ephemeral: true);
                     return;

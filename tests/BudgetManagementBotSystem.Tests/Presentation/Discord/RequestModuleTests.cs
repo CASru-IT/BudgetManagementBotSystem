@@ -144,7 +144,7 @@ public class RequestModuleTests
         public Fixture(bool withEvidence = false, AccountRole role = AccountRole.GroupLeader)
         {
             var user = new User("Requester", 0UL, role);
-            user.ChangeGroupId(Group.Id);
+            user.AddGroup(Group.Id);
             var request = Group.CreateBudgetRequest(user, new Money(1000m), new FiscalYear(4), "備品購入",
                 withEvidence ? new[] { "receipt.pdf" } : Array.Empty<string>());
             typeof(BudgetRequest).GetProperty(nameof(BudgetRequest.Id))!.SetValue(request, 37);

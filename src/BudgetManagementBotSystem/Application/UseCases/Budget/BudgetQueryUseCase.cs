@@ -23,12 +23,7 @@ namespace BudgetManagementBotSystem.Application.UseCases.Budget
             var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
             if (user == null) throw new ArgumentException("Discord user not registered");
 
-            if (!user.GroupId.HasValue && !targetGroupId.HasValue && !IsPrivileged(user))
-            {
-                throw new UnauthorizedAccessException("User has no group and is not privileged");
-            }
-
-            int gid = targetGroupId ?? user.GroupId!.Value;
+            int gid = ResolveGroupId(user, targetGroupId);
             var group = await _groupRepository.GetByIdAsync(gid);
             if (group == null) throw new ArgumentException("Group not found");
 
@@ -62,7 +57,7 @@ namespace BudgetManagementBotSystem.Application.UseCases.Budget
             var user = await _userRepository.GetByDiscordUserIdAsync(discordUserId);
             if (user == null) throw new ArgumentException("Discord user not registered");
 
-            int targetGroupId = groupId ?? user.GroupId!.Value;
+            int targetGroupId = ResolveGroupId(user, groupId);
             var group = await _groupRepository.GetByIdAsync(targetGroupId);
             if (group == null) return new PagedResult<TransactionDto> { Total = 0, Page = page, PageSize = pageSize };
 
@@ -92,7 +87,8 @@ namespace BudgetManagementBotSystem.Application.UseCases.Budget
                 PageSize = pageSize,
                 Items = items
                 ,
-                ResolvedFiscalYear = resolvedFiscalYear.Year
+                ResolvedFiscalYear = resolvedFiscalYear.Year,
+                ResolvedGroupId = group.Id
             };
         }
 
@@ -114,13 +110,11 @@ namespace BudgetManagementBotSystem.Application.UseCases.Budget
             return allTx;
         }
 
-        private bool IsPrivileged(BudgetManagementBotSystem.Domain.Entities.User user)
+        private static int ResolveGroupId(BudgetManagementBotSystem.Domain.Entities.User user, int? requestedGroupId)
         {
-            var role = user.Role;
-            return role == BudgetManagementBotSystem.Domain.Enums.AccountRole.Admin
-                || role == BudgetManagementBotSystem.Domain.Enums.AccountRole.Accountant
-                || role == BudgetManagementBotSystem.Domain.Enums.AccountRole.President
-                || role == BudgetManagementBotSystem.Domain.Enums.AccountRole.GroupLeader;
+            if (requestedGroupId.HasValue) return requestedGroupId.Value;
+            if (user.GroupIds.Count == 1) return user.GroupIds[0];
+            throw new BudgetManagementBotSystem.Application.Exceptions.GroupSelectionRequiredException(user.GroupIds);
         }
     }
 }

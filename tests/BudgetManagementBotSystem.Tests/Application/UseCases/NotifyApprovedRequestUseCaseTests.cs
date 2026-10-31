@@ -19,8 +19,8 @@ public class NotifyApprovedRequestUseCaseTests
 
         var requester = new User("Requester", 22222UL, AccountRole.Accountant);
         var approver = new User("Approver", 11111UL, AccountRole.Accountant);
-        requester.ChangeGroupId(0);
-        approver.ChangeGroupId(0);
+        requester.AddGroup(0);
+        approver.AddGroup(0);
         typeof(User).GetProperty("Id")!.SetValue(approver, approverUserId);
 
         var group = new Group("Test Group");
@@ -62,8 +62,8 @@ public class NotifyApprovedRequestUseCaseTests
 
         var requester = new User("Requester", 22222UL, AccountRole.Accountant);
         var approver = new User("Approver", 11111UL, AccountRole.Accountant);
-        requester.ChangeGroupId(0);
-        approver.ChangeGroupId(0);
+        requester.AddGroup(0);
+        approver.AddGroup(0);
         typeof(User).GetProperty("Id")!.SetValue(approver, approverUserId);
 
         var group = new Group("Test Group");

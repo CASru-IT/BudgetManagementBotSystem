@@ -9,6 +9,7 @@ public class BudgetManagementDbContext : DbContext
 {
     public DbSet<Group> Groups => Set<Group>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<UserGroupMembership> UserGroupMemberships => Set<UserGroupMembership>();
     public DbSet<BudgetRequest> BudgetRequests => Set<BudgetRequest>();
     public DbSet<BudgetTransaction> BudgetTransactions => Set<BudgetTransaction>();
     public DbSet<RequestEvidence> RequestEvidences => Set<RequestEvidence>();
@@ -38,10 +39,23 @@ public class BudgetManagementDbContext : DbContext
             e.Property(x => x.Role).HasConversion<string>().HasMaxLength(30).IsRequired();
             e.Property(x => x.IsActive).IsRequired();
             e.HasIndex(x => x.DiscordUserId).IsUnique();
+            e.Ignore(x => x.GroupIds);
+            e.Property(x => x.LegacyGroupId).HasColumnName("GroupId");
             e.HasOne<Group>()
              .WithMany()
-             .HasForeignKey(x => x.GroupId)
+             .HasForeignKey(x => x.LegacyGroupId)
              .OnDelete(DeleteBehavior.Restrict);
+            e.HasMany(x => x.Memberships).WithOne().HasForeignKey(x => x.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.Navigation(x => x.Memberships).UsePropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        modelBuilder.Entity<UserGroupMembership>(e =>
+        {
+            e.HasKey(x => new { x.UserId, x.GroupId });
+            e.HasOne<Group>().WithMany().HasForeignKey(x => x.GroupId)
+             .OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => x.GroupId);
         });
 
         modelBuilder.Entity<BudgetTransaction>(e =>
