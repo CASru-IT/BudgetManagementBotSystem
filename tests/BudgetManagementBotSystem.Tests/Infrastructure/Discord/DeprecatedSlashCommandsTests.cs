@@ -5,6 +5,18 @@ namespace BudgetManagementBotSystem.Tests.Infrastructure.Discord;
 public class DeprecatedSlashCommandsTests
 {
     [Theory]
+    [InlineData("usage-history", "budget-history")]
+    [InlineData("予算履歴", "budget-history")]
+    [InlineData("予算取消", "cancel-budget")]
+    public void RenamedBudgetCommandsDirectToSingleEnglishReplacement(string oldName, string replacement)
+    {
+        Assert.True(DeprecatedSlashCommands.TryGet(oldName, out var info));
+        Assert.Equal(replacement, info.ReplacementCommandName);
+        Assert.Contains("/" + replacement, info.Message);
+        Assert.False(DeprecatedSlashCommands.TryGet(replacement, out _));
+    }
+
+    [Theory]
     [InlineData("grant-role")]
     [InlineData("revoke-role")]
     public void TryGet_ReturnsReplacementMessage_ForDeprecatedRoleCommands(string commandName)

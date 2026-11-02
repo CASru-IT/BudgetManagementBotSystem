@@ -2,6 +2,7 @@ using BudgetManagementBotSystem.Application.UseCases.Budget;
 using BudgetManagementBotSystem.Domain.Exceptions;
 using BudgetManagementBotSystem.Presentation.Discord.Helpers;
 using BudgetManagementBotSystem.Presentation.Discord.Services;
+using BudgetManagementBotSystem.Presentation.Discord.Autocomplete;
 using Discord;
 using Discord.Interactions;
 using Microsoft.EntityFrameworkCore;
@@ -14,10 +15,10 @@ public class BudgetCancellationModule(
     BudgetCancellationConfirmationStore store,
     ILogger<BudgetCancellationModule> logger) : InteractionModuleBase<SocketInteractionContext>
 {
-    [SlashCommand("予算取消", "誤った予算追加を履歴IDで指定し、確認して取り消します")]
+    [SlashCommand("cancel-budget", "誤った予算追加を履歴IDで指定し、確認して取り消します")]
     public async Task CancelBudget(
-        [Summary("履歴id", "/予算履歴 に表示される追加取引のID")] int transactionId,
-        [Summary("理由", "取り消す理由（1〜500文字）")] string reason)
+        [Summary("transaction-id", "/budget-history に表示される追加取引のID"), Autocomplete(typeof(BudgetTransactionAutocompleteHandler))] int transactionId,
+        [Summary("reason", "取り消す理由（1〜500文字）")] string reason)
     {
         await DeferAsync(ephemeral: true);
         try
@@ -46,7 +47,7 @@ public class BudgetCancellationModule(
         if (!store.TryTake(token, Context.User.Id, out var item) || item == null)
         {
             await FollowupAsync(embed: DiscordEmbedFactory.BuildWarningEmbed("この確認は利用できません",
-                "確認期限切れ・処理済み、または操作した本人ではありません。必要なら /予算取消 を再実行してください。"), ephemeral: true);
+                "確認期限切れ・処理済み、または操作した本人ではありません。必要なら /cancel-budget を再実行してください。"), ephemeral: true);
             return;
         }
 
@@ -76,7 +77,7 @@ public class BudgetCancellationModule(
         if (ex is UnauthorizedAccessException)
             return DiscordEmbedFactory.BuildAuthorizationErrorEmbed(ex.Message);
         if (ex is DbUpdateConcurrencyException || ex is DbUpdateException { InnerException: PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } })
-            return DiscordEmbedFactory.BuildWarningEmbed("予算が更新されています", "他の操作が先に反映されました。/予算履歴 を確認し、必要なら /予算取消 を再実行してください。");
+            return DiscordEmbedFactory.BuildWarningEmbed("予算が更新されています", "他の操作が先に反映されました。/budget-history を確認し、必要なら /cancel-budget を再実行してください。");
         if (ex is BudgetCancellationValidationException or BudgetCancellationRejectedException)
             return DiscordEmbedFactory.BuildValidationErrorEmbed(ex.Message);
         logger.LogError(ex, "Failed to cancel budget addition. DiscordUserId: {DiscordUserId}", Context.User.Id);

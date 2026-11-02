@@ -63,7 +63,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             }
         }
 
-        [SlashCommand("usage-history", "予算使用履歴を表示します")]
+        [SlashCommand("budget-history", "班の予算の収入・支出・取消履歴を表示します")]
         public async Task UsageHistory([Summary("group-id"), Autocomplete(typeof(GroupAutocompleteHandler))] int? groupId = null, int page = 1, int pageSize = 10, [Summary("fiscal-year")] int? fiscalYear = null)
         {
             try
@@ -104,16 +104,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to get usage history. DiscordUserId: {DiscordUserId}, GroupId: {GroupId}, Page: {Page}, PageSize: {PageSize}, FiscalYear: {FiscalYear}", Context.User.Id, groupId, page, pageSize, fiscalYear);
-                await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("使用履歴を取得できません", "時間を置いて再実行してください。"), ephemeral: true);
+                await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("予算履歴を取得できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }
-
-        [SlashCommand("予算履歴", "班の予算履歴と取消対象の履歴IDを表示します")]
-        public Task BudgetHistory(
-            [Summary("班"), Autocomplete(typeof(GroupAutocompleteHandler))] int groupId,
-            [Summary("ページ")] int page = 1,
-            [Summary("年度")] int? fiscalYear = null)
-            => UsageHistory(groupId: groupId, page: page, fiscalYear: fiscalYear);
 
         [SlashCommand("add-budget", "追加予算を付与します")]
         public async Task AddBudget(
@@ -171,7 +164,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             }
         }
 
-        [SlashCommand("all-history", "全班の予算使用履歴を閲覧します")]
+        [SlashCommand("all-history", "全班の予算の収入・支出・取消履歴を閲覧します")]
         public async Task AllHistory(int take = 50)
         {
             try

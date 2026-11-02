@@ -13,7 +13,10 @@ public static class DeprecatedSlashCommands
         new Dictionary<string, DeprecatedSlashCommandInfo>(StringComparer.Ordinal)
         {
             ["grant-role"] = Create("grant-role", "set-user-role"),
-            ["revoke-role"] = Create("revoke-role", "set-user-role")
+            ["revoke-role"] = Create("revoke-role", "set-user-role"),
+            ["usage-history"] = Create("usage-history", "budget-history"),
+            ["予算履歴"] = Create("予算履歴", "budget-history"),
+            ["予算取消"] = Create("予算取消", "cancel-budget")
         };
 
     public static bool TryGet(string commandName, out DeprecatedSlashCommandInfo info)

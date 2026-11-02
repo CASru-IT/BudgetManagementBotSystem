@@ -70,7 +70,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Helpers
             var totalPages = GetTotalPages(result.Total, result.PageSize);
             var fiscalYear = requestedFiscalYear ?? result.ResolvedFiscalYear;
             var embed = new EmbedBuilder()
-                .WithTitle("予算使用履歴")
+                .WithTitle("予算履歴（収入・支出・取消）")
                 .WithColor(Color.Blue)
                 .AddField("ページ", $"{result.Page}/{totalPages}", true)
                 .AddField("合計件数", result.Total.ToString(), true)
@@ -374,7 +374,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Helpers
 
             if (user.Role == AccountRole.Accountant || user.Role == AccountRole.President || user.Role == AccountRole.Admin)
             {
-                embed.AddField("会計担当者向け", "`/pending-list`\n`/approve`\n`/reject`\n`/usage-history`\n`/予算履歴`\n`/予算取消`");
+                embed.AddField("会計担当者向け", "`/pending-list`\n`/approve`\n`/reject`\n`/budget-history`\n`/cancel-budget`");
             }
 
             if (user.Role == AccountRole.Admin || user.Role == AccountRole.President)

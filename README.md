@@ -22,7 +22,8 @@ Discord 上で動作する予算管理 Bot システムです。
   - `/revoke-approval` — 承認の取り消し
 - 予算関連
   - `/remaining-budget` — 班の残予算確認
-  - `/usage-history` — 取引履歴表示
+  - `/budget-history` — 収入・支出・取消を含む予算履歴
+  - `/cancel-budget` — 追加予算を候補付きの履歴IDで選択して取消（管理者・会長・会計）
   - `/add-budget` — 追加予算の付与（管理者権限）
 - 班・ユーザー管理
   - `/register-group`, `/delete-group`, `/list-groups`

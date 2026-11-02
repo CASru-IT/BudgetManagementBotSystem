@@ -51,7 +51,7 @@ public class DiscordEmbedFactoryTests
 
         var embed = DiscordEmbedFactory.BuildUsageHistoryEmbed(result);
 
-        Assert.Equal("予算使用履歴", embed.Title);
+        Assert.Equal("予算履歴（収入・支出・取消）", embed.Title);
         Assert.Contains("条件に一致する取引履歴はありません", embed.Description);
         Assert.Contains(embed.Fields, field => field.Name == "ページ" && field.Value == "1/1");
     }
