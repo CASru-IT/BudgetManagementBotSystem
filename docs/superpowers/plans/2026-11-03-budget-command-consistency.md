@@ -21,14 +21,14 @@ DB変更なし。権限・確定処理・ページングを維持。候補25件�
 
 ### Task 1: Candidates and command migration
 
-- [ ] テストを先に追加: 候補検索・認可・不適格除外・検索後limit・数字のID文字列value・ラベル・公開スキーマ/旧名案内・不正ID拒否。
-- [ ] targeted testの失敗を確認。
-- [ ] CancelBudgetAdditionUseCase.GetCandidatesAsync(ulong,string)とBudgetTransactionAutocompleteHandlerを実装。budget-history/cancel-budgetに改名し、メニュー・案内・運用資料を更新。
-- [ ] dotnet testで関連/既存テスト成功を確認、レビューと修正、commit/push。
+- [x] テストを先に追加: 候補検索・認可・不適格除外・検索後limit・数字のID文字列value・ラベル・公開スキーマ/旧名案内・不正ID拒否。
+- [x] targeted testの失敗を確認。
+- [x] CancelBudgetAdditionUseCase.GetCandidatesAsync(ulong,string)とBudgetTransactionAutocompleteHandlerを実装。budget-history/cancel-budgetに改名し、メニュー・案内・運用資料を更新。
+- [x] dotnet testで関連/既存テスト成功を確認、レビューと修正、commit/push。
 
 ### Task 2: Production rollout
 
-- [ ] DLLを既存本番イメージへ組み込み、既存依存DLLの一致を確認。本番DBの複製でAdminの候補検索・schemaと既存データ保持を検証。
-- [ ] Botを停止してDB/証憑/構成をバックアップし、本番へ反映。
-- [ ] Ready/無再起動、Discord登録された新名・autocomplete・旧名の非存在を確認。
-- [ ] 反映記録をcommit/push。
+- [x] DLLを既存本番イメージへ組み込み、既存依存DLLの一致を確認。本番DBの複製でAdminの候補検索・schemaと既存データ保持を検証。
+- [x] Botを停止してDB/証憑/構成をバックアップし、本番へ反映。
+- [x] Ready/無再起動、Discord登録された新名・autocomplete・旧名の非存在を確認。
+- [x] 反映記録をcommit/push。

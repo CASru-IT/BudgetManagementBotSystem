@@ -8,6 +8,7 @@
 - [予算取消の設計](superpowers/specs/2026-11-02-cancel-budget-design.md) — 履歴指定の取消と競合対策。
 - [予算コマンドの英語統一と入力候補](superpowers/specs/2026-11-03-budget-command-consistency.md) — 履歴統合・取消候補・旧名の移行。
 - [2026-11-02 本番反映記録](deployments/2026-11-02-budget-cancellation.md) — 既存修正の維持、検証結果、バックアップと稼働版。
+- [2026-11-03 コマンド統一の本番反映記録](deployments/2026-11-03-budget-command-consistency.md) — 英語名・履歴統合・取消候補。
 
 - [設計資料](design.md) — 全体構造、ユースケース設計、ドメインルールを確認する。
 - [実装状況](implementation.md) — 現在の到達点と未実装項目を確認する。

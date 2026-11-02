@@ -10,7 +10,7 @@
 
 ### 実装済み
 
-- `/budget-history` と `/cancel-budget`: 履歴IDによる確認付き予算追加取消。有効なAdmin / President / Accountantのみ。理由と実行者を保存し、二重取消・必要予算不足を拒否。
+- `/cancel-budget`: 履歴IDによる確認付き予算追加取消。有効なAdmin / President / Accountantのみ。理由と実行者を保存し、二重取消・必要予算不足を拒否。
 - 履歴は `/budget-history` に統合し、収入・支出・取消を表示。`/cancel-budget` の `transaction-id` は権限と取消可能性を検査した候補を返す。旧名は移行案内の対象。
 - `Group.BudgetRevision` と取消元IDの一意制約: 同時処理の競合を検知。既存PostgreSQL DBは起動時に列・制約を冪等に追加。
 - 収入の由来を新規記録から区別。旧収入は由来未確認として確認画面に表示。
