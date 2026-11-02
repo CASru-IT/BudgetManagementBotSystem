@@ -28,7 +28,7 @@ public class UserAutocompleteHandler : AutocompleteHandler
             .Select(user =>
             {
                 var state = user.IsActive ? "Active" : "Inactive";
-                var group = user.GroupId.HasValue ? $", Group: {user.GroupId.Value}" : ", No group";
+                var group = user.GroupIds.Count > 0 ? $", Groups: {string.Join(",", user.GroupIds)}" : ", No group";
                 return new AutocompleteResult(
                     AutocompleteText.TruncateName($"{user.Name} (User ID: {user.Id}, {user.Role}, {state}{group})"),
                     AutocompleteText.ValueForParameter(user.Id, parameter));

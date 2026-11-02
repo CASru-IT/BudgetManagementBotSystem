@@ -283,7 +283,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Helpers
             {
                 embed.AddField(
                     $"ID {user.Id} / {user.Name}",
-                    $"Role: `{user.Role}`\n班ID: `{(user.GroupId.HasValue ? user.GroupId.Value.ToString() : "未所属")}`\n状態: {(user.IsActive ? "有効" : "無効")}",
+                    $"Role: `{user.Role}`\n班ID: `{FormatGroupIds(user, 8)}`\n状態: {(user.IsActive ? "有効" : "無効")}",
                     true);
             }
 
@@ -300,9 +300,16 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Helpers
                 .AddField("名前", user.Name, true)
                 .AddField("DiscordUserId", user.DiscordUserId.ToString(), true)
                 .AddField("Role", user.Role.ToString(), true)
-                .AddField("所属班", user.GroupId.HasValue ? $"班ID {user.GroupId.Value}" : "未所属", true)
+                .AddField("所属班ID", FormatGroupIds(user), true)
                 .AddField("状態", user.IsActive ? "有効" : "無効", true)
                 .Build();
+        }
+
+        private static string FormatGroupIds(User user, int maxGroups = 20)
+        {
+            var ids = user.GroupIds;
+            if (ids.Count == 0) return "未所属";
+            return string.Join(", ", ids.Take(maxGroups)) + (ids.Count > maxGroups ? $" ほか{ids.Count - maxGroups}班" : "");
         }
 
         public static Embed BuildGroupMembersEmbed(int groupId, IEnumerable<User> members)

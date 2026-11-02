@@ -49,6 +49,9 @@ public class SubmitBudgetRequestUseCase
 
         if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount), "Amount must be non-negative");
 
+        // Recheck current membership before writing any evidence files.
+        group.EnsureRequestMembership(user);
+
         var requestAmount = new Money(amount);
         var fiscalYear = new FiscalYear(_configuration.GetValue<int>("FiscalYearStartMonth:Month"));
 

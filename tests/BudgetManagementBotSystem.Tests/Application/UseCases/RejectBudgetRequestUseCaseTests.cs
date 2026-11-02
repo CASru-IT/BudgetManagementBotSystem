@@ -19,7 +19,7 @@ public class RejectBudgetRequestUseCaseTests
 
         var changedByUser = new User("Approver", 11111UL, AccountRole.Accountant);
         var requester = new User("Requester", 22222UL, AccountRole.Accountant);
-        requester.ChangeGroupId(0);
+        requester.AddGroup(0);
         var group = new Group("Test Group");
 
         _ = group.CreateBudgetRequest(requester, new Money(50_000m), new FiscalYear(4), "備品購入", Array.Empty<string>());
@@ -79,7 +79,7 @@ public class RejectBudgetRequestUseCaseTests
 
         var group = new Group("Test Group");
         var requester = new User("Requester", 22222UL, AccountRole.Accountant);
-        requester.ChangeGroupId(0);
+        requester.AddGroup(0);
         _ = group.CreateBudgetRequest(requester, new Money(50_000m), new FiscalYear(4), "備品購入", Array.Empty<string>());
 
         var mockGroupRepository = new Mock<IGroupRepository>();
@@ -142,8 +142,8 @@ public class RejectBudgetRequestUseCaseTests
         var changedByUser = new User("Approver", 11111UL, AccountRole.Accountant);
         var requester1 = new User("Requester1", 22222UL, AccountRole.Accountant);
         var requester2 = new User("Requester2", 33333UL, AccountRole.Accountant);
-        requester1.ChangeGroupId(0);
-        requester2.ChangeGroupId(0);
+        requester1.AddGroup(0);
+        requester2.AddGroup(0);
         var group = new Group("Test Group");
 
         _ = group.CreateBudgetRequest(requester1, new Money(30_000m), new FiscalYear(4), "PC購入", Array.Empty<string>());
@@ -182,7 +182,7 @@ public class RejectBudgetRequestUseCaseTests
 
         var changedByUser = new User("Approver", 11111UL, AccountRole.Admin);
         var requester = new User("Requester", 22222UL, AccountRole.Accountant);
-        requester.ChangeGroupId(0);
+        requester.AddGroup(0);
         var group = new Group("Test Group");
 
         _ = group.CreateBudgetRequest(requester, new Money(50_000m), new FiscalYear(4), "備品購入", Array.Empty<string>());

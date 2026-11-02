@@ -95,7 +95,7 @@ public class BudgetCancellationTests : IDisposable
         using var db = Open();
         var group = (await new EfCoreGroupRepository(db).GetByIdAsync(_groupId))!;
         if (spent > 0) group.AddBudgetTransaction(new BudgetTransaction(false, spent, _year));
-        if (pending > 0) group.CreateBudgetRequest(await db.Users.SingleAsync(), new Money(pending), _year, "資材", []);
+        if (pending > 0) group.CreateBudgetRequest((await new EfCoreUserRepository(db).GetByDiscordUserIdAsync(100))!, new Money(pending), _year, "資材", []);
         await db.SaveChangesAsync();
         var count = await db.BudgetTransactions.CountAsync();
         await Assert.ThrowsAnyAsync<InvalidOperationException>(() => UseCase(db).PreviewAsync(100, _additionId, "訂正"));
@@ -108,7 +108,7 @@ public class BudgetCancellationTests : IDisposable
         using var db = Open();
         var group = (await new EfCoreGroupRepository(db).GetByIdAsync(_groupId))!;
         group.AddBudgetTransaction(new BudgetTransaction(false, 30000, _year));
-        group.CreateBudgetRequest(await db.Users.SingleAsync(), new Money(99999), new FiscalYear(2026, 4), "別年度", []);
+        group.CreateBudgetRequest((await new EfCoreUserRepository(db).GetByDiscordUserIdAsync(100))!, new Money(99999), new FiscalYear(2026, 4), "別年度", []);
         await db.SaveChangesAsync();
         var p = await UseCase(db).PreviewAsync(100, _additionId, "訂正");
         await UseCase(db).ExecuteAsync(100, _additionId, "訂正", p.Revision);

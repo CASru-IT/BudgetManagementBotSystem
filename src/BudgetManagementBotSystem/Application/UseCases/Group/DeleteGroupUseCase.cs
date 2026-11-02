@@ -30,9 +30,9 @@ public class DeleteGroupUseCase
         var users = await _userRepository.GetAllAsync();
         if (users != null)
         {
-            foreach (var u in users.Where(u => u.GroupId == groupId))
+            foreach (var u in users.Where(u => u.IsMemberOf(groupId)))
             {
-                u.ChangeGroupId(null);
+                u.RemoveGroup(groupId);
             }
         }
 

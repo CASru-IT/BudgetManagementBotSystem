@@ -20,16 +20,16 @@
 
 ### SubmitBudgetRequestUseCase
 
-- 入力: `userId(int)`, `groupId(int)`, `amount(decimal)`, `description(string)`, `evidenceFilePaths(IEnumerable<string>)`
+- 入力: `userId(int)`, `groupId(int)`, `amount(decimal)`, `description(string)`, `evidenceFiles(IEnumerable<UploadedEvidenceDto>)`
 - 処理:
   1. `IUserRepository.GetByIdAsync(int userId)` でユーザー取得
   2. `IGroupRepository.GetByIdAsync(int groupId)` でグループ取得
   3. `amount` のバリデーション（負数禁止）
-  4. `evidenceFilePaths` の null チェック
-  5. `Group.CreateBudgetRequest(user, amount, fiscalYear, description, evidenceFilePaths)` で申請生成
-  6. `Group.IsWithinBudgetLimit` で予算上限判定
-  7. 上限超過時は `Rejected` に遷移
-  8. `IUnitOfWork.SaveChangesAsync` で保存
+  4. `Group.EnsureRequestMembership(user)` で最新の所属を確認。不一致・未設定は `BudgetRequestMembershipException` で拒否する（役職による例外なし）
+  5. `Group.IsWithinBudgetLimit` で予算上限を確認。超過時は申請を作成せず拒否
+  6. 証憑ファイルを保存し、保存済みパスを使って `Group.CreateBudgetRequest` で申請生成
+  7. `IUnitOfWork.SaveChangesAsync` で保存
+- Presentation は確認画面の前にも同じ所属ルールを確認する。専用例外は、登録された所属班・申請先・対処方法を含む非公開の案内へ変換し、一般的な一時障害の案内とは区別する。
 
 ### IncreaseBudgetLimitUseCase
 
@@ -72,7 +72,8 @@
 
 ```mermaid
 erDiagram
-    GROUPS ||--o{ USERS : GroupId
+    GROUPS ||--o{ USER_GROUP_MEMBERSHIPS : GroupId
+    USERS ||--o{ USER_GROUP_MEMBERSHIPS : UserId
     GROUPS ||--o{ BUDGET_TRANSACTIONS : GroupId
     GROUPS ||--o{ BUDGET_REQUESTS : GroupId
     USERS ||--o{ BUDGET_REQUESTS : UserId
@@ -88,9 +89,14 @@ erDiagram
         int Id PK
         string Name
       ulong DiscordUserId UK
-        int GroupId FK
+        int GroupId FK "旧版互換用、所属判定には使用しない"
         string Role
         bool IsActive
+    }
+
+    USER_GROUP_MEMBERSHIPS {
+        int UserId PK,FK
+        int GroupId PK,FK
     }
 
     BUDGET_TRANSACTIONS {
@@ -202,14 +208,17 @@ class User {
   +int Id
   +string Name
   +ulong DiscordUserId
-  +int GroupId
+  +IReadOnlyCollection~UserGroupMembership~ Memberships
+  +IReadOnlyList~int~ GroupIds
   +AccountRole Role
   +bool IsActive
   +Deactivate()
   +Activate()
   +ChangeName(name) void
   +ChangeRole(role) void
-  +ChangeGroupId(groupId) void
+  +AddGroup(groupId) void
+  +RemoveGroup(groupId) void
+  +IsMemberOf(groupId) bool
 }
 
 class Money {
@@ -254,7 +263,8 @@ BudgetTransaction --> Money
 BudgetTransaction --> FiscalYear
 RequestStatusChange --> RequestStatus
 User --> AccountRole
-User --> Group : GroupId
+User "1" *-- "0..*" UserGroupMembership : Memberships
+UserGroupMembership --> Group : GroupId
 Group ..> User : CreateBudgetRequest(user)
 ```
 
@@ -265,6 +275,10 @@ Group ..> User : CreateBudgetRequest(user)
 - `BudgetTransaction.Kind`: Legacy / BudgetAddition / ApprovalRefund / BudgetCancellation。過去の由来不明収入は警告付きで対象にできるが、既知の返金・支出は取消対象外。
 - `CancelBudgetAdditionUseCase` は有効なAdmin / President / Accountantを照合し、確定時にも確認画面の更新トークンを比較する。UI確認は本人に紐づく使い捨てトークンで10分間保持する。
 
+- ユーザーは複数の班に所属可能。追加は重複せず、解除は指定班のみを対象とする。申請先が所属一覧に含まれていれば申請可能。
+- `UserGroupMemberships` の複合主キー `(UserId, GroupId)` で重複を防ぐ。ユーザー取得時には全所属を読み込む。
+- 旧 `Users.GroupId` は互換用に残す。既存所属は起動時の `MembershipSchemaUpgrade` で一度だけ引き継ぎ、移行記録を同一トランザクション内に保存する。財務テーブル・証憑は変更しない。
+- 残予算・使用履歴の班省略は所属が一つの場合だけ補完する。未所属・複数所属なら対象班の指定を促す。
 - `BudgetRequest` の初期ステータスは `Pending`
 - `BudgetRequest.RequestDate`、`RequestStatusChange.ChangedAt`、`BudgetTransaction.TransactionDate` は UTC で保存する
 - ステータス遷移制約

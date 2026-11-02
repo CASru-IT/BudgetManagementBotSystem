@@ -52,7 +52,7 @@ namespace BudgetManagementBotSystem.Application.UseCases.RequestWorkflow
             }
             else
             {
-                if (!user.GroupId.HasValue)
+                if (user.GroupIds.Count == 0)
                 {
                     return new PagedResult<PendingRequestDto>
                     {
@@ -62,7 +62,7 @@ namespace BudgetManagementBotSystem.Application.UseCases.RequestWorkflow
                     };
                 }
 
-                allRequests = allRequests.Where(r => r.GroupId == user.GroupId.Value);
+                allRequests = allRequests.Where(r => user.IsMemberOf(r.GroupId) && (!groupId.HasValue || r.GroupId == groupId.Value));
             }
 
             if (!string.IsNullOrWhiteSpace(status))

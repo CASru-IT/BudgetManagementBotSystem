@@ -63,10 +63,7 @@ public class Group
         {
             throw new InvalidOperationException("この予算申請のユーザーIDは、リクエストを追加しようとしているユーザーのIDと一致しません。");
         }
-        else if (!IsUserMemberOfGroup(user))
-        {
-            throw new InvalidOperationException("この予算申請のユーザーはグループのメンバーではありません。");
-        }
+        EnsureRequestMembership(user);
         _requests.Add(request);
         BudgetRevision = Guid.NewGuid();
     }
@@ -122,9 +119,13 @@ public class Group
         return _requests.Where(r => r.GetCurrentStatus() == status).ToList();
     }
 
-    private bool IsUserMemberOfGroup(User user)
+    public void EnsureRequestMembership(User user)
     {
-        return user.GroupId == Id;
+        ArgumentNullException.ThrowIfNull(user);
+        if (!user.IsMemberOf(Id))
+        {
+            throw new BudgetRequestMembershipException(user.GroupIds, Id, Name);
+        }
     }
 
     private BudgetRequest GetBudgetRequestById(int requestId)

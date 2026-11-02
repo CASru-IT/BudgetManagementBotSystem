@@ -78,6 +78,7 @@ if (!useInMemoryDatabase)
     var dbContext = scope.ServiceProvider.GetRequiredService<BudgetManagementDbContext>();
     await dbContext.Database.EnsureCreatedAsync();
     await BudgetCancellationSchemaUpgrade.ApplyAsync(dbContext);
+    await MembershipSchemaUpgrade.ApplyAsync(dbContext);
 }
 
 bot.Run();

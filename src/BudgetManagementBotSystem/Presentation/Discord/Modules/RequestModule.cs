@@ -2,6 +2,7 @@ using BudgetManagementBotSystem.Application.DTOs;
 using BudgetManagementBotSystem.Application.UseCases.Budget;
 using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 using BudgetManagementBotSystem.Domain.Enums;
+using BudgetManagementBotSystem.Domain.Exceptions;
 using BudgetManagementBotSystem.Domain.Repository;
 using BudgetManagementBotSystem.InfraStructure.Discord;
 using BudgetManagementBotSystem.Presentation.Discord.Autocomplete;
@@ -90,6 +91,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     return;
                 }
 
+                group.EnsureRequestMembership(user);
+
                 var attachments = new[] { evidence1, evidence2, evidence3, evidence4, evidence5 }
                     .Where(attachment => attachment != null)
                     .Cast<IAttachment>()
@@ -152,6 +155,10 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     embed: DiscordEmbedFactory.BuildRequestConfirmationEmbed(group.Name, groupId, amountDecimal, description, evidenceFiles, remainingBudget),
                     components: components,
                     ephemeral: true);
+            }
+            catch (BudgetRequestMembershipException ex)
+            {
+                await FollowupAsync(embed: await RequestMembershipFeedback.BuildAsync(ex, _groupRepository, _logger), ephemeral: true);
             }
             catch (ArgumentNullException)
             {
@@ -221,18 +228,21 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         [SlashCommand("request-detail", "指定した申請の詳細を表示します")]
         public async Task RequestDetail([Summary("request-id"), Autocomplete(typeof(RequestAutocompleteHandler))] string requestId)
         {
+            if (!int.TryParse(requestId, out var parsedRequestId))
+            {
+                await RespondAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("申請IDは数値で指定してください。"), ephemeral: true);
+                return;
+            }
+
+            // File reads and uploads can exceed Discord's three-second initial response deadline.
+            await DeferAsync();
+
             try
             {
-                if (!int.TryParse(requestId, out var parsedRequestId))
-                {
-                    await RespondAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("申請IDは数値で指定してください。"), ephemeral: true);
-                    return;
-                }
-
                 var detail = await _requestDetailUseCase.GetByIdAsync(parsedRequestId);
                 if (detail.Request == null)
                 {
-                    await RespondAsync(embed: DiscordEmbedFactory.BuildNotFoundEmbed("申請", parsedRequestId.ToString()), ephemeral: true);
+                    await FollowupAsync(embed: DiscordEmbedFactory.BuildNotFoundEmbed("申請", parsedRequestId.ToString()));
                     return;
                 }
 
@@ -247,7 +257,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     : null;
                 if (!detail.Evidences.Any())
                 {
-                    await RespondAsync(embed: embed, components: components);
+                    await FollowupAsync(embed: embed, components: components);
                     return;
                 }
 
@@ -255,12 +265,22 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     .Select(evidence => new FileAttachment(new MemoryStream(evidence.Content, writable: false), evidence.FileName))
                     .ToList();
 
-                await RespondWithFilesAsync(files, embeds: new[] { embed }, components: components);
+                try
+                {
+                    await FollowupWithFilesAsync(files, embeds: new[] { embed }, components: components);
+                }
+                finally
+                {
+                    foreach (var file in files)
+                    {
+                        file.Dispose();
+                    }
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to get request detail. DiscordUserId: {DiscordUserId}, RequestId: {RequestId}", Context.User.Id, requestId);
-                await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("申請詳細を取得できません", "時間を置いて再実行してください。"), ephemeral: true);
+                await FollowupAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("申請詳細を取得できません", "時間を置いて再実行してください。"));
             }
         }
 

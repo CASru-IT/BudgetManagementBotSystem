@@ -1,4 +1,5 @@
 using BudgetManagementBotSystem.Application.DTOs;
+using BudgetManagementBotSystem.Application.Exceptions;
 using BudgetManagementBotSystem.Application.UseCases.Budget;
 using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 using BudgetManagementBotSystem.Presentation.Discord.Helpers;
@@ -83,6 +84,10 @@ public class PagingComponentModule : InteractionModuleBase<SocketInteractionCont
             }
 
             await RespondAsync(embed: rendered.Embed, components: rendered.Components, ephemeral: true);
+        }
+        catch (GroupSelectionRequiredException ex)
+        {
+            await RespondAsync(embed: DiscordEmbedFactory.BuildWarningEmbed("表示する班を指定してください", ex.Message), ephemeral: true);
         }
         catch (UnauthorizedAccessException)
         {

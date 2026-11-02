@@ -9,5 +9,6 @@ namespace BudgetManagementBotSystem.Application.DTOs
         public int PageSize { get; set; }
         public List<T> Items { get; set; } = new List<T>();
         public int ResolvedFiscalYear { get; set; }
+        public int? ResolvedGroupId { get; set; }
     }
 }

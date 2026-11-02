@@ -32,7 +32,7 @@ namespace BudgetManagementBotSystem.Application.UseCases.UserManagement
         {
             var users = await _userRepository.GetAllAsync();
             if (users == null) return new List<User>();
-            return users.Where(u => u.GroupId.HasValue && u.GroupId.Value == groupId).ToList();
+            return users.Where(u => u.IsMemberOf(groupId)).ToList();
         }
     }
 }
