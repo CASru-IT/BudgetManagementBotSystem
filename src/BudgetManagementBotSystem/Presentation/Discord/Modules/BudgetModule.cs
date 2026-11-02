@@ -99,6 +99,13 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             }
         }
 
+        [SlashCommand("予算履歴", "班の予算履歴と取消対象の履歴IDを表示します")]
+        public Task BudgetHistory(
+            [Summary("班"), Autocomplete(typeof(GroupAutocompleteHandler))] int groupId,
+            [Summary("ページ")] int page = 1,
+            [Summary("年度")] int? fiscalYear = null)
+            => UsageHistory(groupId: groupId, page: page, fiscalYear: fiscalYear);
+
         [SlashCommand("add-budget", "追加予算を付与します")]
         public async Task AddBudget(
             [Summary("group-id"), Autocomplete(typeof(GroupAutocompleteHandler))] int groupId,

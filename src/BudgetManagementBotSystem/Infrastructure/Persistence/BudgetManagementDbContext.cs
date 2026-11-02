@@ -29,6 +29,7 @@ public class BudgetManagementDbContext : DbContext
             e.HasKey(x => x.Id);
             e.Property(x => x.Name).HasMaxLength(200).IsRequired();
             e.HasIndex(x => x.Name).IsUnique();
+            e.Property(x => x.BudgetRevision).IsConcurrencyToken();
         });
 
         modelBuilder.Entity<User>(e =>
@@ -56,6 +57,11 @@ public class BudgetManagementDbContext : DbContext
 
             e.Property(x => x.TransactionDate).IsRequired();
             e.Property(x => x.IsIncome).IsRequired();
+            e.Property(x => x.Kind).IsRequired();
+            e.Property(x => x.CancellationReason).HasMaxLength(500);
+            e.HasIndex(x => x.ReversesTransactionId).IsUnique();
+            e.HasOne<BudgetTransaction>().WithMany().HasForeignKey(x => x.ReversesTransactionId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.CancelledByUserId).OnDelete(DeleteBehavior.Restrict);
 
             e.HasOne<Group>()
              .WithMany(g => g.BudgetTransactions)

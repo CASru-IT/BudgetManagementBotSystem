@@ -55,7 +55,7 @@ namespace BudgetManagementBotSystem.Application.UseCases.RequestWorkflow
             }
 
             request.UpdateStatus(RequestStatus.ApprovalCancelled, actingUser);
-            group.AddBudgetTransaction(new BudgetTransaction(true, request.Amount.Value, request.FiscalYear));
+            group.AddBudgetTransaction(new BudgetTransaction(true, request.Amount.Value, request.FiscalYear, BudgetTransactionKind.ApprovalRefund));
 
             await _unitOfWork.SaveChangesAsync();
         }

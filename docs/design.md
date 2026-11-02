@@ -260,6 +260,11 @@ Group ..> User : CreateBudgetRequest(user)
 
 ## ドメインルール
 
+- `Group.CancelBudgetAddition`: 追加取引を残して同じ年度の減額取引を生成する。元ID・理由・実行者を保持し、取消後の実残高と未承認申請考慮後残高を検証する。
+- 予算取引追加・申請作成・Group経由の状態変更で `BudgetRevision` を更新し、EFのConcurrencyTokenとして同時更新を検知する。取消元IDの一意制約も併用する。
+- `BudgetTransaction.Kind`: Legacy / BudgetAddition / ApprovalRefund / BudgetCancellation。過去の由来不明収入は警告付きで対象にできるが、既知の返金・支出は取消対象外。
+- `CancelBudgetAdditionUseCase` は有効なAdmin / President / Accountantを照合し、確定時にも確認画面の更新トークンを比較する。UI確認は本人に紐づく使い捨てトークンで10分間保持する。
+
 - `BudgetRequest` の初期ステータスは `Pending`
 - `BudgetRequest.RequestDate`、`RequestStatusChange.ChangedAt`、`BudgetTransaction.TransactionDate` は UTC で保存する
 - ステータス遷移制約
