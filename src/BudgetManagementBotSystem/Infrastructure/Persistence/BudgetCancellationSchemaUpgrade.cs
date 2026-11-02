@@ -13,6 +13,8 @@ public static class BudgetCancellationSchemaUpgrade
         await db.Database.ExecuteSqlRawAsync("""
             ALTER TABLE "Groups" ADD COLUMN IF NOT EXISTS "BudgetRevision" uuid NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000';
             ALTER TABLE "BudgetTransactions" ADD COLUMN IF NOT EXISTS "Kind" integer NOT NULL DEFAULT 0;
+            ALTER TABLE "Groups" ALTER COLUMN "BudgetRevision" SET DEFAULT '00000000-0000-0000-0000-000000000000';
+            ALTER TABLE "BudgetTransactions" ALTER COLUMN "Kind" SET DEFAULT 0;
             ALTER TABLE "BudgetTransactions" ADD COLUMN IF NOT EXISTS "ReversesTransactionId" integer;
             ALTER TABLE "BudgetTransactions" ADD COLUMN IF NOT EXISTS "CancelledByUserId" integer;
             ALTER TABLE "BudgetTransactions" ADD COLUMN IF NOT EXISTS "CancellationReason" character varying(500);

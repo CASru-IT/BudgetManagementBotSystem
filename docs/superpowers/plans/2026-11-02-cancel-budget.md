@@ -25,10 +25,10 @@ Files: Domain/Entities/{Group,BudgetTransaction}.cs, Domain/Enums/BudgetTransact
 
 Interfaces: Group.ValidateBudgetCancellation(int) -> BudgetTransaction; Group.CancelBudgetAddition(int,int,string) -> BudgetTransaction; CancelBudgetAdditionUseCase.PreviewAsync(ulong,int,string) and ExecuteAsync(ulong,int,string,Guid) -> BudgetCancellationPreview.
 
-- [ ] Write failing tests for audit, no preview mutation, duplicate/expense/refund rejection, original fiscal year, spent/pending protection, authorization, concurrent saves and stale preview.
-- [ ] Run targeted tests: expected missing types initially.
-- [ ] Implement domain guards, application authorization, EF mapping/upgrade, revision increments on budget/requests changes; tag newly created income sources.
-- [ ] Run targeted tests; expect pass. Commit.
+- [x] Write failing tests for audit, no preview mutation, duplicate/expense/refund rejection, original fiscal year, spent/pending protection, authorization, concurrent saves and stale preview.
+- [x] Run targeted tests: expected missing types initially.
+- [x] Implement domain guards, application authorization, EF mapping/upgrade, revision increments on budget/requests changes; tag newly created income sources.
+- [x] Run targeted tests; expect pass. Commit.
 
 ### Task 2: Discord confirmation and history
 
@@ -36,13 +36,13 @@ Files: Presentation/Discord/{Modules/BudgetCancellationModule,Services/BudgetCan
 
 Interfaces: consumes Task 1 preview/execute; store.Create(owner, preview) -> token, store.TryTake(token,owner,out confirmation) -> bool; embeds show exact target/year/amount/reason and remaining balance.
 
-- [ ] Write tests for owner-bound atomic consumption, expiry, cancel-without-write, history IDs and reversal metadata, confirmation stale/permission checks.
-- [ ] Run targeted tests; expect missing feature failures.
-- [ ] Implement Japanese commands, deferred ephemeral replies, buttons with opaque tokens, clear errors; show audit in history and help.
-- [ ] Run targeted and full suite, update operations/design/implementation and DB upgrade procedure. Commit.
+- [x] Write tests for owner-bound atomic consumption, expiry, cancel-without-write, history IDs and reversal metadata, confirmation stale/permission checks.
+- [x] Run targeted tests; expect missing feature failures.
+- [x] Implement Japanese commands, deferred ephemeral replies, buttons with opaque tokens, clear errors; show audit in history and help.
+- [x] Run targeted and full suite, update operations/design/implementation and DB upgrade procedure. Commit.
 
 ### Task 3: Review and delivery
 
-- [ ] Independent code review of changes against spec and Review Focus; resolve important findings with regression tests.
-- [ ] Run full suite and git diff --check. Expected all pass.
-- [ ] Commit and push feature branch as required by AGENTS.md; report commands, test results, deployment status.
+- [x] Independent code review of changes against spec and Review Focus; resolve important findings with regression tests.
+- [x] Run full suite and git diff --check. Expected all pass.
+- [x] Commit and push feature branch as required by AGENTS.md; report commands, test results, deployment status.
