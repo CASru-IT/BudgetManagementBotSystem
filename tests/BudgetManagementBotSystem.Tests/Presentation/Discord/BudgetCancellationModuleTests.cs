@@ -18,12 +18,27 @@ namespace BudgetManagementBotSystem.Tests.Presentation.Discord;
 public class BudgetCancellationModuleTests
 {
     [Theory]
+    [InlineData("abc")]
+    [InlineData("-1")]
+    [InlineData("0")]
+    [InlineData("1.2")]
+    [InlineData("999999999999999999999")]
+    public async Task InvalidTransactionIdDoesNotCreateConfirmationOrChangeBudget(string id)
+    {
+        var fixture = new Fixture();
+        await fixture.Module.CancelBudget(id, "訂正");
+        Assert.Single(fixture.Group.BudgetTransactions);
+        Assert.Null(fixture.Module.Components);
+        Assert.Contains("取引ID", fixture.Module.LastEmbed!.Description);
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task ButtonsOnlyWriteOnConfirmation_AndCannotRepeat(bool confirm)
     {
         var fixture = new Fixture();
-        await fixture.Module.CancelBudget(123, "班の訂正");
+        await fixture.Module.CancelBudget("123", "班の訂正");
         Assert.True(fixture.Module.Deferred);
         Assert.Single(fixture.Group.BudgetTransactions);
         var token = fixture.Module.Components!.Components.OfType<ActionRowComponent>().First().Components.OfType<ButtonComponent>().First().CustomId.Split(':').Last();
@@ -41,7 +56,7 @@ public class BudgetCancellationModuleTests
         var fixture = new Fixture();
         var pending = new TaskCompletionSource<List<Group>?>();
         fixture.Groups.Setup(x => x.GetAllAsync()).Returns(pending.Task);
-        var running = fixture.Module.CancelBudget(123, "訂正");
+        var running = fixture.Module.CancelBudget("123", "訂正");
         Assert.True(fixture.Module.Deferred);
         pending.SetException(new InvalidOperationException("private database configuration"));
         await running;
@@ -52,7 +67,7 @@ public class BudgetCancellationModuleTests
     public async Task LostPermissionsAtConfirmationDoNotWrite()
     {
         var fixture = new Fixture();
-        await fixture.Module.CancelBudget(123, "訂正");
+        await fixture.Module.CancelBudget("123", "訂正");
         var token = fixture.Module.Components!.Components.OfType<ActionRowComponent>().First().Components.OfType<ButtonComponent>().First().CustomId.Split(':').Last();
         fixture.User.Deactivate();
         await fixture.Module.ConfirmCancellation(token);

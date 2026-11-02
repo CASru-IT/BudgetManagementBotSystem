@@ -21,7 +21,7 @@ DB変更なし。権限・確定処理・ページングを維持。候補25件�
 
 ### Task 1: Candidates and command migration
 
-- [ ] テストを先に追加: 候補検索・認可・不適格除外・検索後limit・数値value・ラベル・公開スキーマ/旧名案内。
+- [ ] テストを先に追加: 候補検索・認可・不適格除外・検索後limit・数字のID文字列value・ラベル・公開スキーマ/旧名案内・不正ID拒否。
 - [ ] targeted testの失敗を確認。
 - [ ] CancelBudgetAdditionUseCase.GetCandidatesAsync(ulong,string)とBudgetTransactionAutocompleteHandlerを実装。budget-history/cancel-budgetに改名し、メニュー・案内・運用資料を更新。
 - [ ] dotnet testで関連/既存テスト成功を確認、レビューと修正、commit/push。

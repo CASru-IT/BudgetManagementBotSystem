@@ -28,7 +28,7 @@ public class BudgetCommandSchemaTests
         Assert.DoesNotContain("予算履歴", commands);
         Assert.DoesNotContain("予算取消", commands);
         var parameter = typeof(BudgetCancellationModule).GetMethod(nameof(BudgetCancellationModule.CancelBudget))!.GetParameters()[0];
-        Assert.Equal(typeof(int), parameter.ParameterType);
+        Assert.Equal(typeof(string), parameter.ParameterType);
         Assert.Single(parameter.GetCustomAttributes(typeof(AutocompleteAttribute), false));
         Assert.Equal("transaction-id", ((SummaryAttribute)parameter.GetCustomAttributes(typeof(SummaryAttribute), false).Single()).Name);
     }
@@ -36,7 +36,7 @@ public class BudgetCommandSchemaTests
     [Theory]
     [InlineData(AccountRole.Admin, true)]
     [InlineData(AccountRole.GroupLeader, false)]
-    public async Task HandlerReturnsNumericIdsAndBoundedLabelsOnlyToAuthorizedUsers(AccountRole role, bool allowed)
+    public async Task HandlerReturnsStringIdsAndBoundedLabelsOnlyToAuthorizedUsers(AccountRole role, bool allowed)
     {
         var group = new Group(new string('班', 200));
         var tx = new BudgetTransaction(true, 1234.50m, new FiscalYear(2025, 4));
@@ -53,15 +53,15 @@ public class BudgetCommandSchemaTests
         // Discord creates options internally; instantiate its actual payload for the handler boundary.
         var option = (AutocompleteOption)Activator.CreateInstance(typeof(AutocompleteOption),
             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
-            null, [ApplicationCommandOptionType.Integer, "transaction-id", "123", true], null)!;
+            null, [ApplicationCommandOptionType.String, "transaction-id", "班", true], null)!;
         interaction.Setup(i => i.Data.Current).Returns(option);
         var parameter = new Mock<IParameterInfo>();
-        parameter.Setup(p => p.ParameterType).Returns(typeof(int));
+        parameter.Setup(p => p.ParameterType).Returns(typeof(string));
         var result = await new BudgetTransactionAutocompleteHandler().GenerateSuggestionsAsync(context.Object, interaction.Object, parameter.Object, services);
         Assert.True(result.IsSuccess);
         if (!allowed) { Assert.Empty(result.Suggestions); return; }
         var candidate = Assert.Single(result.Suggestions);
-        Assert.Equal(123L, candidate.Value);
+        Assert.Equal("123", candidate.Value);
         Assert.True(candidate.Name.Length <= 100);
         Assert.Contains("1,234.50", candidate.Name);
         Assert.Contains("2025", candidate.Name);

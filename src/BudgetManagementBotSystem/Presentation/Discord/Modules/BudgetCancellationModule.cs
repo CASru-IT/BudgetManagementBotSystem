@@ -17,13 +17,15 @@ public class BudgetCancellationModule(
 {
     [SlashCommand("cancel-budget", "誤った予算追加を履歴IDで指定し、確認して取り消します")]
     public async Task CancelBudget(
-        [Summary("transaction-id", "/budget-history に表示される追加取引のID"), Autocomplete(typeof(BudgetTransactionAutocompleteHandler))] int transactionId,
+        [Summary("transaction-id", "ID・班名・金額などで検索して追加取引を選択"), Autocomplete(typeof(BudgetTransactionAutocompleteHandler))] string transactionId,
         [Summary("reason", "取り消す理由（1〜500文字）")] string reason)
     {
         await DeferAsync(ephemeral: true);
         try
         {
-            var preview = await useCase.PreviewAsync(Context.User.Id, transactionId, reason);
+            if (!int.TryParse(transactionId, out var parsedId) || parsedId <= 0)
+                throw new BudgetCancellationValidationException("取引IDは候補から選択するか、正の整数で入力してください。");
+            var preview = await useCase.PreviewAsync(Context.User.Id, parsedId, reason);
             var token = store.Create(Context.User.Id, preview);
             await FollowupAsync(embed: BudgetCancellationEmbeds.Confirmation(preview),
                 components: BudgetCancellationEmbeds.Buttons(token), ephemeral: true,
