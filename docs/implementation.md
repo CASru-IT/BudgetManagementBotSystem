@@ -8,6 +8,10 @@
 
 ### 実装済み
 
+- `/予算履歴` と `/予算取消`: 履歴IDによる確認付き予算追加取消。有効なAdmin / President / Accountantのみ。理由と実行者を保存し、二重取消・必要予算不足を拒否。
+- `Group.BudgetRevision` と取消元IDの一意制約: 同時処理の競合を検知。既存PostgreSQL DBは起動時に列・制約を冪等に追加。
+- 収入の由来を新規記録から区別。旧収入は由来未確認として確認画面に表示。
+
 - Worker 起動時に `Discord:Token` を読み取り、Discord Bot を起動
 - スラッシュコマンドは `Discord:CommandRegistrationMode` に従って Guild / Global に登録
   - 既定は `Guild`。`Discord:GuildId` に指定したサーバーへ `deleteMissing=true` で登録し、コードから消えた古いコマンドを登録対象から外します。

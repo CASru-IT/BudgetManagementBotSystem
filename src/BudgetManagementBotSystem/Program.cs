@@ -43,6 +43,7 @@ builder.Services.AddScoped<RegisterUserUseCase>();
 builder.Services.AddScoped<BootstrapAdminUseCase>();
 builder.Services.AddScoped<SubmitBudgetRequestUseCase>();
 builder.Services.AddScoped<IncreaseBudgetLimitUseCase>();
+builder.Services.AddScoped<CancelBudgetAdditionUseCase>();
 builder.Services.AddScoped<AdminAddBudgetTransactionUseCase>();
 builder.Services.AddScoped<CancelBudgetRequestUseCase>();
 builder.Services.AddScoped<UserCancelBudgetRequestUseCase>();
@@ -65,6 +66,7 @@ builder.Services.Configure<AdminBootstrapOptions>(builder.Configuration.GetSecti
 
 builder.Services.AddSingleton<DiscordBotService>();
 builder.Services.AddSingleton<PendingRequestConfirmationStore>();
+builder.Services.AddSingleton<BudgetCancellationConfirmationStore>();
 builder.Services.AddSingleton<PagingSessionStore>();
 builder.Services.AddHostedService<Worker>();
 
@@ -75,6 +77,7 @@ if (!useInMemoryDatabase)
     using var scope = bot.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<BudgetManagementDbContext>();
     await dbContext.Database.EnsureCreatedAsync();
+    await BudgetCancellationSchemaUpgrade.ApplyAsync(dbContext);
 }
 
 bot.Run();

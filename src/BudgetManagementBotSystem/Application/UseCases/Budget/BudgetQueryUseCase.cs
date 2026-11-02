@@ -77,6 +77,12 @@ namespace BudgetManagementBotSystem.Application.UseCases.Budget
             var total = txs.Count;
             var items = txs.Skip((page - 1) * pageSize).Take(pageSize).Select(t => new TransactionDto
             {
+                TransactionId = t.Id,
+                Kind = t.Kind,
+                ReversesTransactionId = t.ReversesTransactionId,
+                ReversedByTransactionId = group.BudgetTransactions.FirstOrDefault(x => x.ReversesTransactionId == t.Id)?.Id,
+                CancelledByUserId = t.CancelledByUserId,
+                CancellationReason = t.CancellationReason,
                 GroupId = group.Id,
                 GroupName = group.Name,
                 IsIncome = t.IsIncome,
@@ -103,6 +109,12 @@ namespace BudgetManagementBotSystem.Application.UseCases.Budget
 
             var allTx = groups.SelectMany(g => g.BudgetTransactions.Select(t => new TransactionDto
             {
+                TransactionId = t.Id,
+                Kind = t.Kind,
+                ReversesTransactionId = t.ReversesTransactionId,
+                ReversedByTransactionId = g.BudgetTransactions.FirstOrDefault(x => x.ReversesTransactionId == t.Id)?.Id,
+                CancelledByUserId = t.CancelledByUserId,
+                CancellationReason = t.CancellationReason,
                 GroupId = g.Id,
                 GroupName = g.Name,
                 IsIncome = t.IsIncome,

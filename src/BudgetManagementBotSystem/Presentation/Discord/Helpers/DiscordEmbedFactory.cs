@@ -367,7 +367,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Helpers
 
             if (user.Role == AccountRole.Accountant || user.Role == AccountRole.President || user.Role == AccountRole.Admin)
             {
-                embed.AddField("会計担当者向け", "`/pending-list`\n`/approve`\n`/reject`\n`/usage-history`");
+                embed.AddField("会計担当者向け", "`/pending-list`\n`/approve`\n`/reject`\n`/usage-history`\n`/予算履歴`\n`/予算取消`");
             }
 
             if (user.Role == AccountRole.Admin || user.Role == AccountRole.President)
@@ -512,10 +512,19 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Helpers
         {
             foreach (var transaction in transactions.Take(MaxListItems))
             {
-                var type = transaction.IsIncome ? "収入" : "支出";
+                var type = transaction.Kind switch
+                {
+                    BudgetTransactionKind.BudgetCancellation => "予算取消",
+                    BudgetTransactionKind.BudgetAddition => "予算追加",
+                    BudgetTransactionKind.ApprovalRefund => "承認取消の返金",
+                    _ => transaction.IsIncome ? "収入（旧履歴・由来未確認）" : "支出"
+                };
+                var audit = transaction.ReversedByTransactionId.HasValue ? $"\n取消済（取消履歴ID: `{transaction.ReversedByTransactionId}`）" : "";
+                if (transaction.ReversesTransactionId.HasValue)
+                    audit += $"\n取消元履歴ID: `{transaction.ReversesTransactionId}`\n実行者の登録ユーザーID: `{transaction.CancelledByUserId}`\n理由: {Truncate(transaction.CancellationReason ?? "", 500)}";
                 embed.AddField(
-                    $"{transaction.GroupName} / {type} / {transaction.Amount:C}",
-                    $"日付: `{transaction.TransactionDate:yyyy-MM-dd}`\n会計年度: `{transaction.FiscalYear}`");
+                    Truncate($"履歴ID {transaction.TransactionId} / {type} / {transaction.Amount:N2}円 / {transaction.GroupName}", 80),
+                    Truncate($"日時（日本時間）: `{transaction.TransactionDate.AddHours(9):yyyy-MM-dd HH:mm:ss}`\n会計年度: `{transaction.FiscalYear}`{audit}", 200));
             }
         }
 

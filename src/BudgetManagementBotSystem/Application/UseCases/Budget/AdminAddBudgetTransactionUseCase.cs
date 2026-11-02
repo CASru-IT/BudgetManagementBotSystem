@@ -47,7 +47,8 @@ public class AdminAddBudgetTransactionUseCase
             ? new FiscalYear(fiscalYear.Value, startMonth)
             : new FiscalYear(startMonth);
 
-        group.AddBudgetTransaction(new BudgetTransaction(isIncome, amount, resolvedFiscalYear));
+        group.AddBudgetTransaction(new BudgetTransaction(isIncome, amount, resolvedFiscalYear,
+            isIncome ? BudgetTransactionKind.BudgetAddition : BudgetTransactionKind.Legacy));
         await _unitOfWork.SaveChangesAsync();
 
         return new AdminAddBudgetTransactionResult(

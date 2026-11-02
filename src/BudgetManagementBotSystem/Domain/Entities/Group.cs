@@ -1,5 +1,6 @@
 using BudgetManagementBotSystem.Domain.ValueObjects;
 using BudgetManagementBotSystem.Domain.Enums;
+using BudgetManagementBotSystem.Domain.Exceptions;
 
 namespace BudgetManagementBotSystem.Domain.Entities;
 
@@ -10,6 +11,7 @@ public class Group
 
     public int Id { get; private set; }
     public string Name { get; private set; } = string.Empty;
+    public Guid BudgetRevision { get; private set; }
     public IReadOnlyCollection<BudgetTransaction> BudgetTransactions => _budgetTransactions;
     public IReadOnlyCollection<BudgetRequest> Requests => _requests;
 
@@ -25,6 +27,34 @@ public class Group
             throw new InvalidOperationException("この取引を追加すると、予算がマイナスになります。");
         }
         _budgetTransactions.Add(transaction);
+        BudgetRevision = Guid.NewGuid();
+    }
+
+    public BudgetTransaction ValidateBudgetCancellation(int transactionId)
+    {
+        var original = _budgetTransactions.SingleOrDefault(t => t.Id == transactionId)
+            ?? throw new BudgetCancellationValidationException("指定された予算履歴が見つかりません。", nameof(transactionId));
+        if (!original.IsIncome || original.Amount.Value <= 0 ||
+            original.Kind is not (BudgetTransactionKind.Legacy or BudgetTransactionKind.BudgetAddition))
+            throw new BudgetCancellationRejectedException("この履歴は予算追加ではないため取り消せません。");
+        if (_budgetTransactions.Any(t => t.ReversesTransactionId == transactionId))
+            throw new BudgetCancellationRejectedException("この予算追加はすでに取り消されています。");
+        var balanceAfter = GetTotalBudgetForFiscalYear(original.FiscalYear) - original.Amount.Value;
+        var pending = _requests.Where(r => r.FiscalYear == original.FiscalYear && r.GetCurrentStatus() == RequestStatus.Pending)
+            .Sum(r => r.Amount.Value);
+        if (balanceAfter < 0 || balanceAfter - pending < 0)
+            throw new BudgetCancellationRejectedException("取消後の予算が使用済み額または未承認申請を含む必要額を下回ります。申請・支出を確認してください。");
+        return original;
+    }
+
+    public BudgetTransaction CancelBudgetAddition(int transactionId, int actorId, string reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)
+            throw new BudgetCancellationValidationException("取消理由は1〜500文字で入力してください。", nameof(reason));
+        var original = ValidateBudgetCancellation(transactionId);
+        var reversal = BudgetTransaction.CreateCancellation(original, actorId, reason.Trim());
+        AddBudgetTransaction(reversal);
+        return reversal;
     }
 
     private void AddBudgetRequest(BudgetRequest request, User user)
@@ -38,6 +68,7 @@ public class Group
             throw new InvalidOperationException("この予算申請のユーザーはグループのメンバーではありません。");
         }
         _requests.Add(request);
+        BudgetRevision = Guid.NewGuid();
     }
 
     public BudgetRequest CreateBudgetRequest(User user, Money amount, FiscalYear fiscalYear, string description, IEnumerable<string> evidenceFilePaths)
@@ -53,12 +84,14 @@ public class Group
     {
         var request = GetBudgetRequestById(requestId);
         request.UpdateStatus(newStatus);
+        BudgetRevision = Guid.NewGuid();
     }
 
     public void UpdateBudgetRequestStatus(int requestId, RequestStatus newStatus, User changedBy)
     {
         var request = GetBudgetRequestById(requestId);
         request.UpdateStatus(newStatus, changedBy);
+        BudgetRevision = Guid.NewGuid();
     }
 
     public decimal GetTotalBudgetForFiscalYear(FiscalYear fiscalYear)

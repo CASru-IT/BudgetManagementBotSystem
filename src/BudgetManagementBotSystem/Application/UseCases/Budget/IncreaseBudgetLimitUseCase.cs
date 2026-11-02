@@ -29,7 +29,7 @@ public class IncreaseBudgetLimitUseCase
         FiscalYear currentFiscalYear = fiscalYear.HasValue
             ? new FiscalYear(fiscalYear.Value, startMonth)
             : new FiscalYear(startMonth);
-        BudgetTransaction transaction = new BudgetTransaction(true, amount, currentFiscalYear);
+        BudgetTransaction transaction = new BudgetTransaction(true, amount, currentFiscalYear, Domain.Enums.BudgetTransactionKind.BudgetAddition);
         group.AddBudgetTransaction(transaction);
 
         await _unitOfWork.SaveChangesAsync();
