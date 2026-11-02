@@ -6,6 +6,7 @@
 
 - [予算取消機能の更新手順](budget-cancellation-upgrade.md) — DB拡張・既存履歴・更新と切り戻し。
 - [予算取消の設計](superpowers/specs/2026-11-02-cancel-budget-design.md) — 履歴指定の取消と競合対策。
+- [2026-11-02 本番反映記録](deployments/2026-11-02-budget-cancellation.md) — 既存修正の維持、検証結果、バックアップと稼働版。
 
 - [設計資料](design.md) — 全体構造、ユースケース設計、ドメインルールを確認する。
 - [実装状況](implementation.md) — 現在の到達点と未実装項目を確認する。
