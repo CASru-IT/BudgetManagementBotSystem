@@ -9,6 +9,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__Db=${ConnectionStrings__Db:-Host=postgres;Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}}
       - Discord__Token=${Discord__Token}
+      - Discord__BudgetActivityChannelId=${Discord__BudgetActivityChannelId:-}
       - AdminBootstrap__Password=${AdminBootstrap__Password}
       - EvidenceStorage__BasePath=${EvidenceStorage__BasePath}
       - FiscalYearStartMonth__Month=${FiscalYearStartMonth__Month}

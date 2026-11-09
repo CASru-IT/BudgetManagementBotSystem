@@ -1,4 +1,5 @@
 using BudgetManagementBotSystem.Application.Interface;
+using BudgetManagementBotSystem.Application.DTOs;
 using BudgetManagementBotSystem.Domain.Entities;
 using BudgetManagementBotSystem.Domain.Enums;
 using BudgetManagementBotSystem.Domain.Repository;
@@ -25,7 +26,7 @@ public class AdminAddBudgetTransactionUseCase
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<AdminAddBudgetTransactionResult> ExecuteAsync(
+    public async Task<BudgetTransactionResult> ExecuteAsync(
         ulong discordUserId,
         int groupId,
         string transactionType,
@@ -47,11 +48,13 @@ public class AdminAddBudgetTransactionUseCase
             ? new FiscalYear(fiscalYear.Value, startMonth)
             : new FiscalYear(startMonth);
 
-        group.AddBudgetTransaction(new BudgetTransaction(isIncome, amount, resolvedFiscalYear,
-            isIncome ? BudgetTransactionKind.BudgetAddition : BudgetTransactionKind.Legacy));
+        var transaction = new BudgetTransaction(isIncome, amount, resolvedFiscalYear,
+            isIncome ? BudgetTransactionKind.BudgetAddition : BudgetTransactionKind.Legacy);
+        group.AddBudgetTransaction(transaction);
         await _unitOfWork.SaveChangesAsync();
 
-        return new AdminAddBudgetTransactionResult(
+        return new BudgetTransactionResult(
+            transaction.Id,
             group.Id,
             group.Name,
             isIncome,
@@ -77,11 +80,3 @@ public class AdminAddBudgetTransactionUseCase
         throw new ArgumentException("Transaction type must be income or expense.", nameof(transactionType));
     }
 }
-
-public sealed record AdminAddBudgetTransactionResult(
-    int GroupId,
-    string GroupName,
-    bool IsIncome,
-    decimal Amount,
-    int FiscalYear,
-    decimal ActualBalance);

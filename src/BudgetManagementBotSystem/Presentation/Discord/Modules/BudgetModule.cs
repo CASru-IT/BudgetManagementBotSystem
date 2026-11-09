@@ -18,6 +18,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         private readonly IncreaseBudgetLimitUseCase _increaseBudgetLimitUseCase;
         private readonly AdminAddBudgetTransactionUseCase _adminAddBudgetTransactionUseCase;
         private readonly PagingSessionStore _pagingSessionStore;
+        private readonly BudgetActivityChannel _activityChannel;
         private readonly ILogger<BudgetModule> _logger;
 
         public BudgetModule(
@@ -26,13 +27,15 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             IncreaseBudgetLimitUseCase increaseBudgetLimitUseCase,
             AdminAddBudgetTransactionUseCase adminAddBudgetTransactionUseCase,
             PagingSessionStore pagingSessionStore,
-            ILogger<BudgetModule> logger)
+            ILogger<BudgetModule> logger,
+            BudgetActivityChannel activityChannel)
         {
             _userRepository = userRepository;
             _budgetQueryUseCase = budgetQueryUseCase;
             _increaseBudgetLimitUseCase = increaseBudgetLimitUseCase;
             _adminAddBudgetTransactionUseCase = adminAddBudgetTransactionUseCase;
             _pagingSessionStore = pagingSessionStore;
+            _activityChannel = activityChannel;
             _logger = logger;
         }
 
@@ -114,53 +117,54 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             double amount,
             [Summary("fiscal-year")] int? fiscalYear = null)
         {
+            await DeferAsync(ephemeral: true);
             try
             {
                 var caller = await _userRepository.GetByDiscordUserIdAsync(Context.User.Id);
                 if (caller == null)
                 {
-                    await RespondAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("Discordユーザーがシステムに登録されていません。管理者に登録を依頼してください。"), ephemeral: true);
+                    await FollowupAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("Discordユーザーがシステムに登録されていません。管理者に登録を依頼してください。"), ephemeral: true);
                     return;
                 }
 
                 var canAddBudget = await AuthorizationHelper.IsPrivilegedAsync(_userRepository, Context.User.Id, AccountRole.Admin, AccountRole.President);
                 if (!canAddBudget)
                 {
-                    await RespondAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("追加予算を付与する権限がありません。"), ephemeral: true);
+                    await FollowupAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("追加予算を付与する権限がありません。"), ephemeral: true);
                     return;
                 }
 
                 if (amount <= 0)
                 {
-                    await RespondAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("追加金額は正の数で指定してください。"), ephemeral: true);
+                    await FollowupAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("追加金額は正の数で指定してください。"), ephemeral: true);
                     return;
                 }
 
                 var amountDecimal = Convert.ToDecimal(amount);
-                await _increaseBudgetLimitUseCase.ExecuteAsync(groupId, amountDecimal, fiscalYear);
-                var remainingBudget = await _budgetQueryUseCase.GetRemainingBudgetAsync(Context.User.Id, groupId, fiscalYear);
+                var result = await _increaseBudgetLimitUseCase.ExecuteAsync(groupId, amountDecimal, fiscalYear);
+                await _activityChannel.NotifyTransactionAsync("追加予算が付与されました", Context.User.Id, result);
 
-                await RespondAsync(
+                await FollowupAsync(
                     embed: DiscordEmbedFactory.BuildBudgetAddedEmbed(
-                        remainingBudget.GroupName,
-                        remainingBudget.GroupId,
-                        amountDecimal,
-                        remainingBudget.ActualBalance,
-                        remainingBudget.FiscalYear),
+                        result.GroupName,
+                        result.GroupId,
+                        result.Amount,
+                        result.ActualBalance,
+                        result.FiscalYear),
                     ephemeral: true);
             }
             catch (ArgumentNullException)
             {
-                await RespondAsync(embed: DiscordEmbedFactory.BuildNotFoundEmbed("班", groupId.ToString()), ephemeral: true);
+                await FollowupAsync(embed: DiscordEmbedFactory.BuildNotFoundEmbed("班", groupId.ToString()), ephemeral: true);
             }
             catch (ArgumentOutOfRangeException)
             {
-                await RespondAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("追加金額は正の数で指定してください。"), ephemeral: true);
+                await FollowupAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("追加金額は正の数で指定してください。"), ephemeral: true);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to add budget. DiscordUserId: {DiscordUserId}, GroupId: {GroupId}, Amount: {Amount}, FiscalYear: {FiscalYear}", Context.User.Id, groupId, amount, fiscalYear);
-                await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("追加予算を処理できません", "時間を置いて再実行してください。"), ephemeral: true);
+                await FollowupAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("追加予算を処理できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }
 
@@ -186,6 +190,7 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             [Summary("amount")] double amount,
             [Summary("fiscal-year")] int? fiscalYear = null)
         {
+            await DeferAsync(ephemeral: true);
             try
             {
                 var result = await _adminAddBudgetTransactionUseCase.ExecuteAsync(
@@ -195,7 +200,9 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
                     Convert.ToDecimal(amount),
                     fiscalYear);
 
-                await RespondAsync(
+                var title = result.IsIncome ? "管理者が収入を入力しました" : "管理者が支出を入力しました";
+                await _activityChannel.NotifyTransactionAsync(title, Context.User.Id, result);
+                await FollowupAsync(
                     embed: DiscordEmbedFactory.BuildTransactionAddedEmbed(
                         result.GroupId,
                         result.GroupName,
@@ -207,24 +214,24 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
             }
             catch (UnauthorizedAccessException)
             {
-                await RespondAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("この操作には管理者権限が必要です。"), ephemeral: true);
+                await FollowupAsync(embed: DiscordEmbedFactory.BuildAuthorizationErrorEmbed("この操作には管理者権限が必要です。"), ephemeral: true);
             }
             catch (ArgumentOutOfRangeException)
             {
-                await RespondAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("金額は正の数で指定してください。"), ephemeral: true);
+                await FollowupAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("金額は正の数で指定してください。"), ephemeral: true);
             }
             catch (ArgumentException)
             {
-                await RespondAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("班ID、種別、金額を確認してください。"), ephemeral: true);
+                await FollowupAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("班ID、種別、金額を確認してください。"), ephemeral: true);
             }
             catch (InvalidOperationException)
             {
-                await RespondAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("この取引を追加すると予算条件を満たせません。"), ephemeral: true);
+                await FollowupAsync(embed: DiscordEmbedFactory.BuildValidationErrorEmbed("この取引を追加すると予算条件を満たせません。"), ephemeral: true);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to add budget transaction. DiscordUserId: {DiscordUserId}, GroupId: {GroupId}, TransactionType: {TransactionType}, Amount: {Amount}, FiscalYear: {FiscalYear}", Context.User.Id, groupId, transactionType, amount, fiscalYear);
-                await RespondAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("予算取引を追加できません", "時間を置いて再実行してください。"), ephemeral: true);
+                await FollowupAsync(embed: DiscordEmbedFactory.BuildErrorEmbed("予算取引を追加できません", "時間を置いて再実行してください。"), ephemeral: true);
             }
         }
 
