@@ -1,3 +1,4 @@
+using BudgetManagementBotSystem.Application.DTOs;
 using BudgetManagementBotSystem.Application.UseCases.RequestWorkflow;
 using BudgetManagementBotSystem.Domain.Enums;
 using BudgetManagementBotSystem.Domain.Exceptions;
@@ -17,6 +18,7 @@ public class RequestComponentModule : InteractionModuleBase<SocketInteractionCon
     private readonly IGroupRepository _groupRepository;
     private readonly PendingRequestConfirmationStore _store;
     private readonly DiscordRequestNotificationService _notificationService;
+    private readonly BudgetActivityChannel _activityChannel;
     private readonly RequestWorkflowInteractionService _requestWorkflowInteractionService;
     private readonly ILogger<RequestComponentModule> _logger;
 
@@ -27,13 +29,15 @@ public class RequestComponentModule : InteractionModuleBase<SocketInteractionCon
         DiscordRequestNotificationService notificationService,
         RequestWorkflowInteractionService requestWorkflowInteractionService,
         ILogger<RequestComponentModule> logger,
-        IGroupRepository groupRepository)
+        IGroupRepository groupRepository,
+        BudgetActivityChannel activityChannel)
     {
         _submitBudgetRequestUseCase = submitBudgetRequestUseCase;
         _userRepository = userRepository;
         _groupRepository = groupRepository;
         _store = store;
         _notificationService = notificationService;
+        _activityChannel = activityChannel;
         _requestWorkflowInteractionService = requestWorkflowInteractionService;
         _logger = logger;
     }
@@ -79,6 +83,8 @@ public class RequestComponentModule : InteractionModuleBase<SocketInteractionCon
                 confirmation.Description,
                 confirmation.EvidenceFiles);
 
+            var summary = new BudgetRequestSummary(requestId, confirmation.GroupId, confirmation.GroupName, confirmation.Amount);
+            await _activityChannel.NotifyRequestAsync("予算申請が作成されました", confirmation.RequesterDiscordUserId, summary);
             var notifiedCount = await _notificationService.NotifyAccountantsAsync(
                 requestId,
                 confirmation.GroupId,
@@ -172,8 +178,8 @@ public class RequestComponentModule : InteractionModuleBase<SocketInteractionCon
 
         try
         {
-            var notificationSent = await _requestWorkflowInteractionService.ApproveAsync(parsedRequestId, Context.User.Id);
-            await FollowupAsync(embed: DiscordEmbedFactory.BuildApprovalResultEmbed(parsedRequestId, notificationSent), ephemeral: true);
+            await _requestWorkflowInteractionService.ApproveAsync(parsedRequestId, Context.User.Id,
+                sent => FollowupAsync(embed: DiscordEmbedFactory.BuildApprovalResultEmbed(parsedRequestId, sent), ephemeral: true));
         }
         catch (UnauthorizedAccessException)
         {
@@ -230,8 +236,8 @@ public class RequestComponentModule : InteractionModuleBase<SocketInteractionCon
 
         try
         {
-            var notificationSent = await _requestWorkflowInteractionService.RejectAsync(parsedRequestId, Context.User.Id, reason);
-            await FollowupAsync(embed: DiscordEmbedFactory.BuildRejectionResultEmbed(parsedRequestId, notificationSent, reason), ephemeral: true);
+            await _requestWorkflowInteractionService.RejectAsync(parsedRequestId, Context.User.Id, reason,
+                sent => FollowupAsync(embed: DiscordEmbedFactory.BuildRejectionResultEmbed(parsedRequestId, sent, reason), ephemeral: true));
         }
         catch (UnauthorizedAccessException)
         {

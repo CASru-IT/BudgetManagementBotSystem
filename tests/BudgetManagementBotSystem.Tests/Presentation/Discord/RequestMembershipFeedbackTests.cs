@@ -88,6 +88,48 @@ public class RequestMembershipFeedbackTests
         fixture.Files.Verify(x => x.SaveFileAsync(It.IsAny<string>(), It.IsAny<Stream>()), Times.Never);
         fixture.UnitOfWork.Verify(x => x.SaveChangesAsync(), Times.Never);
         Assert.Empty(fixture.Group.Requests);
+        Assert.Empty(fixture.Activity.Client.Invocations);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ConfirmingRequestAttemptsOnePostAndCompletesEvenIfDiscordRefusesIt(bool sendFails)
+    {
+        var fixture = new Fixture(10);
+        if (sendFails)
+            fixture.Activity.Channel.SetReturnsDefault(Task.FromException<IUserMessage>(new IOException("Discord refused the post")));
+        var token = fixture.Store.Create(new PendingRequestConfirmation
+        {
+            RequesterDiscordUserId = fixture.User.DiscordUserId,
+            UserId = fixture.User.Id,
+            GroupId = 10,
+            GroupName = fixture.Group.Name,
+            Amount = 730,
+            Description = "個人用の詳細",
+            EvidenceFiles = new() { new("private-receipt.pdf", new byte[] { 1 }) }
+        });
+        var module = new RecordingConfirmModule(fixture);
+        fixture.UnitOfWork.Setup(u => u.SaveChangesAsync()).Returns(() =>
+        {
+            Assert.Empty(fixture.Activity.Posts);
+            typeof(BudgetRequest).GetProperty(nameof(BudgetRequest.Id))!.SetValue(fixture.Group.Requests.Single(), 37);
+            return Task.CompletedTask;
+        });
+        Assert.Empty(fixture.Activity.Posts);
+        await module.ConfirmCreateRequest(token);
+        Assert.Contains("作成しました", module.Response!.Title);
+        fixture.Users.Verify(u => u.GetAllAsync(), Times.Once);
+        await module.ConfirmCreateRequest(token);
+
+        var post = Assert.Single(fixture.Activity.Posts);
+        Assert.Contains("予算申請", post.Title);
+        Assert.Contains(post.Fields, f => f.Value.Contains("執行部"));
+        Assert.Contains(post.Fields, f => f.Value.Contains("730"));
+        Assert.Contains(post.Fields, f => f.Value == "<@0>");
+        Assert.Contains("#37", post.Footer?.Text);
+        Assert.DoesNotContain(post.Fields, f => f.Value.Contains("個人用") || f.Value.Contains("private-receipt"));
+        fixture.UnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
     }
 
     [Theory]
@@ -171,6 +213,7 @@ public class RequestMembershipFeedbackTests
         public Mock<IFileStorage> Files { get; } = new();
         public Mock<IUnitOfWork> UnitOfWork { get; } = new();
         public PendingRequestConfirmationStore Store { get; } = new();
+        public RecordingBudgetChannel Activity { get; } = new();
         public SubmitBudgetRequestUseCase Submit { get; }
 
         public Fixture(int? membership)
@@ -217,7 +260,9 @@ public class RequestMembershipFeedbackTests
     private sealed class RecordingConfirmModule : RequestComponentModule
     {
         public Embed? Response { get; private set; }
-        public RecordingConfirmModule(Fixture f) : base(f.Submit, f.Users.Object, f.Store, null!, null!, NullLogger<RequestComponentModule>.Instance, f.Groups.Object) => SetContext(this);
+        public RecordingConfirmModule(Fixture f) : base(f.Submit, f.Users.Object, f.Store,
+            new DiscordRequestNotificationService(f.Users.Object, null!, null!, null!), null!,
+            NullLogger<RequestComponentModule>.Instance, f.Groups.Object, f.Activity.Service) => SetContext(this);
         protected override Task DeferAsync(bool ephemeral = false, RequestOptions? options = null)
         { Assert.True(ephemeral); return Task.CompletedTask; }
         protected override Task<IUserMessage> FollowupAsync(string? text = null, Embed[]? embeds = null, bool isTTS = false,

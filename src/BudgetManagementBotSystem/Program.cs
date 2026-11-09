@@ -11,6 +11,8 @@ using BudgetManagementBotSystem.Infrastructure.FileStorage;
 using BudgetManagementBotSystem.Infrastructure.Persistence;
 using BudgetManagementBotSystem.Infrastructure.Persistence.Repository;
 using BudgetManagementBotSystem.Presentation.Discord.Services;
+using Discord;
+using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 
@@ -64,7 +66,13 @@ builder.Services.AddScoped<RequestWorkflowInteractionService>();
 builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
 builder.Services.Configure<AdminBootstrapOptions>(builder.Configuration.GetSection("AdminBootstrap"));
 
+builder.Services.AddSingleton(_ => new DiscordSocketClient(new DiscordSocketConfig
+{
+    GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.DirectMessages | GatewayIntents.MessageContent
+}));
 builder.Services.AddSingleton<DiscordBotService>();
+builder.Services.AddSingleton(sp => new BudgetActivityChannel(sp.GetRequiredService<DiscordSocketClient>(),
+    sp.GetRequiredService<IConfiguration>(), sp.GetRequiredService<ILogger<BudgetActivityChannel>>()));
 builder.Services.AddSingleton<PendingRequestConfirmationStore>();
 builder.Services.AddSingleton<BudgetCancellationConfirmationStore>();
 builder.Services.AddSingleton<PagingSessionStore>();

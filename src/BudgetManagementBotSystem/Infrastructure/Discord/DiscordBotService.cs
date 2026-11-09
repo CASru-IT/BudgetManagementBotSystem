@@ -11,23 +11,18 @@ namespace BudgetManagementBotSystem.InfraStructure.Discord;
 public class DiscordBotService
 {
     private readonly IServiceProvider _provider;
-    private DiscordSocketClient _client = null!;
+    private readonly DiscordSocketClient _client;
     private InteractionService _interactions = null!;
     private readonly HttpClient _httpClient = new HttpClient();
 
-    public DiscordBotService(IServiceProvider provider)
+    public DiscordBotService(IServiceProvider provider, DiscordSocketClient client)
     {
         _provider = provider;
+        _client = client;
     }
 
     public async Task StartAsync(string token)
     {
-        var config = new DiscordSocketConfig
-        {
-            GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages | GatewayIntents.DirectMessages | GatewayIntents.MessageContent
-        };
-
-        _client = new DiscordSocketClient(config);
         _interactions = new InteractionService(_client, new InteractionServiceConfig
         {
             AutoServiceScopes = true,

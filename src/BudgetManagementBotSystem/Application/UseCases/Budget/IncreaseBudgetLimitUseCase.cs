@@ -2,6 +2,7 @@ using BudgetManagementBotSystem.Domain.Repository;
 using BudgetManagementBotSystem.Domain.Entities;
 using BudgetManagementBotSystem.Domain.ValueObjects;
 using BudgetManagementBotSystem.Application.Interface;
+using BudgetManagementBotSystem.Application.DTOs;
 
 namespace BudgetManagementBotSystem.Application.UseCases.Budget;
 
@@ -18,7 +19,7 @@ public class IncreaseBudgetLimitUseCase
         _unitOfWork = unitOfWork;
     }
 
-    public async Task ExecuteAsync(int groupId, decimal amount, int? fiscalYear = null)
+    public async Task<BudgetTransactionResult> ExecuteAsync(int groupId, decimal amount, int? fiscalYear = null)
     {
         Group? group = await _groupRepository.GetByIdAsync(groupId);
         if (group == null) throw new ArgumentNullException(nameof(groupId), "Group not found");
@@ -33,5 +34,7 @@ public class IncreaseBudgetLimitUseCase
         group.AddBudgetTransaction(transaction);
 
         await _unitOfWork.SaveChangesAsync();
+        return new BudgetTransactionResult(transaction.Id, group.Id, group.Name, transaction.IsIncome,
+            amount, currentFiscalYear.Year, group.GetTotalBudgetForFiscalYear(currentFiscalYear));
     }
 }
