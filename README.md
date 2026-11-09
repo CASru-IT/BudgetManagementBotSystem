@@ -76,7 +76,7 @@ cp .env.example .env
   - `Discord__CommandRegistrationMode=Global` の場合は不要です。
 
 - `Discord__BudgetActivityChannelId`（任意）
-  - 予算申請の確定、追加予算の付与、管理者による収支入力を知らせるテキストチャンネルのIDです。Discordのチャンネルリンクの末尾にある数字を、デプロイ先の `.env` に設定します。空欄でチャンネル通知を停止できます。
+  - 予算申請の作成・承認・却下、追加予算の付与、管理者による収支入力を知らせるテキストチャンネルのIDです。Discordのチャンネルリンクの末尾にある数字を、デプロイ先の `.env` に設定します。空欄でチャンネル通知を停止できます。
   - Botに対象チャンネルの「チャンネルを見る」「メッセージを送信」「埋め込みリンク」権限が必要です。設定を変更したら `docker compose up -d app` で反映します。
 
 - `DB_USER`, `DB_PASSWORD`, `DB_NAME` (推奨)

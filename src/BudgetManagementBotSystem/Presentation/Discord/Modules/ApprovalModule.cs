@@ -72,9 +72,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         {
             try
             {
-                var notificationSent = await _requestWorkflowInteractionService.ApproveAsync(requestId, Context.User.Id);
-
-                await RespondAsync(embed: DiscordEmbedFactory.BuildApprovalResultEmbed(requestId, notificationSent));
+                await _requestWorkflowInteractionService.ApproveAsync(requestId, Context.User.Id,
+                    sent => RespondAsync(embed: DiscordEmbedFactory.BuildApprovalResultEmbed(requestId, sent)));
             }
             catch (UnauthorizedAccessException)
             {
@@ -100,9 +99,8 @@ namespace BudgetManagementBotSystem.Presentation.Discord.Modules
         {
             try
             {
-                var notificationSent = await _requestWorkflowInteractionService.RejectAsync(requestId, Context.User.Id, reason);
-
-                await RespondAsync(embed: DiscordEmbedFactory.BuildRejectionResultEmbed(requestId, notificationSent, reason));
+                await _requestWorkflowInteractionService.RejectAsync(requestId, Context.User.Id, reason,
+                    sent => RespondAsync(embed: DiscordEmbedFactory.BuildRejectionResultEmbed(requestId, sent, reason)));
             }
             catch (UnauthorizedAccessException)
             {

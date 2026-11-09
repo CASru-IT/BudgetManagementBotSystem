@@ -1,6 +1,5 @@
 using System.Globalization;
 using BudgetManagementBotSystem.Application.DTOs;
-using BudgetManagementBotSystem.Presentation.Discord.Models;
 using Discord;
 
 namespace BudgetManagementBotSystem.Presentation.Discord.Services;
@@ -24,9 +23,8 @@ public sealed class BudgetActivityChannel
             _logger.LogWarning("Discord:BudgetActivityChannelId must be a positive numeric channel ID. Budget activity notifications are disabled.");
     }
 
-    public Task NotifyRequestCreatedAsync(PendingRequestConfirmation request, int requestId) =>
-        SendAsync("予算申請が作成されました", request.RequesterDiscordUserId, request.GroupName,
-            request.GroupId, request.Amount, $"申請ID #{requestId}");
+    public Task NotifyRequestAsync(string title, ulong actorId, BudgetRequestSummary request) =>
+        SendAsync(title, actorId, request.GroupName, request.GroupId, request.Amount, $"申請ID #{request.RequestId}");
 
     public Task NotifyTransactionAsync(string title, ulong actorId, BudgetTransactionResult result) =>
         SendAsync(title, actorId, result.GroupName, result.GroupId, result.Amount,

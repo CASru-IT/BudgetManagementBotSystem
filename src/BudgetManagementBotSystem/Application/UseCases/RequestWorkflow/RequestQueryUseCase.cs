@@ -1,3 +1,4 @@
+using BudgetManagementBotSystem.Application.DTOs;
 using BudgetManagementBotSystem.Domain.Repository;
 using System.Linq;
 
@@ -14,17 +15,17 @@ namespace BudgetManagementBotSystem.Application.UseCases.RequestWorkflow
             _userRepository = userRepository;
         }
 
-        public async Task<int> GetGroupIdByRequestIdAsync(int requestId)
+        public async Task<BudgetRequestSummary> GetRequestSummaryAsync(int requestId)
         {
             var groups = await _groupRepository.GetAllAsync();
             if (groups == null) throw new ArgumentException("No groups available");
 
-            foreach (var g in groups)
+            foreach (var group in groups)
             {
-                var match = g.Requests.FirstOrDefault(r => r.Id == requestId);
-                if (match != null)
+                var request = group.Requests.FirstOrDefault(r => r.Id == requestId);
+                if (request != null)
                 {
-                    return g.Id;
+                    return new BudgetRequestSummary(request.Id, group.Id, group.Name, request.Amount.Value);
                 }
             }
 
