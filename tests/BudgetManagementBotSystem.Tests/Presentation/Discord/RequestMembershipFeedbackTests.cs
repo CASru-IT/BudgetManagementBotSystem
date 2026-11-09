@@ -91,10 +91,14 @@ public class RequestMembershipFeedbackTests
         Assert.Empty(fixture.Activity.Client.Invocations);
     }
 
-    [Fact]
-    public async Task ConfirmingRequestPostsOneSummaryAcrossRepeatedClicks()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ConfirmingRequestAttemptsOnePostAndCompletesEvenIfDiscordRefusesIt(bool sendFails)
     {
         var fixture = new Fixture(10);
+        if (sendFails)
+            fixture.Activity.Channel.SetReturnsDefault(Task.FromException<IUserMessage>(new IOException("Discord refused the post")));
         var token = fixture.Store.Create(new PendingRequestConfirmation
         {
             RequesterDiscordUserId = fixture.User.DiscordUserId,
@@ -115,6 +119,7 @@ public class RequestMembershipFeedbackTests
         Assert.Empty(fixture.Activity.Posts);
         await module.ConfirmCreateRequest(token);
         Assert.Contains("作成しました", module.Response!.Title);
+        fixture.Users.Verify(u => u.GetAllAsync(), Times.Once);
         await module.ConfirmCreateRequest(token);
 
         var post = Assert.Single(fixture.Activity.Posts);
